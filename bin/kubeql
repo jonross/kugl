@@ -1,0 +1,10 @@
+#!/bin/bash
+
+PYTHONPATH=$HOME/src/kq/lib
+
+python3 -c 'if True:
+    import sys
+    from kubeql.main import main
+    main()
+' "$@"
+
