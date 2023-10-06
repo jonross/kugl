@@ -26,7 +26,7 @@ class SqliteDb:
 
     def __init__(self, target=None):
         self.target = target
-        self.conn = sqlite3.connect(":memory:") if target is None else None
+        self.conn = sqlite3.connect(":memory:", check_same_thread=False) if target is None else None
 
     def query(self, sql, data=None, named=False, one_row=False):
         """
@@ -85,7 +85,5 @@ def from_footprint(x: str):
     for suffix, mul in [("K",  10**3), ("M",  10**6), ("G",  10**9),
                         ("Ki", 2**10), ("Mi", 2**20), ("Gi", 2**30)]:
         if x.endswith(suffix):
-            return mul * float(x.removesuffix(suffix))
-    return float(x)
-
-
+            return int(mul * float(x.removesuffix(suffix)))
+    return int(float(x))

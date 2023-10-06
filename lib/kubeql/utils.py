@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+import re
 from typing import Optional, Union
 
 import arrow
@@ -45,7 +46,7 @@ class K8SObjectHelper:
 class Resources:
     cpu: float
     gpu: float
-    mem: float
+    mem: int
 
     def __add__(self, other):
         return Resources(self.cpu + other.cpu, self.gpu + other.gpu, self.mem + other.mem)

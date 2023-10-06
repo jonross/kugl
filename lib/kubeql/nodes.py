@@ -9,10 +9,10 @@ def add_nodes(db, nodes):
             amp_type TEXT,
             cpu_alloc REAL,
             gpu_alloc REAL,
-            mem_alloc REAL,
+            mem_alloc INTEGER,
             cpu_cap REAL,
             gpu_cap REAL,
-            mem_cap REAL
+            mem_cap INTEGER
         )
     """)
     nodes = [NodeHelper(node) for node in nodes["items"]]
