@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PYTHONPATH=$HOME/src/kq/lib
+PYTHONPATH=$(dirname "$0")/../lib
 
 python3 -c 'if True:
     import sys
