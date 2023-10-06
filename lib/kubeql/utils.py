@@ -1,10 +1,11 @@
-import sqlite3
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional, Union
 
 import arrow
 import dateutil
 from datetime import datetime
-from typing import Union
+import yaml
 
 from .jross import from_footprint
 
@@ -109,3 +110,15 @@ def to_age(x: Union[datetime,str]):
     if isinstance(x, str):
         x = dateutil.parse(x)
     return arrow.get() - arrow.get(x)
+
+
+class KubeConfig:
+    """
+    A helper class for reading data from .kube/config
+    """
+
+    def __init__(self, path: Path = Path.home() / ".kube/config") -> None:
+        self._config = yaml.safe_load(path.read_text())
+
+    def current_context(self) -> Optional[str]:
+        return self._config.get("current-context")

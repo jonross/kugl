@@ -13,11 +13,11 @@ from .jobs import add_jobs
 from .jross import SqliteDb, run
 from .pods import add_pods
 from .nodes import add_nodes
-from .utils import add_custom_functions, to_age
+from .utils import add_custom_functions, to_age, KubeConfig
 from .workflows import add_workflows
 
 ALWAYS, CHECK, NEVER = 1, 2, 3
-STORAGE = Path.home() / ".kubeql"
+CACHE = Path.home() / ".kubeql"
 
 def main():
     ap = ArgumentParser()
@@ -29,9 +29,9 @@ def main():
         sys.exit("Cannot specify both --no-update and --update")
     update = ALWAYS if args.update else NEVER if args.no_update else CHECK
     _, context, _ = run(["kubectl", "config", "current-context"])
-    context = context.strip()
+    context = KubeConfig().current_context()
     with ThreadPoolExecutor(max_workers=8) as pool:
-        pods, jobs, nodes, workflows = pool.map(lambda x: fetch(x, context, update),
+        pods, jobs, nodes, workflows = pool.map(lambda x: _get_k8s_objects(x, context, update),
                                                 ["pods", "jobs", "nodes", "workflows"])
     db = SqliteDb()
     add_custom_functions(db.conn)
@@ -42,22 +42,29 @@ def main():
     rows = db.query(args.sql)
     print(tabulate(rows, tablefmt="plain"))
 
-def fetch(what, context, update):
-    dir = STORAGE / context
-    dir.mkdir(exist_ok=True)
-    data = dir / f"{what}.json"
-    if update == NEVER:
+def _get_k8s_objects(kind, context, cache_how):
+    """
+    Fetch Kubernetes objects either via the API or from our cache
+    :param kind: e.g. "pods", "nodes", "jobs" etc..
+    :param context: a Kubernetes context name
+    :param cache_how: how to consult the cache, one of ALWAYS, CHECK, NEVER
+    :return: raw JSON objects as output by "kubectl get {kind}"
+    """
+    cache_dir = CACHE / context
+    cache_dir.mkdir(exist_ok=True)
+    data = cache_dir / f"{kind}.json"
+    if cache_how == NEVER:
         regen = False
-    elif update == ALWAYS or not data.exists():
+    elif cache_how == ALWAYS or not data.exists():
         regen = True
     elif to_age(data.stat().st_mtime) > timedelta(minutes=10):
         regen = True
     else:
         regen = False
     if regen:
-        all_ns = [] if what == "nodes" else ["--all-namespaces"]
-        _, out, _= run(["kubectl", "get", what, *all_ns, "-o", "json"])
+        all_ns = [] if kind == "nodes" else ["--all-namespaces"]
+        _, out, _= run(["kubectl", "get", kind, *all_ns, "-o", "json"])
         data.write_text(out)
     if not data.exists():
-        sys.exit(f"No data for {what} table")
+        sys.exit(f"No data for {kind} table")
     return json.loads(data.read_text())
