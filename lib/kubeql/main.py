@@ -38,7 +38,10 @@ def main():
     add_custom_functions(db.conn)
 
     # Determine which tables are needed for the query
-    table_names = set(re.findall(r"(?<=from|join)\s+(\w+)", args.sql.replace("\n", " "), re.IGNORECASE))
+    sql = args.sql.replace("\n", " ")
+    table_names = set(re.findall(r"(?<=from|join)\s+(\w+)", sql, re.IGNORECASE))
+    cte_names = set(re.findall(r"(?<=with)\s+(\w+)\s+(?=as)", sql, re.IGNORECASE))
+    table_names = table_names.difference(cte_names)
     bad_names = table_names.difference(["pods", "jobs", "nodes", "workflows"])
     if bad_names:
         sys.exit(f"Not available for query: {bad_names}")
