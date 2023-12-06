@@ -5,6 +5,7 @@ def add_nodes(db, nodes):
     db.execute("""
         CREATE TABLE nodes (
             name TEXT,
+            provider TEXT,
             node_family TEXT,
             amp_type TEXT,
             cpu_alloc REAL,
@@ -18,6 +19,7 @@ def add_nodes(db, nodes):
     nodes = [NodeHelper(node) for node in nodes["items"]]
     data = [(
         node.name,
+        node.obj.get("spec", {}).get("providerID"),
         node.label("pathai.com/node-family") or node.label("mle.pathai.com/node-family"),
         node.label("amp.pathai.com/node-type"),
         *Resources.extract(node["status"]["allocatable"]).as_tuple(),
