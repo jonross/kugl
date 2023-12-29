@@ -8,15 +8,16 @@ import re
 import sys
 from threading import Lock
 
-import arrow
 from tabulate import tabulate
+import yaml
 
-from .jobs import add_jobs
 from .jross import SqliteDb, run
-from .pods import add_pods
-from .nodes import add_nodes
 from .utils import add_custom_functions, to_age, KubeConfig
-from .workflows import add_workflows
+
+# These don't appear imported in the IDE but they are used.
+from .jobs import add_jobs
+from .nodes import add_nodes
+from .pods import add_pods
 
 ALWAYS, CHECK, NEVER = 1, 2, 3
 CACHE = Path.home() / ".kubeql"
@@ -36,6 +37,13 @@ def main():
     db = SqliteDb()
     db_lock = Lock()
     add_custom_functions(db.conn)
+
+    # Check for a predefined query
+    config_file = CACHE / "canned.yaml"
+    if config_file.exists():
+        config = yaml.safe_load(config_file.read_text())
+        if args.sql in config:
+            args.sql = config[args.sql]
 
     # Determine which tables are needed for the query
     sql = args.sql.replace("\n", " ")

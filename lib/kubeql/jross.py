@@ -82,7 +82,8 @@ def from_footprint(x: str):
     """
     Translate a string a la 10K, 5Mb, 3Gi to # of bytes.
     """
-    for suffix, mul in [("K",  10**3), ("M",  10**6), ("G",  10**9),
+    for suffix, mul in [("m", .001),
+                        ("K",  10**3), ("M",  10**6), ("G",  10**9),
                         ("Ki", 2**10), ("Mi", 2**20), ("Gi", 2**30)]:
         if x.endswith(suffix):
             return int(mul * float(x.removesuffix(suffix)))
