@@ -1,5 +1,5 @@
 
-def add_workflows(db, workflows):
+def add_workflows(db, objects):
     db.execute("""
         CREATE TABLE workflows (
             name TEXT,
@@ -11,7 +11,7 @@ def add_workflows(db, workflows):
             env_name TEXT
         )
     """)
-    workflows = workflows["items"]
+    workflows = objects["workflows"]["items"]
     data = [(
         w["metadata"]["name"],
         w["metadata"]["namespace"],

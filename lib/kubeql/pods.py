@@ -3,7 +3,7 @@ import funcy as fn
 from .utils import K8SObjectHelper, Resources
 
 
-def add_pods(db, pods):
+def add_pods(db, objects):
     db.execute("""
         CREATE TABLE pods (
             name TEXT,
@@ -23,7 +23,7 @@ def add_pods(db, pods):
             partition TEXT
         )
     """)
-    pods = map(PodHelper, pods["items"])
+    pods = map(PodHelper, objects["pods"]["items"])
     data = [(pod.name,
              pod.namespace,
              pod.node_name,

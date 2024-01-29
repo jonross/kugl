@@ -1,7 +1,9 @@
 
 from argparse import ArgumentParser
+import collections as co
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
+import funcy as fn
 import json
 from pathlib import Path
 import re
@@ -14,10 +16,10 @@ import yaml
 from .jross import SqliteDb, run
 from .utils import add_custom_functions, to_age, KubeConfig
 
-# These don't appear imported in the IDE but they are used.
 from .jobs import add_jobs
-from .nodes import add_nodes
+from .nodes import add_nodes, add_node_taints, add_node_load
 from .pods import add_pods
+from .workflows import add_workflows
 
 ALWAYS, CHECK, NEVER = 1, 2, 3
 CACHE = Path.home() / ".kubeql"
@@ -45,28 +47,51 @@ def main():
         if args.sql in config:
             args.sql = config[args.sql]
 
+    # Correlate queryable tables with object types needed from K8S.
+    Table = co.namedtuple("Table", ["name", "needs", "builders"])
+    table_needs = { t.name: t for t in [
+        Table("pods", ["pods"], [add_pods]),
+        Table("jobs", ["jobs"], [add_jobs]),
+        Table("nodes", ["nodes"], [add_nodes]),
+        Table("workflows", ["workflows"], [add_workflows]),
+        Table("node_taints", ["nodes"], [add_node_taints]),
+        Table("node_load", ["pods"], [add_pods, add_node_load]),
+    ] }
+
     # Determine which tables are needed for the query
     sql = args.sql.replace("\n", " ")
     table_names = set(re.findall(r"(?<=from|join)\s+(\w+)", sql, re.IGNORECASE))
     cte_names = set(re.findall(r"(?<=with)\s+(\w+)\s+(?=as)", sql, re.IGNORECASE))
     table_names = table_names.difference(cte_names)
-    bad_names = table_names.difference(["pods", "jobs", "nodes", "workflows"])
+    bad_names = table_names.difference(table_needs.keys())
     if bad_names:
         sys.exit(f"Not available for query: {bad_names}")
 
-    # Fetch from K8S in parallel, and add to SQLite thread-safely
-    def fetch(table_name):
-        data = _get_k8s_objects(table_name, context, update)
-        with db_lock:
-            globals()[f"add_{table_name}"](db, data)
+    # Fetch required object types from K8S in parallel.
+    objects = {}
+    fetch_types = fn.lflatten(table_needs[table_name].needs for table_name in table_names)
+    def fetch(object_type):
+        objects[object_type] = _get_k8s_objects(object_type, context, update)
     with ThreadPoolExecutor(max_workers=8) as pool:
-        for _ in pool.map(fetch, table_names):
+        for _ in pool.map(fetch, fetch_types):
             pass
 
-    rows = db.query(args.sql)
-    print(tabulate(rows, tablefmt="plain", floatfmt=".4g"))
-    # now print them with floating-point numbers truncated to two decimal places
-    # print(tabulate(rows, tablefmt="plain", floatfmt=".2f"))
+    # Create tables in SQLite
+    called_builders = set()
+    for table_name in table_names:
+        for builder in table_needs[table_name].builders:
+            if builder not in called_builders:
+                called_builders.add(builder)
+                builder(db, objects)
+
+    column_names = []
+    rows = db.query(args.sql, names=column_names)
+    # %g is susceptible to outputting scientific notation, which we don't want.
+    # but %f always outputs trailing zeros, which we also don't want.
+    # So turn every value x in each row into an int if x == float(int(x))
+    truncate = lambda x: int(x) if isinstance(x, float) and x == float(int(x)) else x
+    rows = [[truncate(x) for x in row] for row in rows]
+    print(tabulate(rows, tablefmt="plain", floatfmt=".1f", headers=column_names))
 
 def _get_k8s_objects(table_name, context_name, update_cache):
     """

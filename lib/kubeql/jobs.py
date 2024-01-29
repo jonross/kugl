@@ -1,7 +1,7 @@
 
 from .utils import K8SObjectHelper
 
-def add_jobs(db, jobs):
+def add_jobs(db, objects):
     db.execute("""
         CREATE TABLE jobs (
             name TEXT,
@@ -11,7 +11,7 @@ def add_jobs(db, jobs):
             workflow_id TEXT
         )
     """)
-    jobs = map(JobHelper, jobs["items"])
+    jobs = map(JobHelper, objects["jobs"]["items"])
     data = [(
         job.name,
         job.namespace,

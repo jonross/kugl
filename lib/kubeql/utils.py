@@ -8,7 +8,7 @@ import dateutil
 from datetime import datetime
 import yaml
 
-from .jross import from_footprint
+from .jross import from_size
 
 
 
@@ -63,14 +63,10 @@ class Resources:
     def extract(cls, obj):
         if obj is None:
             return Resources(0, 0, 0)
-        cpu = Resources.parse_cpu(obj.get("cpu", "0"))
+        cpu = from_size(obj.get("cpu", "0"))
         gpu = int(obj.get("nvidia.com/gpu", 0))
-        mem = from_footprint(obj.get("memory", "0"))
+        mem = from_size(obj.get("memory", "0"))
         return Resources(cpu, gpu, mem)
-
-    @staticmethod
-    def parse_cpu(x: str):
-        return float(x[:-1]) / 1000 if "m" in x else float(x)
 
 
 def add_custom_functions(db):

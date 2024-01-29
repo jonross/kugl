@@ -1,6 +1,7 @@
 # These are from my personal library and are under the MIT license
 
 import collections as co
+import re
 import sqlite3
 import subprocess as sp
 import sys
@@ -28,23 +29,26 @@ class SqliteDb:
         self.target = target
         self.conn = sqlite3.connect(":memory:", check_same_thread=False) if target is None else None
 
-    def query(self, sql, data=None, named=False, one_row=False):
+    def query(self, sql, **kwargs):
         """
         Query boilerplate reducer.
         :param sql str: SQL query
         :param data list: Optional query args
         :param one_row bool: If True, use cursor.fetchone() instead of fetchall()
         :param named bool: If True, rows are namedtuples
+        :param names list: If an array, append column names to it
         """
         if self.conn:
-            return self._query(self.conn, sql, data, named, one_row)
+            return self._query(self.conn, sql, **kwargs)
         else:
             with sqlite3.connect(self.target) as conn:
-                return self._query(conn, sql, data, named, one_row)
+                return self._query(conn, sql, **kwargs)
 
-    def _query(self, conn, sql, data=None, named=False, one_row=False):
+    def _query(self, conn, sql, data=None, named=False, names=None, one_row=False):
         cur = conn.cursor()
         res = cur.execute(sql, data or [])
+        if names is not None:
+            names.extend(col[0] for col in cur.description)
         if named:
             Row = co.namedtuple("Row", [col[0] for col in cur.description])
             if one_row:
@@ -78,13 +82,25 @@ class SqliteDb:
             conn.cursor().execute(sql, data)
 
 
-def from_footprint(x: str):
+SIZE_RE = re.compile(r"([0-9.]+)(([A-Za-z]+)?)")
+SIZE_MULTIPLIERS = dict(K=10**3, M=10**6, G=10**9,
+                        Ki=2**10, Mi=2**20, Gi=2**30)
+
+def from_size(x: str):
     """
-    Translate a string a la 10K, 5Mb, 3Gi to # of bytes.
+    Translate a string a la 10K, 5Mb, 3Gi to # of bytes.  Returns an int if the result
+    can be represented as an int, else a float.
     """
-    for suffix, mul in [("m", .001),
-                        ("K",  10**3), ("M",  10**6), ("G",  10**9),
-                        ("Ki", 2**10), ("Mi", 2**20), ("Gi", 2**30)]:
-        if x.endswith(suffix):
-            return int(mul * float(x.removesuffix(suffix)))
-    return int(float(x))
+    m = SIZE_RE.match(x)
+    if m is None:
+        raise ValueError(f"Can't translate {x} to a size")
+    amount, suffix = m.group(1), m.group(2)
+    amount = float(amount) if "." in amount else int(amount)
+    if suffix == "m":
+        return amount / 1000
+    if suffix == "":
+        return amount
+    multiplier = SIZE_MULTIPLIERS.get(suffix)
+    if multiplier is None:
+        raise ValueError(f"Unknown size suffix in {x}")
+    return int(amount * multiplier)
