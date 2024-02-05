@@ -1,4 +1,6 @@
-# These are from my personal library and are under the MIT license
+# These are from my personal library and are under the MIT license.
+# They have no unit tests in kubeql because they are tested elsewhere.
+
 
 import collections as co
 import re
@@ -86,7 +88,7 @@ SIZE_RE = re.compile(r"([0-9.]+)(([A-Za-z]+)?)")
 SIZE_MULTIPLIERS = dict(K=10**3, M=10**6, G=10**9,
                         Ki=2**10, Mi=2**20, Gi=2**30)
 
-def from_size(x: str):
+def from_footprint(x: str):
     """
     Translate a string a la 10K, 5Mb, 3Gi to # of bytes.  Returns an int if the result
     can be represented as an int, else a float.
@@ -104,3 +106,28 @@ def from_size(x: str):
     if multiplier is None:
         raise ValueError(f"Unknown size suffix in {x}")
     return int(amount * multiplier)
+
+
+def to_footprint(nbytes: int, ibi=False):
+    """
+    Given a byte count, render it as a string in the most appropriate units, suffixed by KB, MB, GB, etc.
+    Larger sizes will use the appropriate unit.  The result may have a maximum of one digit after the
+    decimal point.  If ibi is True, use IEC binary units (KiB, MiB, etc).
+    """
+    factor = 1024 if ibi else 1000
+    bytes = "iB" if ibi else "B"
+    if nbytes < factor:
+        size, suffix = nbytes, bytes
+        return f"{nbytes}B"
+    elif nbytes < factor ** 2:
+        size, suffix = nbytes / factor, "K" + bytes
+    elif nbytes < factor ** 3:
+        size, suffix = nbytes / factor ** 2, "M" + bytes
+    elif nbytes < factor ** 4:
+        size, suffix = nbytes / factor ** 3, "G" + bytes
+    else:
+        size, suffix = nbytes / factor ** 4, "T" + bytes
+    if size < 10:
+        return f"{size:.1f}{suffix}"
+    else:
+        return f"{round(size)}{suffix}"

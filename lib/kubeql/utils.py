@@ -8,7 +8,7 @@ import dateutil
 from datetime import datetime
 import yaml
 
-from .jross import from_size
+from .jross import from_footprint, to_footprint
 
 
 
@@ -63,9 +63,9 @@ class Resources:
     def extract(cls, obj):
         if obj is None:
             return Resources(0, 0, 0)
-        cpu = from_size(obj.get("cpu", "0"))
+        cpu = from_footprint(obj.get("cpu", "0"))
         gpu = int(obj.get("nvidia.com/gpu", 0))
-        mem = from_size(obj.get("memory", "0"))
+        mem = from_footprint(obj.get("memory", "0"))
         return Resources(cpu, gpu, mem)
 
 
@@ -73,35 +73,12 @@ def add_custom_functions(db):
     """
     Given a SQLite database instance, add pretty_size as a custom function.
     """
-    db.create_function("to_size", 1, to_size)
+    db.create_function("to_size", 1, to_footprint)
     db.create_function("to_ui", 1, to_ui)
 
 
 def to_ui(workflow_id: str):
     return workflow_id and f"https://app.mle.pathai.com/jabba/workflows/view/{workflow_id}"
-
-
-def to_size(nbytes: int):
-    """
-    Given a byte count, render it as a string in the most appropriate units, suffixed by KB, MB, GB, etc.
-    Larger sizes will use the appropriate unit.  The result may have a maximum of one digit after the
-    decimal point.
-    """
-    if nbytes < 1024:
-        size, suffix = nbytes, "B"
-        return f"{nbytes}B"
-    elif nbytes < 1024 ** 2:
-        size, suffix = nbytes / 1024, "KB"
-    elif nbytes < 1024 ** 3:
-        size, suffix = nbytes / 1024 ** 2, "MB"
-    elif nbytes < 1024 ** 4:
-        size, suffix = nbytes / 1024 ** 3, "GB"
-    else:
-        size, suffix = nbytes / 1024 ** 4, "TB"
-    if size < 10:
-        return f"{size:.1f}{suffix}"
-    else:
-        return f"{round(size)}{suffix}"
 
 
 def to_age(x: Union[datetime,str]):
