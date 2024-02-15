@@ -13,7 +13,8 @@ def add_nodes(db, objects):
             mem_alloc INTEGER,
             cpu_cap REAL,
             gpu_cap REAL,
-            mem_cap INTEGER
+            mem_cap INTEGER,
+            ns_taints TEXT
         )
     """)
     nodes = [NodeHelper(node) for node in objects["nodes"]["items"]]
@@ -24,6 +25,8 @@ def add_nodes(db, objects):
         node.label("amp.pathai.com/node-type"),
         *Resources.extract(node["status"]["allocatable"]).as_tuple(),
         *Resources.extract(node["status"]["capacity"]).as_tuple(),
+        ",".join(taint["key"] for taint in node.obj.get("spec", {}).get("taints", [])
+                 if taint["effect"] == "NoSchedule")
     ) for node in nodes]
     if not data:
         return
