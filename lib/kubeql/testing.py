@@ -12,7 +12,7 @@ def make_pod(no_metadata: bool = False,
     responses from the K8S API.
 
     :param no_metadata: Pretend there is no metadata
-    :param name_at_root: Put the object name at top level, not the metadata
+    :param name_at_root: Put the object name at top level, not in the metadata
     :param no_name: Pretend there is no object name
     """
     obj = yaml.safe_load(BASE_POD_YAML)
