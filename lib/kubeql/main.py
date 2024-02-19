@@ -16,12 +16,12 @@ import yaml
 from .jross import SqliteDb, run
 from .utils import add_custom_functions, to_age, KubeConfig
 
+from .kubejson import RealK8S
 from .jobs import add_jobs
 from .nodes import add_nodes, add_node_taints, add_node_load
 from .pods import add_pods
 from .workflows import add_workflows
 
-ALWAYS, CHECK, NEVER = 1, 2, 3
 CACHE = Path.home() / ".kubeql"
 
 def main():
@@ -33,7 +33,7 @@ def main():
     if args.update and args.no_update:
         sys.exit("Cannot specify both --no-update and --update")
 
-    update = ALWAYS if args.update else NEVER if args.no_update else CHECK
+    update = RealK8S.ALWAYS if args.update else RealK8S.NEVER if args.no_update else RealK8S.CHECK
     context = KubeConfig().current_context()
 
     db = SqliteDb()
@@ -104,9 +104,9 @@ def _get_k8s_objects(table_name, context_name, update_cache):
     cache_dir = CACHE / context_name
     cache_dir.mkdir(exist_ok=True)
     cache_file = cache_dir / f"{table_name}.json"
-    if update_cache == NEVER:
+    if update_cache == RealK8S.NEVER:
         run_kubectl = False
-    elif update_cache == ALWAYS or not cache_file.exists():
+    elif update_cache == RealK8S.ALWAYS or not cache_file.exists():
         run_kubectl = True
     elif to_age(cache_file.stat().st_mtime) > timedelta(minutes=10):
         run_kubectl = True
