@@ -55,11 +55,12 @@ def main():
 
 class KubeData:
 
-    def __init__(self, cache_dir: Path, update_cache: bool, context_name: str):
+    def __init__(self, cache_dir: Path, update_cache: bool, context_name: str, data: dict | None = None):
         """
         :param update_cache: how to consult the cache, one of ALWAYS, CHECK, NEVER
         :param context_name: a Kubernetes context name from .kube/config
         """
+        self.data = data or {}
         self.cache_dir = cache_dir
         self.update_cache = update_cache
         self.context_name = context_name
@@ -116,10 +117,10 @@ class KubeData:
             sys.exit(f"Not available for query: {bad_names}")
 
         # Fetch required object types from K8S in parallel.
-        objects = {}
         fetch_types = fn.lflatten(table_needs[table_name].needs for table_name in table_names)
         def fetch(object_type):
-            objects[object_type] = self.get_objects(object_type)
+            if object_type not in self.data:
+                self.data[object_type] = self.get_objects(object_type)
         with ThreadPoolExecutor(max_workers=8) as pool:
             for _ in pool.map(fetch, fetch_types):
                 pass
@@ -130,7 +131,7 @@ class KubeData:
             for builder in table_needs[table_name].builders:
                 if builder not in called_builders:
                     called_builders.add(builder)
-                    builder(self.db, objects)
+                    builder(self.db, self.data)
 
         column_names = []
         rows = self.db.query(kql, names=column_names)

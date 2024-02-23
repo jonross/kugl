@@ -3,9 +3,15 @@ import yaml
 from .pods import PodHelper
 
 
-def make_pod(no_metadata: bool = False,
+def make_pod(name: str,
+             no_metadata: bool = False,
              name_at_root: bool = False,
              no_name: bool = False,
+             cpu_req: int = 1,
+             cpu_lim: int = 2,
+             mem_req: str = "1M",
+             mem_lim: str = "2M",
+             gpu: int = 0,
              ):
     """
     Construct a PodHelper from a generic chunk of pod YAML that we can alter to simulate different
@@ -17,13 +23,20 @@ def make_pod(no_metadata: bool = False,
     """
     obj = yaml.safe_load(BASE_POD_YAML)
     if name_at_root:
-        obj["name"] = obj["metadata"]["name"]
-        del obj["metadata"]["name"]
-    elif no_name:
-        del obj["metadata"]["name"]
+        obj["name"] = name
+    elif not no_name:
+        obj["metadata"]["name"] = name
     if no_metadata:
         del obj["metadata"]
-    return PodHelper(obj)
+    resources = {
+        "requests": {"cpu": f"{cpu_req}", "memory": mem_req},
+        "limits": {"cpu": f"{cpu_lim}", "memory": mem_lim},
+    }
+    if gpu:
+        resources["requests"]["nvidia.com/gpu"] = f"{gpu}"
+        resources["limits"]["nvidia.com/gpu"] = f"{gpu}"
+    obj["spec"]["containers"][0]["resources"] = resources
+    return obj
 
 
 BASE_POD_YAML = """
@@ -34,12 +47,10 @@ BASE_POD_YAML = """
         example.com/abc: an annotation
         example.com/def: another annotation
       creationTimestamp: '2024-02-04T15:15:01Z'
-      generateName: my-pod-xtsuotvlbalkdjrdjwawabvnm4zw7grhd2dy72m56u2crycyxwyq
       labels:
         example.com/uvw: a label
         example.com/xyz: another label
         job-name: my-important-job
-      name: my-pod-xtsuotvlbalkdjrdjwawabvnm4zw7grhd2dy72m56u2crycyxwyq
       namespace: research
       ownerReferences:
       - apiVersion: batch/v1
@@ -76,13 +87,6 @@ BASE_POD_YAML = """
         image: example.com/hello-world
         imagePullPolicy: Always
         name: main
-        resources:
-          limits:
-            cpu: 2
-            memory: 2M
-          requests:
-            cpu: 1
-            memory: 1M
         volumeMounts:
         - mountPath: /utils
           name: utils-volume
