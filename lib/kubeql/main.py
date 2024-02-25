@@ -13,8 +13,10 @@ from threading import Lock
 from tabulate import tabulate
 import yaml
 
+from .config import KConfig
+from .constants import CACHE
 from .jross import SqliteDb, run
-from .utils import add_custom_functions, to_age, KubeConfig
+from .utils import add_custom_functions, to_age, KubeConfig, fail
 
 from .jobs import add_jobs
 from .nodes import add_nodes, add_node_taints, add_node_load
@@ -22,27 +24,35 @@ from .pods import add_pods
 from .workflows import add_workflows
 
 ALWAYS, CHECK, NEVER = 1, 2, 3
-CACHE = Path.home() / ".kubeql"
 
 def main():
     ap = ArgumentParser()
     ap.add_argument("-n", "--no_update", default=False, action="store_true")
     ap.add_argument("-u", "--update", default=False, action="store_true")
+    ap.add_argument("-v", "--verbose", default=False, action="store_true")
     ap.add_argument("sql")
-    args = ap.parse_args()
+    args = ap.parse_args(sys.argv[1:])
+    try:
+        _main(args)
+    except Exception as e:
+        if args.verbose:
+            raise
+        print(e, file=sys.stderr)
+        sys.exit(1)
+
+
+def _main(args):
     if args.update and args.no_update:
-        sys.exit("Cannot specify both --no-update and --update")
+        fail("Cannot specify both --no-update and --update")
 
     update = ALWAYS if args.update else NEVER if args.no_update else CHECK
     context = KubeConfig().current_context()
     kd = KubeData(CACHE, update, context)
+    kc = KConfig()
 
-    # Check for a predefined query
-    config_file = CACHE / "canned.yaml"
-    if config_file.exists():
-        config = yaml.safe_load(config_file.read_text())
-        if args.sql in config:
-            args.sql = config[args.sql]
+    if " " not in args.sql:
+        # Assume canned query
+        args.sql = kc.canned(args.sql)
 
     rows, headers = kd.query(args.sql)
     # %g is susceptible to outputting scientific notation, which we don't want.

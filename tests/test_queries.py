@@ -5,7 +5,7 @@ from kubeql.testing import make_pod
 import pytest
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def kd():
     return KubeData(CACHE, False, "nocontext", data={
         "pods": {

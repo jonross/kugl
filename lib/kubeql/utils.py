@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-import re
+import sys
 from typing import Optional, Union
 
 import arrow
@@ -85,6 +85,12 @@ def to_age(x: Union[datetime,str]):
     if isinstance(x, str):
         x = dateutil.parse(x)
     return arrow.get() - arrow.get(x)
+
+
+def fail(message: str):
+    class KubeQLError(Exception):
+        pass
+    raise KubeQLError(message)
 
 
 class KubeConfig:
