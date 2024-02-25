@@ -93,6 +93,10 @@ def fail(message: str):
     raise KubeQLError(message)
 
 
+def rcfail(message: str):
+    fail(f"In .kubeqlrc: {message}")
+
+
 class KubeConfig:
     """
     A helper class for reading data from .kube/config

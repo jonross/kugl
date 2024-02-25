@@ -19,7 +19,7 @@ from .jross import SqliteDb, run
 from .utils import add_custom_functions, to_age, KubeConfig, fail
 
 from .jobs import add_jobs
-from .nodes import add_nodes, add_node_taints, add_node_load
+from .nodes import add_nodes, add_node_taints
 from .pods import add_pods
 from .workflows import add_workflows
 
@@ -51,10 +51,9 @@ def _main(args):
     kc = KConfig()
 
     if " " not in args.sql:
-        # Assume canned query
-        args.sql = kc.canned(args.sql)
+        args.sql = kc.canned_query(args.sql)
 
-    rows, headers = kd.query(args.sql)
+    rows, headers = kd.query(kc, args.sql)
     # %g is susceptible to outputting scientific notation, which we don't want.
     # but %f always outputs trailing zeros, which we also don't want.
     # So turn every value x in each row into an int if x == float(int(x))
@@ -104,7 +103,7 @@ class KubeData:
             sys.exit(f"No cache file exists for {table_name} table")
         return json.loads(cache_file.read_text())
 
-    def query(self, kql):
+    def query(self, config, kql):
 
         # Correlate queryable tables with object types needed from K8S.
         Table = co.namedtuple("Table", ["name", "needs", "builders"])
@@ -114,7 +113,6 @@ class KubeData:
             Table("nodes", ["nodes"], [add_nodes]),
             Table("workflows", ["workflows"], [add_workflows]),
             Table("node_taints", ["nodes"], [add_node_taints]),
-            Table("node_load", ["pods"], [add_pods, add_node_load]),
         ]}
 
         # Determine which tables are needed for the query
@@ -141,7 +139,7 @@ class KubeData:
             for builder in table_needs[table_name].builders:
                 if builder not in called_builders:
                     called_builders.add(builder)
-                    builder(self.db, self.data)
+                    builder(self.db, config, self.data)
 
         column_names = []
         rows = self.db.query(kql, names=column_names)

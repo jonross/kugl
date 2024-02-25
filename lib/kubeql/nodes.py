@@ -1,7 +1,9 @@
+
+from .config import KConfig
 from .utils import K8SObjectHelper, Resources
 
 
-def add_nodes(db, objects):
+def add_nodes(db, config: KConfig, objects):
     db.execute("""
         CREATE TABLE nodes (
             name TEXT,
@@ -52,23 +54,6 @@ def add_node_taints(db, objects):
         return
     placeholders = ", ".join("?" * len(data[0]))
     db.execute(f"INSERT INTO node_taints VALUES({placeholders})", data)
-
-
-def add_node_load(db, objects):
-    db.execute("""
-        CREATE VIEW node_load (
-            node_name,
-            cpu_req,
-            gpu_req,
-            mem_req
-        )
-        AS SELECT node_name, sum(cpu_req), sum(gpu_req), sum(mem_req)
-        FROM pods
-        WHERE 
-          node_name IS NOT NULL
-          AND status = 'Running'
-        GROUP BY node_name
-    """)
 
 
 class NodeHelper(K8SObjectHelper):

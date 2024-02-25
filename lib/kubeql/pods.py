@@ -1,10 +1,13 @@
 import funcy as fn
 
+from .config import KConfig
 from .utils import K8SObjectHelper, Resources
 
 
-def add_pods(db, objects):
-    db.execute("""
+def add_pods(db, config: KConfig, objects):
+    extra_columns = config.extra_columns("pods")
+    extra_ddl = ", " + ", ".join(f"{c.name} {c.type.sql_type}" for c in extra_columns) if extra_columns else ""
+    db.execute(f"""
         CREATE TABLE pods (
             name TEXT,
             namespace TEXT,
@@ -16,11 +19,8 @@ def add_pods(db, objects):
             mem_req INTEGER,
             cpu_lim REAL,
             gpu_lim REAL,
-            mem_lim INTEGER,
-            workflow_id TEXT,
-            step_type TEXT,
-            env_name TEXT,
-            partition TEXT
+            mem_lim INTEGER
+            {extra_ddl}
         )
     """)
     pods = map(PodHelper, objects["pods"]["items"])
@@ -31,10 +31,7 @@ def add_pods(db, objects):
              pod.status,
              *pod.resources("requests").as_tuple(),
              *pod.resources("limits").as_tuple(),
-             pod.label("jabba.pathai.com/workflow-id"),
-             pod.label("jabba.pathai.com/runtime-type") or pod.label("jabba.pathai.com/step-type"),
-             pod.label("mle.pathai.com/mle-env-name"),
-             pod.label("jabba.pathai.com/partition-name"),
+             *[c.extract(pod.obj) for c in extra_columns]
              ) for pod in pods]
     if not data:
         return
