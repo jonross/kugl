@@ -13,17 +13,15 @@ from threading import Lock
 from tabulate import tabulate
 import yaml
 
+from .cluster import Cluster
 from .config import KConfig
-from .constants import CACHE
+from .constants import ALWAYS, CHECK, NEVER
 from .jross import SqliteDb, run
-from .utils import add_custom_functions, to_age, KubeConfig, fail
-
 from .jobs import add_jobs
 from .nodes import add_nodes, add_node_taints
 from .pods import add_pods
+from .utils import add_custom_functions, to_age, KubeConfig, fail
 from .workflows import add_workflows
-
-ALWAYS, CHECK, NEVER = 1, 2, 3
 
 def main():
     ap = ArgumentParser()
@@ -45,9 +43,9 @@ def _main(args):
     if args.update and args.no_update:
         fail("Cannot specify both --no-update and --update")
 
-    update = ALWAYS if args.update else NEVER if args.no_update else CHECK
-    context = KubeConfig().current_context()
-    kd = KubeData(CACHE, update, context)
+    cluster = Cluster(KubeConfig().current_context(),
+                      ALWAYS if args.update else NEVER if args.no_update else CHECK)
+    kd = KubeData(cluster)
     kc = KConfig()
 
     if " " not in args.sql:
@@ -64,44 +62,16 @@ def _main(args):
 
 class KubeData:
 
-    def __init__(self, cache_dir: Path, update_cache: bool, context_name: str, data: dict | None = None):
+    def __init__(self, cluster: Cluster, data: dict | None = None):
         """
         :param update_cache: how to consult the cache, one of ALWAYS, CHECK, NEVER
         :param context_name: a Kubernetes context name from .kube/config
         """
         self.data = data or {}
-        self.cache_dir = cache_dir
-        self.update_cache = update_cache
-        self.context_name = context_name
+        self.cluster = cluster
         self.db = SqliteDb()
         self.db_lock = Lock()
         add_custom_functions(self.db.conn)
-
-    def get_objects(self, table_name):
-        """
-        Fetch Kubernetes objects either via the API or from our cache
-        :param table_name: e.g. "pods", "nodes", "jobs" etc..
-        :return: raw JSON objects as output by "kubectl get {table_name}"
-        """
-        cache_dir = self.cache_dir / self.context_name
-        cache_dir.mkdir(exist_ok=True)
-        cache_file = cache_dir / f"{table_name}.json"
-        if self.update_cache == NEVER:
-            run_kubectl = False
-        elif self.update_cache == ALWAYS or not cache_file.exists():
-            run_kubectl = True
-        elif to_age(cache_file.stat().st_mtime) > timedelta(minutes=10):
-            run_kubectl = True
-        else:
-            run_kubectl = False
-        if run_kubectl:
-            all_ns = [] if table_name == "nodes" else ["--all-namespaces"]
-            _, output, _= run(["kubectl", "get", table_name, *all_ns, "-o", "json"])
-            cache_file.write_text(output)
-        if not cache_file.exists():
-            # TODO: throw exception instead, use backstop in main()
-            sys.exit(f"No cache file exists for {table_name} table")
-        return json.loads(cache_file.read_text())
 
     def query(self, config, kql):
 
@@ -128,7 +98,7 @@ class KubeData:
         fetch_types = fn.lflatten(table_needs[table_name].needs for table_name in table_names)
         def fetch(object_type):
             if object_type not in self.data:
-                self.data[object_type] = self.get_objects(object_type)
+                self.data[object_type] = self.cluster.get_objects(object_type)
         with ThreadPoolExecutor(max_workers=8) as pool:
             for _ in pool.map(fetch, fetch_types):
                 pass
