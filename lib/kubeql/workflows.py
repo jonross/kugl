@@ -1,7 +1,7 @@
 
-from .config import KConfig
+from .utils import MyConfig
 
-def add_workflows(db, config: KConfig, objects):
+def add_workflows(db, config: MyConfig, objects):
     db.execute("""
         CREATE TABLE workflows (
             name TEXT,

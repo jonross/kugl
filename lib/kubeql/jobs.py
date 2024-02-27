@@ -1,8 +1,7 @@
 
-from .config import KConfig
-from .utils import K8SObjectHelper
+from .utils import K8SObjectHelper, MyConfig
 
-def add_jobs(db, config: KConfig, objects):
+def add_jobs(db, config: MyConfig, objects):
     db.execute("""
         CREATE TABLE jobs (
             name TEXT,

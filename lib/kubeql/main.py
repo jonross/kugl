@@ -2,10 +2,7 @@
 from argparse import ArgumentParser
 import collections as co
 from concurrent.futures import ThreadPoolExecutor
-from datetime import timedelta
 import funcy as fn
-import json
-from pathlib import Path
 import re
 import sys
 from threading import Lock
@@ -14,13 +11,12 @@ from tabulate import tabulate
 import yaml
 
 from .cluster import Cluster
-from .config import KConfig
 from .constants import ALWAYS, CHECK, NEVER
 from .jross import SqliteDb, run
 from .jobs import add_jobs
 from .nodes import add_nodes, add_node_taints
 from .pods import add_pods
-from .utils import add_custom_functions, to_age, KubeConfig, fail
+from .utils import add_custom_functions, to_age, KubeConfig, fail, MyConfig
 from .workflows import add_workflows
 
 def main():
@@ -46,7 +42,7 @@ def _main(args):
     cluster = Cluster(KubeConfig().current_context(),
                       ALWAYS if args.update else NEVER if args.no_update else CHECK)
     kd = KubeData(cluster)
-    kc = KConfig()
+    kc = MyConfig()
 
     if " " not in args.sql:
         args.sql = kc.canned_query(args.sql)

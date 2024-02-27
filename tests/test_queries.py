@@ -1,8 +1,8 @@
 
-from kubeql.config import KConfig
 from kubeql.constants import CACHE
 from kubeql.main import KubeData
 from kubeql.testing import make_pod
+from kubeql.utils import MyConfig
 
 import pytest
 
@@ -30,5 +30,5 @@ def test_by_cpu(kd):
 
 
 def verify(kd, kql, expected):
-    actual, _ = kd.query(KConfig(), kql)
+    actual, _ = kd.query(MyConfig(), kql)
     assert actual == expected

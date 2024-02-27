@@ -1,12 +1,13 @@
 import funcy as fn
 
-from .config import KConfig
+from .column import KColumn
 from .constants import MAIN_CONTAINERS
-from .utils import K8SObjectHelper, Resources
+from .utils import K8SObjectHelper, Resources, MyConfig
 
 
-def add_pods(db, config: KConfig, objects):
-    extra_columns = config.extra_columns("pods")
+def add_pods(db, config: MyConfig, objects):
+    extra_info = config.extra_columns("pods")
+    extra_columns = [KColumn.from_config(k, "pods", v) for k, v in extra_info.items()]
     extra_ddl = ", " + ", ".join(f"{c.name} {c.type.sql_type}" for c in extra_columns) if extra_columns else ""
     db.execute(f"""
         CREATE TABLE pods (

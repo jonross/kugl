@@ -1,9 +1,8 @@
 
-from .config import KConfig
-from .utils import K8SObjectHelper, Resources
+from .utils import K8SObjectHelper, Resources, MyConfig
 
 
-def add_nodes(db, config: KConfig, objects):
+def add_nodes(db, config: MyConfig, objects):
     db.execute("""
         CREATE TABLE nodes (
             name TEXT,
