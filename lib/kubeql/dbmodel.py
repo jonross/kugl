@@ -6,22 +6,22 @@ from .utils import rcfail
 
 
 @dataclass
-class KColumnType:
+class ColumnType:
     sql_type: str
     converter: callable
 
 
 COLUMN_TYPES = {
-    "str": KColumnType("TEXT", str),
-    "int": KColumnType("INTEGER", int),
-    "float": KColumnType("REAL", float),
+    "str": ColumnType("TEXT", str),
+    "int": ColumnType("INTEGER", int),
+    "float": ColumnType("REAL", float),
 }
 
 
 @dataclass
-class KColumn:
+class Column:
     # e.g. int
-    type: KColumnType
+    type: ColumnType
     # e.g. "name"
     name: str
     # e.g. "pods"
@@ -49,7 +49,7 @@ class KColumn:
                 finder = lambda obj: jmesexpr.search(obj)
             except jmespath.exceptions.ParseError as e:
                 rcfail(f"invalid JMESPath expression for {what}: {e}")
-        return KColumn(type, name, table_name, finder)
+        return Column(type, name, table_name, finder)
 
     def extract(self, obj):
         value = self.finder(obj)
