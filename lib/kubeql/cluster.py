@@ -9,7 +9,7 @@ from typing import Literal
 import sys
 
 from .constants import ALWAYS, CHECK, NEVER
-from .constants import CACHE, RESOURCE_KINDS
+from .constants import CACHE, CACHE_EXPIRATION, RESOURCE_KINDS
 from .jross import run
 from .utils import fail, to_age
 
@@ -35,7 +35,7 @@ class Cluster:
             run_kubectl = False
         elif self.update_cache == ALWAYS or not cache_file.exists():
             run_kubectl = True
-        elif to_age(cache_file.stat().st_mtime) > timedelta(minutes=10):
+        elif to_age(cache_file.stat().st_mtime) > CACHE_EXPIRATION:
             run_kubectl = True
         else:
             run_kubectl = False

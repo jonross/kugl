@@ -1,6 +1,7 @@
 import funcy as fn
 
 from .config import KConfig
+from .constants import MAIN_CONTAINERS
 from .utils import K8SObjectHelper, Resources
 
 
@@ -72,7 +73,7 @@ class PodHelper(K8SObjectHelper):
         Return the main container in the pod, if any, defined as the first container with a name
         of "main" or "notebook".
         """
-        return fn.first(fn.filter(lambda c: c["name"] in ("main", "notebook"), self.containers))
+        return fn.first(fn.filter(lambda c: c["name"] in MAIN_CONTAINERS, self.containers))
 
     def resources(self, tag):
         return sum(Resources.extract(c["resources"].get(tag)) for c in self.containers)
