@@ -1,6 +1,6 @@
 import funcy as fn
 
-from .column import KColumn
+from .dbmodel import KColumn
 from .constants import MAIN_CONTAINERS
 from .utils import K8SObjectHelper, Resources, MyConfig
 
