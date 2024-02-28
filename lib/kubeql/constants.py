@@ -12,8 +12,5 @@ ALWAYS, CHECK, NEVER = 1, 2, 3
 # Cache expiration time
 CACHE_EXPIRATION = timedelta(minutes=10)
 
-# What kinds of Kubernetes resources we know about
-RESOURCE_KINDS = ["pods", "nodes", "jobs", "workflows"]
-
 # What container name is considered the "main" container, if present
 MAIN_CONTAINERS = ["main", "notebook", "app"]

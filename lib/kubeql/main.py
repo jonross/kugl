@@ -1,18 +1,16 @@
 
 from argparse import ArgumentParser
-import collections as co
 from concurrent.futures import ThreadPoolExecutor
-import funcy as fn
 import re
 import sys
 from threading import Lock
 
 from tabulate import tabulate
-import yaml
 
 from .cluster import Cluster
 from .constants import ALWAYS, CHECK, NEVER
 from .jross import SqliteDb, run
+from .tables import *
 from .utils import add_custom_functions, to_age, KubeConfig, fail, MyConfig
 
 def main():
@@ -67,10 +65,6 @@ class KubeData:
 
     def query(self, config, kql):
 
-        from .pods import PodsTable
-        from .jobs import JobsTable
-        from .nodes import NodesTable, NodeTaintsTable
-        from .workflows import WorkflowsTable
         all_tables = [PodsTable, JobsTable, NodesTable, NodeTaintsTable, WorkflowsTable]
 
         # Determine which tables are needed for the query

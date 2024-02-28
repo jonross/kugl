@@ -9,7 +9,7 @@ from typing import Literal
 import sys
 
 from .constants import ALWAYS, CHECK, NEVER
-from .constants import CACHE, CACHE_EXPIRATION, RESOURCE_KINDS
+from .constants import CACHE, CACHE_EXPIRATION
 from .jross import run
 from .utils import fail, to_age
 
@@ -22,7 +22,7 @@ class Cluster:
         self.update_cache = update_cache
         self.cache_dir = cache_dir
 
-    def get_objects(self, kind: RESOURCE_KINDS)-> dict:
+    def get_objects(self, kind: str)-> dict:
         """
         Fetch Kubernetes objects either via the API or from our cache
         :param kind: known K8S resource kind e.g. "pods", "nodes", "jobs" etc..
