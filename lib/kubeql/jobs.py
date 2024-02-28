@@ -1,28 +1,28 @@
 
+from .dbmodel import Table
 from .utils import K8SObjectHelper, MyConfig
 
-def add_jobs(db, config: MyConfig, objects):
-    db.execute("""
-        CREATE TABLE jobs (
-            name TEXT,
-            namespace TEXT,
-            status TEXT,
-            partition TEXT,
-            workflow_id TEXT
-        )
-    """)
-    jobs = map(JobHelper, objects["jobs"]["items"])
-    data = [(
-        job.name,
-        job.namespace,
-        job.status,
-        job.label("jabba.pathai.com/partition-name"),
-        job.label("jabba.pathai.com/workflow-id"),
-        ) for job in jobs]
-    if not data:
-        return
-    placeholders = ", ".join("?" * len(data[0]))
-    db.execute(f"INSERT INTO jobs VALUES({placeholders})", data)
+
+class JobsTable(Table):
+
+    NAME = "jobs"
+    RESOURCE_KIND = "jobs"
+    SCHEMA = """
+        name TEXT,
+        namespace TEXT,
+        status TEXT,
+        partition TEXT,
+        workflow_id TEXT
+    """
+
+    def make_rows(self, kube_data: list[dict]) -> list[tuple]:
+        return [(
+            job.name,
+            job.namespace,
+            job.status,
+            job.label("jabba.pathai.com/partition-name"),
+            job.label("jabba.pathai.com/workflow-id"),
+        ) for job in map(JobHelper, kube_data)]
 
 
 class JobHelper(K8SObjectHelper):

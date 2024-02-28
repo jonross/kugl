@@ -13,11 +13,7 @@ import yaml
 from .cluster import Cluster
 from .constants import ALWAYS, CHECK, NEVER
 from .jross import SqliteDb, run
-from .jobs import add_jobs
-from .nodes import add_nodes, add_node_taints
-from .pods import add_pods
 from .utils import add_custom_functions, to_age, KubeConfig, fail, MyConfig
-from .workflows import add_workflows
 
 def main():
     ap = ArgumentParser()
@@ -71,41 +67,33 @@ class KubeData:
 
     def query(self, config, kql):
 
-        # Correlate queryable tables with object types needed from K8S.
-        Table = co.namedtuple("Table", ["name", "needs", "builders"])
-        table_needs = {t.name: t for t in [
-            Table("pods", ["pods"], [add_pods]),
-            Table("jobs", ["jobs"], [add_jobs]),
-            Table("nodes", ["nodes"], [add_nodes]),
-            Table("workflows", ["workflows"], [add_workflows]),
-            Table("node_taints", ["nodes"], [add_node_taints]),
-        ]}
+        from .pods import PodsTable
+        from .jobs import JobsTable
+        from .nodes import NodesTable, NodeTaintsTable
+        from .workflows import WorkflowsTable
+        all_tables = [PodsTable, JobsTable, NodesTable, NodeTaintsTable, WorkflowsTable]
 
         # Determine which tables are needed for the query
         kql = kql.replace("\n", " ")
-        table_names = set(re.findall(r"(?<=from|join)\s+(\w+)", kql, re.IGNORECASE))
-        cte_names = set(re.findall(r"(?<=with)\s+(\w+)\s+(?=as)", kql, re.IGNORECASE))
-        table_names = table_names.difference(cte_names)
-        bad_names = table_names.difference(table_needs.keys())
+        table_names = (set(re.findall(r"(?<=from|join)\s+(\w+)", kql, re.IGNORECASE)) -
+                       set(re.findall(r"(?<=with)\s+(\w+)\s+(?=as)", kql, re.IGNORECASE)))
+        bad_names = table_names - {t.NAME for t in all_tables}
         if bad_names:
-            sys.exit(f"Not available for query: {bad_names}")
+            sys.exit(f"Not available for query: {', '.join(bad_names)}")
 
         # Fetch required object types from K8S in parallel.
-        fetch_types = fn.lflatten(table_needs[table_name].needs for table_name in table_names)
-        def fetch(object_type):
-            if object_type not in self.data:
-                self.data[object_type] = self.cluster.get_objects(object_type)
+        tables_used = [t() for t in all_tables if t.NAME in table_names]
+        resources_used = {t.RESOURCE_KIND for t in tables_used}
+        def fetch(kind):
+            if kind not in self.data:
+                self.data[kind] = self.cluster.get_objects(kind)
         with ThreadPoolExecutor(max_workers=8) as pool:
-            for _ in pool.map(fetch, fetch_types):
+            for _ in pool.map(fetch, resources_used):
                 pass
 
         # Create tables in SQLite
-        called_builders = set()
-        for table_name in table_names:
-            for builder in table_needs[table_name].builders:
-                if builder not in called_builders:
-                    called_builders.add(builder)
-                    builder(self.db, config, self.data)
+        for t in tables_used:
+            t.create(self.db, config, self.data[t.NAME])
 
         column_names = []
         rows = self.db.query(kql, names=column_names)
