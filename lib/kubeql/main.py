@@ -1,14 +1,17 @@
 
 from argparse import ArgumentParser
 from concurrent.futures import ThreadPoolExecutor
+import json
+from pathlib import Path
 import re
 import sys
 from threading import Lock
+from typing import Literal
 
 from tabulate import tabulate
 
-from .cluster import Cluster
 from .constants import ALWAYS, CHECK, NEVER
+from .constants import CACHE, CACHE_EXPIRATION
 from .jross import SqliteDb, run
 from .tables import *
 from .utils import add_custom_functions, to_age, KubeConfig, fail, MyConfig
@@ -48,6 +51,40 @@ def _main(args):
     truncate = lambda x: int(x) if isinstance(x, float) and x == float(int(x)) else x
     rows = [[truncate(x) for x in row] for row in rows]
     print(tabulate(rows, tablefmt="plain", floatfmt=".1f", headers=headers))
+
+
+class Cluster:
+
+    def __init__(self, context_name: str, update_cache: Literal[ALWAYS, CHECK, NEVER],
+                 cache_dir: Path = CACHE):
+        self.context_name = context_name
+        self.update_cache = update_cache
+        self.cache_dir = cache_dir
+
+    def get_objects(self, kind: str)-> dict:
+        """
+        Fetch Kubernetes objects either via the API or from our cache
+        :param kind: known K8S resource kind e.g. "pods", "nodes", "jobs" etc..
+        :return: raw JSON objects as output by "kubectl get {kind}"
+        """
+        cache_dir = self.cache_dir / self.context_name
+        cache_dir.mkdir(exist_ok=True)
+        cache_file = cache_dir / f"{kind}.json"
+        if self.update_cache == NEVER:
+            run_kubectl = False
+        elif self.update_cache == ALWAYS or not cache_file.exists():
+            run_kubectl = True
+        elif to_age(cache_file.stat().st_mtime) > CACHE_EXPIRATION:
+            run_kubectl = True
+        else:
+            run_kubectl = False
+        if run_kubectl:
+            all_ns = [] if kind == "nodes" else ["--all-namespaces"]
+            _, output, _= run(["kubectl", "get", kind, *all_ns, "-o", "json"])
+            cache_file.write_text(output)
+        if not cache_file.exists():
+            fail(f"Internal error: no cache file exists for {kind} table")
+        return json.loads(cache_file.read_text())
 
 
 class KubeData:
@@ -92,3 +129,4 @@ class KubeData:
         column_names = []
         rows = self.db.query(kql, names=column_names)
         return rows, column_names
+
