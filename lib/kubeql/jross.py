@@ -108,14 +108,14 @@ def from_footprint(x: str):
     return int(amount * multiplier)
 
 
-def to_footprint(nbytes: int, ibi=False):
+def to_footprint(nbytes: int, iec=False):
     """
     Given a byte count, render it as a string in the most appropriate units, suffixed by KB, MB, GB, etc.
     Larger sizes will use the appropriate unit.  The result may have a maximum of one digit after the
-    decimal point.  If ibi is True, use IEC binary units (KiB, MiB, etc).
+    decimal point.  If iec is True, use IEC binary units (KiB, MiB, etc).
     """
-    factor = 1024 if ibi else 1000
-    bytes = "iB" if ibi else "B"
+    factor = 1024 if iec else 1000
+    bytes = "iB" if iec else "B"
     if nbytes < factor:
         size, suffix = nbytes, bytes
         return f"{nbytes}B"
