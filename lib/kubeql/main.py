@@ -83,7 +83,7 @@ class Cluster:
             _, output, _= run(["kubectl", "get", kind, *all_ns, "-o", "json"])
             cache_file.write_text(output)
         if not cache_file.exists():
-            fail(f"Internal error: no cache file exists for {kind} table")
+            fail(f"Internal error: no cache file exists for {kind} table in {self.context_name}.")
         return json.loads(cache_file.read_text())
 
 

@@ -85,8 +85,8 @@ class SqliteDb:
 
 
 SIZE_RE = re.compile(r"([0-9.]+)(([A-Za-z]+)?)")
-SIZE_MULTIPLIERS = dict(K=10**3, M=10**6, G=10**9,
-                        Ki=2**10, Mi=2**20, Gi=2**30)
+SIZE_MULTIPLIERS = dict(K=10**3, M=10**6, G=10**9, T=10**12,
+                        Ki=2**10, Mi=2**20, Gi=2**30, Ti=2**40)
 
 def from_footprint(x: str):
     """

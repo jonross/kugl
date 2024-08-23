@@ -59,6 +59,7 @@ class PodsTable(Table):
     RESOURCE_KIND = "pods"
     SCHEMA = """
         name TEXT,
+        is_daemon INTEGER,
         namespace TEXT,
         node_name TEXT,
         command TEXT,
@@ -74,6 +75,7 @@ class PodsTable(Table):
     def make_rows(self, kube_data: list[dict]) -> list[tuple]:
         return [(
             pod.name,
+            1 if pod.is_daemon else 0,
             pod.namespace,
             pod.node_name,
             pod.command,
@@ -90,9 +92,7 @@ class JobsTable(Table):
     SCHEMA = """
         name TEXT,
         namespace TEXT,
-        status TEXT,
-        partition TEXT,
-        workflow_id TEXT
+        status TEXT
     """
 
     def make_rows(self, kube_data: list[dict]) -> list[tuple]:
@@ -100,8 +100,6 @@ class JobsTable(Table):
             job.name,
             job.namespace,
             job.status,
-            job.label("jabba.pathai.com/partition-name"),
-            job.label("jabba.pathai.com/workflow-id"),
         ) for job in map(JobHelper, kube_data)]
 
 
@@ -112,20 +110,14 @@ class WorkflowsTable(Table):
     SCHEMA = """
         name TEXT,
         namespace TEXT,
-        partition TEXT,
-        id TEXT,
         url TEXT,
-        phase TEXT,
-        env_name TEXT
+        phase TEXT
     """
 
     def make_rows(self, kube_data: list[dict]) -> list[tuple]:
         return [(
             w.name,
             w.namespace,
-            w.label("jabba.pathai.com/partition-name"),
-            w.label("jabba.pathai.com/workflow-id"),
             f'http://app.mle.pathai.com/jabba/workflows/view/{w.label("jabba.pathai.com/workflow-id")}',
             w.label("workflows.argoproj.io/phase"),
-            w.obj["spec"]["templates"][0]["metadata"]["labels"].get("mle.pathai.com/mle-env-name"),
         ) for w in map(ItemHelper, kube_data)]

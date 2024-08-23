@@ -78,6 +78,10 @@ class PodHelper(ItemHelper):
         return " ".join((self.main or {}).get("command", []))
 
     @property
+    def is_daemon(self):
+        return any(ref.get("kind") == "DaemonSet" for ref in self.metadata.get("ownerReferences", []))
+
+    @property
     def status(self):
         # FIXME: use actual logic from kubectl
         if "deletionTimestamp" in self["metadata"]:
