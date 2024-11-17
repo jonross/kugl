@@ -1,8 +1,5 @@
 import yaml
 
-from .pods import PodHelper
-
-
 def make_pod(name: str,
              no_metadata: bool = False,
              name_at_root: bool = False,

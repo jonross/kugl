@@ -114,19 +114,18 @@ def to_footprint(nbytes: int, iec=False):
     Larger sizes will use the appropriate unit.  The result may have a maximum of one digit after the
     decimal point.  If iec is True, use IEC binary units (KiB, MiB, etc).
     """
-    factor = 1024 if iec else 1000
+    one_k = 1024 if iec else 1000
     bytes = "iB" if iec else "B"
-    if nbytes < factor:
-        size, suffix = nbytes, bytes
+    if nbytes < one_k:
         return f"{nbytes}B"
-    elif nbytes < factor ** 2:
-        size, suffix = nbytes / factor, "K" + bytes
-    elif nbytes < factor ** 3:
-        size, suffix = nbytes / factor ** 2, "M" + bytes
-    elif nbytes < factor ** 4:
-        size, suffix = nbytes / factor ** 3, "G" + bytes
+    elif nbytes < one_k ** 2:
+        size, suffix = nbytes / one_k, "K" + bytes
+    elif nbytes < one_k ** 3:
+        size, suffix = nbytes / one_k ** 2, "M" + bytes
+    elif nbytes < one_k ** 4:
+        size, suffix = nbytes / one_k ** 3, "G" + bytes
     else:
-        size, suffix = nbytes / factor ** 4, "T" + bytes
+        size, suffix = nbytes / one_k ** 4, "T" + bytes
     if size < 10:
         return f"{size:.1f}{suffix}"
     else:

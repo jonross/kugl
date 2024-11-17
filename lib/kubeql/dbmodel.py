@@ -20,13 +20,14 @@ COLUMN_TYPES = {
 
 @dataclass
 class Column:
-    # e.g. int
+    # The SQLite type for this column, represented by a member of COLUMN_TYPES, above.
     type: ColumnType
-    # e.g. "name"
+    # The column name
     name: str
-    # e.g. "pods"
+    # The table name
     table_name: str
-    # e.g. jmespath.compile("metadata.name")
+    # How to extract the column value from an item in a Kubernetes API response list.
+    # Example finder: jmespath.compile("metadata.name")
     finder: jmespath.parser.ParsedResult
 
     def __call__(self, obj):
