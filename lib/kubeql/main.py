@@ -155,7 +155,7 @@ class KubeData:
                     pod["kubectl_status"] = status
                     return pod
                 return None
-            self.data["pods"] = list(filter(None, map(pod_with_updated_status, self.data["pods"]["items"])))
+            self.data["pods"]["items"] = list(filter(None, map(pod_with_updated_status, self.data["pods"]["items"])))
             del self.data["pod_statuses"]
 
         # Create tables in SQLite
