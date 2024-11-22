@@ -16,6 +16,9 @@ from .jross import SqliteDb, run
 from .tables import *
 from .utils import add_custom_functions, to_age, KubeConfig, fail, MyConfig
 
+WHITESPACE = re.compile(r"\s+")
+
+
 def main():
     ap = ArgumentParser()
     ap.add_argument("-n", "--no_update", default=False, action="store_true")
@@ -87,7 +90,7 @@ class Cluster:
                 _, output, _ = run(["kubectl", "get", kind, "-o", "json"])
             elif kind == "pod_statuses":
                 _, output, _= run(["kubectl", "get", "pods", "--all-namespaces"])
-                output = self._pod_status_from_pod_list(output)
+                output = json.dumps(self._pod_status_from_pod_list(output))
             else:
                 _, output, _= run(["kubectl", "get", kind, "--all-namespaces", "-o", "json"])
             cache_file.write_text(output)
@@ -96,7 +99,7 @@ class Cluster:
         return json.loads(cache_file.read_text())
 
     def _pod_status_from_pod_list(self, output):
-        rows = [line.split(" ") for line in output.strip().split("\n")]
+        rows = [WHITESPACE.split(line) for line in output.strip().split("\n")]
         header, rows = rows[0], rows[1:]
         name_index = header.index("NAME")
         status_index = header.index("STATUS")
@@ -141,7 +144,10 @@ class KubeData:
         # already supplied.
         def fetch(kind):
             if kind not in self.data:
-                self.data[kind] = self.cluster.get_objects(kind)
+                try:
+                    self.data[kind] = self.cluster.get_objects(kind)
+                except Exception as e:
+                    fail(f"Failed to get {kind} objects: {e}")
         with ThreadPoolExecutor(max_workers=8) as pool:
             for _ in pool.map(fetch, resources_used):
                 pass
