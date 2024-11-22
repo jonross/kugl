@@ -9,7 +9,7 @@ import pytest
 
 @pytest.fixture(scope="session")
 def kd():
-    return KubeData(CACHE, False, "nocontext", data={
+    return KubeData(None, data={
         "pods": {
             "items": [
                 make_pod("pod-1"),
@@ -17,15 +17,16 @@ def kd():
                 make_pod("pod-3", cpu_req=2),
                 make_pod("pod-4", cpu_req=2),
             ]
-        }
+        },
+        "pod_statuses": {f"pod-{i}": f"Init:{i}" for i in range(1, 5)}
     })
 
 
 def test_by_cpu(kd):
-    verify(kd, "SELECT name FROM pods WHERE cpu_req > 1 ORDER BY name",
+    verify(kd, "SELECT name, status FROM pods WHERE cpu_req > 1 ORDER BY name",
            [
-               ("pod-3",),
-               ("pod-4",),
+               ("pod-3", "Init:3"),
+               ("pod-4", "Init:4"),
            ])
 
 

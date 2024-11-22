@@ -77,9 +77,9 @@ class PodsTable(Table):
             pod.name,
             1 if pod.is_daemon else 0,
             pod.namespace,
-            pod.node_name,
+            pod["spec"].get("nodeName"),
             pod.command,
-            pod.status,
+            pod["kubectl_status"],
             *pod.resources("requests").as_tuple(),
             *pod.resources("limits").as_tuple(),
         ) for pod in map(PodHelper, kube_data)]

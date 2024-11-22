@@ -70,28 +70,12 @@ class ItemHelper:
 class PodHelper(ItemHelper):
 
     @property
-    def node_name(self):
-        return self["spec"].get("nodeName")
-
-    @property
     def command(self):
         return " ".join((self.main or {}).get("command", []))
 
     @property
     def is_daemon(self):
         return any(ref.get("kind") == "DaemonSet" for ref in self.metadata.get("ownerReferences", []))
-
-    @property
-    def status(self):
-        # FIXME: use actual logic from kubectl
-        if "deletionTimestamp" in self["metadata"]:
-            return "Terminating"
-        for status in self["status"].get("containerStatuses", []):
-            for condition in "waiting", "terminated":
-                reason = status["state"].get(condition, {}).get("reason")
-                if reason is not None:
-                    return reason
-        return self["status"].get("reason") or self["status"]["phase"]
 
     @property
     def containers(self):

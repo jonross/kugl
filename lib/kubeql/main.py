@@ -63,7 +63,11 @@ class Cluster:
 
     def get_objects(self, kind: str)-> dict:
         """
-        Fetch Kubernetes objects either via the API or from our cache
+        Fetch Kubernetes objects either via the API or from our cache.
+        TODO: make the cache a persistent SQLite DB; don't parse JSON each time.
+        Special handling if kind is "pod_statuses" -- return a dict mapping pod name to
+        status as shown by "kubectl get pods".
+
         :param kind: known K8S resource kind e.g. "pods", "nodes", "jobs" etc..
         :return: raw JSON objects as output by "kubectl get {kind}"
         """
@@ -79,12 +83,26 @@ class Cluster:
         else:
             run_kubectl = False
         if run_kubectl:
-            all_ns = [] if kind == "nodes" else ["--all-namespaces"]
-            _, output, _= run(["kubectl", "get", kind, *all_ns, "-o", "json"])
+            if kind == "nodes":
+                _, output, _ = run(["kubectl", "get", kind, "-o", "json"])
+            elif kind == "pod_statuses":
+                _, output, _= run(["kubectl", "get", "pods", "--all-namespaces"])
+                output = self._pod_status_from_pod_list(output)
+            else:
+                _, output, _= run(["kubectl", "get", kind, "--all-namespaces", "-o", "json"])
             cache_file.write_text(output)
         if not cache_file.exists():
             fail(f"Internal error: no cache file exists for {kind} table in {self.context_name}.")
         return json.loads(cache_file.read_text())
+
+    def _pod_status_from_pod_list(self, output):
+        rows = [line.split(" ") for line in output.strip().split("\n")]
+        header, rows = rows[0], rows[1:]
+        name_index = header.index("NAME")
+        status_index = header.index("STATUS")
+        if name_index is None or status_index is None:
+            raise ValueError("Can't find NAME and STATUS columns in 'kubectl get pods' output")
+        return {row[name_index]: row[status_index] for row in rows}
 
 
 class KubeData:
@@ -102,25 +120,43 @@ class KubeData:
 
     def query(self, config, kql):
 
-        all_tables = [PodsTable, JobsTable, NodesTable, NodeTaintsTable, WorkflowsTable]
+        table_classes = [PodsTable, JobsTable, NodesTable, NodeTaintsTable, WorkflowsTable]
 
         # Determine which tables are needed for the query
         kql = kql.replace("\n", " ")
         table_names = (set(re.findall(r"(?<=from|join)\s+(\w+)", kql, re.IGNORECASE)) -
                        set(re.findall(r"(?<=with)\s+(\w+)\s+(?=as)", kql, re.IGNORECASE)))
-        bad_names = table_names - {t.NAME for t in all_tables}
+        bad_names = table_names - {c.NAME for c in table_classes}
         if bad_names:
             sys.exit(f"Not available for query: {', '.join(bad_names)}")
 
-        # Fetch required object types from K8S in parallel.
-        tables_used = [t() for t in all_tables if t.NAME in table_names]
+        # What do we need from kubectl
+        tables_used = [c() for c in table_classes if c.NAME in table_names]
         resources_used = {t.RESOURCE_KIND for t in tables_used}
+        if "pods" in resources_used:
+            # This is fake, get_objects knows to get it via "kubectl get pods" not as JSON
+            resources_used.add("pod_statuses")
+
+        # Go get stuff in parallel.  The "if" statement here is for unit tests, where the data is
+        # already supplied.
         def fetch(kind):
             if kind not in self.data:
                 self.data[kind] = self.cluster.get_objects(kind)
         with ThreadPoolExecutor(max_workers=8) as pool:
             for _ in pool.map(fetch, resources_used):
                 pass
+
+        # There won't really be a pod_statuses table, just grab the statuses and put them
+        # on the pod objects.  Drop the pods where we didn't get status back from kubectl.
+        if "pods" in resources_used:
+            def pod_with_updated_status(pod):
+                status = self.data["pod_statuses"].get(pod["metadata"]["name"])
+                if status:
+                    pod["kubectl_status"] = status
+                    return pod
+                return None
+            self.data["pods"]["items"] = list(filter(None, map(pod_with_updated_status, self.data["pods"]["items"])))
+            del self.data["pod_statuses"]
 
         # Create tables in SQLite
         for t in tables_used:
