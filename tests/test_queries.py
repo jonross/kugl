@@ -1,9 +1,10 @@
 
+import pytest
+
 from kubeql.main import KubeData
-from kubeql.testing import make_pod, make_job
 from kubeql.utils import MyConfig
 
-import pytest
+from .testing import make_pod, make_job
 
 
 @pytest.fixture(scope="session")
