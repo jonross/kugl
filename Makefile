@@ -1,4 +1,4 @@
 
 test:
-	PYTHONPATH=lib pytest -v -s --tb=native tests
+	PYTHONPATH=lib pytest -vv -s --tb=native tests
 	

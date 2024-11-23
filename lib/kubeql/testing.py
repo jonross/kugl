@@ -11,12 +11,17 @@ def make_pod(name: str,
              gpu: int = 0,
              ):
     """
-    Construct a PodHelper from a generic chunk of pod YAML that we can alter to simulate different
+    Construct a Pod dict from a generic chunk of pod YAML that we can alter to simulate different
     responses from the K8S API.
 
     :param no_metadata: Pretend there is no metadata
     :param name_at_root: Put the object name at top level, not in the metadata
     :param no_name: Pretend there is no object name
+    :param cpu_req: CPU requested
+    :param cpu_lim: CPU limit
+    :param mem_req: Memory requested
+    :param mem_lim: Memory limit
+    :param gpu: Number of GPUs requested / limit
     """
     obj = yaml.safe_load(BASE_POD_YAML)
     if name_at_root:
@@ -176,4 +181,72 @@ BASE_POD_YAML = """
       - ip: 10.200.201.202
       qosClass: Burstable
       startTime: '2024-02-04T15:15:01Z'
+"""
+
+
+def make_job(name: str,
+             active_count: int | None = None,
+             condition: tuple[str, str, str | None] | None = None,
+             ):
+    """
+    Construct a Job dict from a generic chunk of pod YAML that we can alter to simulate different
+    responses from the K8S API.
+
+    :param name: Job name
+    :param active_count: If present, the number of active pods
+    :param condition: If present, a condition tuple (type, status, reason)
+    """
+    obj = yaml.safe_load(BASE_JOB_YAML)
+    obj["metadata"]["name"] = name
+    obj["metadata"]["labels"]["job-name"] = name
+    if active_count is not None:
+        obj["status"]["active"] = active_count
+    if condition is not None:
+        obj["status"]["conditions"] = [{"type": condition[0], "status": condition[1], "reason": condition[2]}]
+    return obj
+
+BASE_JOB_YAML = """
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      creationTimestamp: "2024-11-20T01:05:00Z"
+      generation: 1
+      labels:
+        controller-uid: 60848f11-1ecb-4a20-b9aa-bc039cb98b88
+        job-name: example-job-1
+      name: example-job-1
+      namespace: example
+      resourceVersion: "3479929701"
+      uid: 60848f11-1ecb-4a20-b9aa-bc039cb98b88
+    spec:
+      backoffLimit: 0
+      completionMode: NonIndexed
+      completions: 1
+      parallelism: 1
+      selector:
+        matchLabels:
+          controller-uid: 60848f11-1ecb-4a20-b9aa-bc039cb98b88
+      suspend: false
+      template:
+        metadata:
+          creationTimestamp: null
+          labels:
+            controller-uid: 60848f11-1ecb-4a20-b9aa-bc039cb98b88
+            job-name: example-job-28867745
+        spec:
+          containers:
+          - command:
+            - echo
+            - "Hello, world"
+            image: alpine:latest
+            imagePullPolicy: IfNotPresent
+            name: example-job
+            resources:
+              requests:
+                cpu: "1"
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          dnsPolicy: ClusterFirst
+          restartPolicy: Never
+    status: {}
 """

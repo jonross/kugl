@@ -107,7 +107,7 @@ class JobHelper(ItemHelper):
         for c in status.get("conditions", []):
             if c["status"] == "True":
                 if c["type"] == "Failed":
-                    return c.get("reason", "Failed")
+                    return c.get("reason") or "Failed"
                 if c["type"] == "Suspended":
                     return "Suspended"
                 if c["type"] == "Complete":
