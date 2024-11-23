@@ -53,7 +53,7 @@ class KubeConfig:
 
 class MyConfig:
 
-    def __init__(self, content: str | Path = CONFIG):
+    def __init__(self, content: Union[str, Path] = CONFIG):
         """
         Create a utility wrapper around the KubeQL configuration file.
         :param content str|Path: The content of the configuration file, or a path to it.

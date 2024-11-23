@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import sys
 from threading import Lock
-from typing import Literal
+from typing import Literal, Optional
 
 from tabulate import tabulate
 
@@ -110,7 +110,7 @@ class Cluster:
 
 class KubeData:
 
-    def __init__(self, cluster: Cluster, data: dict | None = None):
+    def __init__(self, cluster: Cluster, data: Optional[dict] = None):
         """
         :param update_cache: how to consult the cache, one of ALWAYS, CHECK, NEVER
         :param context_name: a Kubernetes context name from .kube/config

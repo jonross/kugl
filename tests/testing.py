@@ -1,3 +1,5 @@
+from typing import Optional, Tuple
+
 import yaml
 
 def make_pod(name: str,
@@ -185,8 +187,8 @@ BASE_POD_YAML = """
 
 
 def make_job(name: str,
-             active_count: int | None = None,
-             condition: tuple[str, str, str | None] | None = None,
+             active_count: Optional[int] = None,
+             condition: Optional[Tuple[str, str, Optional[str]]] = None,
              ):
     """
     Construct a Job dict from a generic chunk of pod YAML that we can alter to simulate different
