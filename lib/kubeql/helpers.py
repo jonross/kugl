@@ -101,16 +101,21 @@ class JobHelper(ItemHelper):
         status = self.obj.get("status", {})
         if len(status) == 0:
             return "Unknown"
+        # Per
+        # https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1JobStatus.md
+        # and https://kubernetes.io/docs/concepts/workloads/controllers/job/
+        for c in status.get("conditions", []):
+            if c["status"] == "True":
+                if c["type"] == "Failed":
+                    return c.get("reason", "Failed")
+                if c["type"] == "Suspended":
+                    return "Suspended"
+                if c["type"] == "Complete":
+                    return "Complete"
+            if c["type"] == "FailureTarget":
+                return "Failed"
+            if c["type"] == "SuccessCriteriaMet":
+                return "Complete"
         if status.get("active", 0) > 0:
             return "Running"
-        completions = self.obj.get("spec", {}).get("completions", 1)
-        if status.get("succeeded", 0) == completions:
-            return "Succeeded"
-        if status.get("failed", 0) == completions:
-            return "Failed"
-        conditions = status.get("conditions")
-        if conditions is not None:
-            current = [c for c in conditions if c["status"] == "True"]
-            if len(current) > 0:
-                return current[-1]["type"]
-        return "TBD"
+        return "Unknown"
