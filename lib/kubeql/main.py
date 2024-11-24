@@ -99,7 +99,7 @@ class Cluster:
         return json.loads(cache_file.read_text())
 
     def _pod_status_from_pod_list(self, output):
-        rows = [WHITESPACE.split(line) for line in output.strip().split("\n")]
+        rows = [WHITESPACE.split(line.strip()) for line in output.strip().split("\n")]
         header, rows = rows[0], rows[1:]
         name_index = header.index("NAME")
         status_index = header.index("STATUS")
