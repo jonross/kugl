@@ -42,7 +42,7 @@ Because KubeQL always uses the `--all-namespaces` option to `kubectl`, it tries
 to reduce strain on the Kubernetes API Server by caching responses for up to
 two minutes.  This is why it often prints "Data delayed up to ..." messages.
 You can suppress that warning with the `-r` / `--reckless` option, or
-always update the cache with the `-u` / `--update` option.
+force a cache update with the `-u` / `--update` option.
 
 In any case, please be cognizant of stale data and server load.
 

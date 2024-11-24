@@ -1,4 +1,4 @@
-
+import os
 from argparse import ArgumentParser
 from concurrent.futures import ThreadPoolExecutor
 import json
@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import sys
 from threading import Lock
-from typing import Literal, Optional
+from typing import Literal, Optional, List
 
 from tabulate import tabulate
 
@@ -19,23 +19,23 @@ from .utils import add_custom_functions, to_age, KubeConfig, fail, MyConfig
 WHITESPACE = re.compile(r"\s+")
 
 
-def main():
+def main(argv: List[str]):
     ap = ArgumentParser()
     ap.add_argument("-n", "--no_update", default=False, action="store_true")
     ap.add_argument("-u", "--update", default=False, action="store_true")
     ap.add_argument("-v", "--verbose", default=False, action="store_true")
     ap.add_argument("sql")
-    args = ap.parse_args(sys.argv[1:])
+    args = ap.parse_args(argv)
     try:
-        _main(args)
+        main2(args)
     except Exception as e:
-        if args.verbose:
+        if args.verbose or os.getenv("KUBEQL_NEVER_EXIT") == "true":
             raise
         print(e, file=sys.stderr)
         sys.exit(1)
 
 
-def _main(args):
+def main2(args):
     if args.update and args.no_update:
         fail("Cannot specify both --no-update and --update")
 
@@ -131,7 +131,7 @@ class KubeData:
                        set(re.findall(r"(?<=with)\s+(\w+)\s+(?=as)", kql, re.IGNORECASE)))
         bad_names = table_names - {c.NAME for c in table_classes}
         if bad_names:
-            sys.exit(f"Not available for query: {', '.join(bad_names)}")
+            fail(f"Not available for query: {', '.join(bad_names)}")
 
         # What do we need from kubectl
         tables_used = [c() for c in table_classes if c.NAME in table_names]

@@ -2,9 +2,9 @@
 
 PYTHONPATH=$(dirname "$0")/../lib
 
-python3 -c 'if True:
+exec python3 -c 'if True:
     import sys
     from kubeql.main import main
-    main()
+    main(sys.argv[1:])
 ' "$@"
 

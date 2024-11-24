@@ -2,10 +2,13 @@
 import os
 from pathlib import Path
 
-# Add tests/ folder to $PATH so 'kubectl ...' invokes our mock
 import pytest
 
+# Add tests/ folder to $PATH so 'kubectl ...' invokes our mock
 os.environ["PATH"] = f"{Path(__file__).parent}:{os.environ['PATH']}"
+
+# Don't sys.exit on fatal errors
+os.environ["KUBEQL_NEVER_EXIT"] = "true"
 
 
 @pytest.fixture(scope="function")

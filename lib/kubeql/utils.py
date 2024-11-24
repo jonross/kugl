@@ -25,9 +25,11 @@ def to_age(x: Union[datetime,str]):
 
 
 def fail(message: str):
-    class KubeQLError(Exception):
-        pass
     raise KubeQLError(message)
+
+
+class KubeQLError(Exception):
+    pass
 
 
 def rcfail(message: str):
