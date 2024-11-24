@@ -3,6 +3,23 @@ Examine Kubernetes resources via SQLite
 
 **UNDER CONSTRUCTION**
 
+Because why 
+
+```shell
+kubectl get jobs --all-namespaces -o json | jq -r '
+  .items[] |
+  select(.status.conditions[]? | select(.type == "Suspended" and .status == "True")) |
+  select(([.spec.template.spec.containers[]?.resources.requests.cpu // "0"] | map(tonumber) | add) > 6) |
+  "\(.metadata.name) \(.metadata.labels["com.mycompany/job-owner"])"
+'
+```
+
+when you could
+
+```shell
+kubeql "select name, owner from jobs where cpu_req > 6 and status = 'Suspended'"
+```
+
 ## Installation
 
 **UNDER CONSTRUCTION**
@@ -24,7 +41,8 @@ there's a config file for that.
 Because KubeQL always uses the `--all-namespaces` option to `kubectl`, it tries
 to reduce strain on the Kubernetes API Server by caching responses for up to
 two minutes.  This is why it often prints "Data delayed up to ..." messages.
-You can suppress that warning with the `-r` / `--reckless` option, or force it
-to always update the cache with the `-u` / `--update` option.  In any case, please
-be cognizant of stale data and server load.
+You can suppress that warning with the `-r` / `--reckless` option, or
+always update the cache with the `-u` / `--update` option.
+
+In any case, please be cognizant of stale data and server load.
 
