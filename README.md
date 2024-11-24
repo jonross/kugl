@@ -1,13 +1,13 @@
 # kubeql
 Examine Kubernetes resources via SQLite
 
+**UNDER CONSTRUCTION**
+
 ## Installation
 
-```shell
-pip install git+...
-```
+**UNDER CONSTRUCTION**
 
-You should be good to go.  Try
+  Try
 
 ```shell
 kubeql "select name, cpu_req, command from pods where namespace = 'kube-system'"
