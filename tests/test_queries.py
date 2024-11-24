@@ -16,6 +16,7 @@ def test_by_cpu(mockdir):
             make_pod("pod-2"),
             make_pod("pod-3", cpu_req=2),
             make_pod("pod-4", cpu_req=2),
+            make_pod("pod-5", cpu_req=2),  # should get dropped because no status available
         ]
     })
     kubectl_response(mockdir, "pod_statuses", """
