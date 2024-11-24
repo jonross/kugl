@@ -16,11 +16,6 @@ def add_custom_functions(db):
     Given a SQLite database instance, add pretty_size as a custom function.
     """
     db.create_function("to_size", 1, to_footprint)
-    db.create_function("to_ui", 1, to_ui)
-
-
-def to_ui(workflow_id: str):
-    return workflow_id and f"https://app.mle.pathai.com/jabba/workflows/view/{workflow_id}"
 
 
 def to_age(x: Union[datetime,str]):
@@ -30,9 +25,11 @@ def to_age(x: Union[datetime,str]):
 
 
 def fail(message: str):
-    class KubeQLError(Exception):
-        pass
     raise KubeQLError(message)
+
+
+class KubeQLError(Exception):
+    pass
 
 
 def rcfail(message: str):
@@ -53,7 +50,7 @@ class KubeConfig:
 
 class MyConfig:
 
-    def __init__(self, content: str | Path = CONFIG):
+    def __init__(self, content: Union[str, Path] = CONFIG):
         """
         Create a utility wrapper around the KubeQL configuration file.
         :param content str|Path: The content of the configuration file, or a path to it.

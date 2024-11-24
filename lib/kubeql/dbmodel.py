@@ -30,9 +30,6 @@ class Column:
     # Example finder: jmespath.compile("metadata.name")
     finder: jmespath.parser.ParsedResult
 
-    def __call__(self, obj):
-        return self.source.search(obj)
-
     @staticmethod
     def from_config(name: str, table_name: str, obj: dict):
         what = f"column '{name}' in table '{table_name}'"
@@ -42,14 +39,11 @@ class Column:
         type = COLUMN_TYPES.get(type)
         if type is None:
             rcfail(f"type of {what} must be one of {', '.join(COLUMN_TYPES.keys())}")
-        if source == "-":
-            finder = lambda obj: obj
-        else:
-            try:
-                jmesexpr = jmespath.compile(source)
-                finder = lambda obj: jmesexpr.search(obj)
-            except jmespath.exceptions.ParseError as e:
-                rcfail(f"invalid JMESPath expression for {what}: {e}")
+        try:
+            jmesexpr = jmespath.compile(source)
+            finder = lambda obj: jmesexpr.search(obj)
+        except jmespath.exceptions.ParseError as e:
+            rcfail(f"invalid JMESPath expression for {what}: {e}")
         return Column(type, name, table_name, finder)
 
     def extract(self, obj):

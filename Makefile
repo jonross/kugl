@@ -1,4 +1,4 @@
 
 test:
-	PYTHONPATH=lib pytest -vv -s --tb=native tests
+	PYTHONPATH=lib pytest --cov --cov-report=html:coverage -vv -s --tb=native tests
 	

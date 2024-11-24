@@ -1,6 +1,7 @@
 
 from kubeql.helpers import PodHelper
-from kubeql.testing import make_pod
+
+from .testing import make_pod
 
 
 def test_missing_metadata():

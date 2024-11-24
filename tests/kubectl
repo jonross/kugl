@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+#
+# In unit tests, calls to run 'kubectl' come here.
+# A test case puts the Kubernetes responses it wants in a temporary folder, and we just print them.
+
+import os
+from pathlib import Path
+import sys
+
+args = sys.argv[1:]
+if args == ["get", "pods", "--all-namespaces", "-o", "json"]:
+    kind = "pods"
+elif args == ["get", "jobs", "--all-namespaces", "-o", "json"]:
+    kind = "jobs"
+elif args == ["get", "nodes", "-o", "json"]:
+    kind = "nodes"
+elif args == ["get", "pods", "--all-namespaces"]:
+    kind = "pod_statuses"
+else:
+    sys.exit("Unhandled command line: " + " ".join(args))
+
+mockdir = Path(os.environ["KUBEQL_MOCKDIR"])
+content = mockdir.joinpath(kind).read_text()
+print(content)

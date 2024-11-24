@@ -7,10 +7,10 @@ import re
 import sqlite3
 import subprocess as sp
 import sys
-from typing import Union
+from typing import List, Union
 
 
-def run(args: Union[str, list[str]], error_ok=False):
+def run(args: Union[str, List[str]], error_ok=False):
     """
     Invoke an external command, which may be a list or a string; in the latter case it will be
     interpreted using bash -c.  Returns exit status, stdout and stderr.

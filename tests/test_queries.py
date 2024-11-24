@@ -1,49 +1,53 @@
-
-from kubeql.main import KubeData
-from kubeql.testing import make_pod, make_job
-from kubeql.utils import MyConfig
+from pathlib import Path
 
 import pytest
 
+from kubeql.constants import ALWAYS
+from kubeql.main import KubeData, Cluster
+from kubeql.utils import MyConfig
 
-@pytest.fixture(scope="session")
-def kd():
-    return KubeData(None, data={
-        "pods": {
-            "items": [
-                make_pod("pod-1"),
-                make_pod("pod-2"),
-                make_pod("pod-3", cpu_req=2),
-                make_pod("pod-4", cpu_req=2),
-            ]
-        },
-        "pod_statuses": {f"pod-{i}": f"Init:{i}" for i in range(1, 5)},
-        "jobs": {
-            "items": [
-                make_job("job-1"),
-                make_job("job-2", active_count=1),
-                make_job("job-3", condition=("Failed", "False", None)),
-                make_job("job-4", condition=("Failed", "True", None)),
-                make_job("job-5", condition=("Failed", "True", "DeadlineExceeded")),
-                make_job("job-6", condition=("Suspended", "True", None)),
-                make_job("job-7", condition=("Complete", "True", None)),
-                make_job("job-8", condition=("FailureTarget", "False", None)),
-                make_job("job-9", condition=("SuccessCriteriaMet", "False", None)),
-            ]
-        }
+from .testing import make_pod, make_job, kubectl_response
+
+
+def test_by_cpu(mockdir):
+    kubectl_response(mockdir, "pods", {
+        "items": [
+            make_pod("pod-1"),
+            make_pod("pod-2"),
+            make_pod("pod-3", cpu_req=2),
+            make_pod("pod-4", cpu_req=2),
+            make_pod("pod-5", cpu_req=2),  # should get dropped because no status available
+        ]
     })
-
-
-def test_by_cpu(kd):
-    verify(kd, "SELECT name, status FROM pods WHERE cpu_req > 1 ORDER BY name",
+    kubectl_response(mockdir, "pod_statuses", """
+        NAME   STATUS
+        pod-1  Init:1
+        pod-2  Init:2
+        pod-3  Init:3
+        pod-4  Init:4
+    """)
+    verify(mockdir, "SELECT name, status FROM pods WHERE cpu_req > 1 ORDER BY name",
            [
                ("pod-3", "Init:3"),
                ("pod-4", "Init:4"),
            ])
 
 
-def test_job_status(kd):
-    verify(kd, "SELECT name, status FROM jobs ORDER BY 1",
+def test_job_status(mockdir):
+    kubectl_response(mockdir, "jobs", {
+        "items": [
+            make_job("job-1"),
+            make_job("job-2", active_count=1),
+            make_job("job-3", condition=("Failed", "False", None)),
+            make_job("job-4", condition=("Failed", "True", None)),
+            make_job("job-5", condition=("Failed", "True", "DeadlineExceeded")),
+            make_job("job-6", condition=("Suspended", "True", None)),
+            make_job("job-7", condition=("Complete", "True", None)),
+            make_job("job-8", condition=("FailureTarget", "False", None)),
+            make_job("job-9", condition=("SuccessCriteriaMet", "False", None)),
+        ]
+    })
+    verify(mockdir, "SELECT name, status FROM jobs ORDER BY 1",
            [
                ("job-1", "Unknown"),
                ("job-2", "Running"),
@@ -56,6 +60,7 @@ def test_job_status(kd):
                ("job-9", "Complete"),
            ])
 
-def verify(kd, kql, expected):
-    actual, _ = kd.query(MyConfig(), kql)
+def verify(mockdir, kql, expected):
+    cluster = Cluster("nocontext", ALWAYS, mockdir)
+    actual, _ = KubeData(cluster, data={}).query(MyConfig(), kql)
     assert actual == expected

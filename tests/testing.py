@@ -1,4 +1,25 @@
+import json
+import os
+from pathlib import Path
+from typing import Optional, Tuple, Union
+
 import yaml
+
+
+def kubectl_response(folder: Path, kind: str, output: Union[str, dict]):
+    """
+    Put a mock response for 'kubectl get {kind} ...' into the mock responses folder,
+    to be found by an invocation of ./kubectl in a test.
+    :param kind: e.g. "pods", "nodes, "jobs" etc
+    :param output: A dict (will be JSON-serialized) or a string (will be trimmed)
+    """
+    if isinstance(output, dict):
+        output = json.dumps(output)
+    else:
+        output = str(output).strip()
+    folder.mkdir(exist_ok=True)
+    folder.joinpath(kind).write_text(output)
+
 
 def make_pod(name: str,
              no_metadata: bool = False,
@@ -185,8 +206,8 @@ BASE_POD_YAML = """
 
 
 def make_job(name: str,
-             active_count: int | None = None,
-             condition: tuple[str, str, str | None] | None = None,
+             active_count: Optional[int] = None,
+             condition: Optional[Tuple[str, str, Optional[str]]] = None,
              ):
     """
     Construct a Job dict from a generic chunk of pod YAML that we can alter to simulate different
