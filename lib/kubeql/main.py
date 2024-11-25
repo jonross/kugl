@@ -42,7 +42,7 @@ def main2(args):
     config = MyConfig()
     cluster = Cluster(config, KubeConfig().current_context(),
                       ALWAYS if args.update else NEVER if args.no_update else CHECK)
-    kd = KubeData(config, cluster)
+    kd = Engine(config, cluster)
     if " " not in args.sql:
         args.sql = cluster.canned_query(args.sql)
     print(kd.query_and_format(args.sql))
@@ -99,7 +99,7 @@ class Cluster:
         return {row[name_index]: row[status_index] for row in rows}
 
 
-class KubeData:
+class Engine:
 
     def __init__(self, config: MyConfig, cluster: Cluster):
         """
