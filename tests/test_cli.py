@@ -4,9 +4,14 @@ from kubeql.main import main
 from kubeql.utils import KubeQLError
 
 
-def test_one_kind_of_update():
-    with pytest.raises(KubeQLError, match="Cannot specify both --cache and --update"):
-        main("-u -c foo".split(" "))
+def test_enforce_one_cache_option():
+    with pytest.raises(KubeQLError, match="Cannot use both --cache and --update"):
+        main("-c -u foo".split(" "))
+
+
+def test_enforce_one_namespace_option():
+    with pytest.raises(KubeQLError, match="Cannot use both --all-namespaces and --namespace"):
+        main("-a -n x foo".split(" "))
 
 
 def test_no_such_resource():
