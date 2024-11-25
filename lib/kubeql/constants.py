@@ -12,3 +12,6 @@ CACHE_EXPIRATION = timedelta(minutes=2)
 
 # What container name is considered the "main" container, if present
 MAIN_CONTAINERS = ["main", "notebook", "app"]
+
+# Fake namespace if "--all-namespaces" option is used
+ALL_NAMESPACE = "__all"
