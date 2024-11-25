@@ -31,5 +31,5 @@ def main2(args):
     engine = Engine(config, KubeConfig().current_context(),
                     ALWAYS if args.update else NEVER if args.no_update else CHECK)
     if " " not in args.sql:
-        args.sql = engine.canned_query(args.sql)
+        args.sql = config.canned_query(args.sql)
     print(engine.query_and_format(args.sql))
