@@ -14,12 +14,20 @@ from kubeql.utils import MyConfig, to_age, fail, add_custom_functions
 WHITESPACE = re.compile(r"\s+")
 
 
-class Cluster:
+class Engine:
 
     def __init__(self, config: MyConfig, context_name: str, update_cache: Literal[ALWAYS, CHECK, NEVER]):
+        """
+        :param update_cache: how to consult the cache, one of ALWAYS, CHECK, NEVER
+        :param context_name: a Kubernetes context name from .kube/config
+        """
         self.config = config
         self.context_name = context_name
         self.update_cache = update_cache
+        self.data = {}
+        self.db = SqliteDb()
+        self.db_lock = Lock()
+        add_custom_functions(self.db.conn)
 
     def get_objects(self, kind: str)-> dict:
         """
@@ -64,20 +72,6 @@ class Cluster:
             raise ValueError("Can't find NAME and STATUS columns in 'kubectl get pods' output")
         return {row[name_index]: row[status_index] for row in rows}
 
-class Engine:
-
-    def __init__(self, config: MyConfig, cluster: Cluster):
-        """
-        :param update_cache: how to consult the cache, one of ALWAYS, CHECK, NEVER
-        :param context_name: a Kubernetes context name from .kube/config
-        """
-        self.data = {}
-        self.config = config
-        self.cluster = cluster
-        self.db = SqliteDb()
-        self.db_lock = Lock()
-        add_custom_functions(self.db.conn)
-
     def query_and_format(self, kql):
         rows, headers = self.query(kql)
         # %g is susceptible to outputting scientific notation, which we don't want.
@@ -109,7 +103,7 @@ class Engine:
         # Go get stuff in parallel.
         def fetch(kind):
             try:
-                self.data[kind] = self.cluster.get_objects(kind)
+                self.data[kind] = self.get_objects(kind)
             except Exception as e:
                 fail(f"Failed to get {kind} objects: {e}")
         with ThreadPoolExecutor(max_workers=8) as pool:

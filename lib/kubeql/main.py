@@ -4,7 +4,7 @@ import sys
 from typing import List
 
 from .constants import ALWAYS, CHECK, NEVER
-from .engine import Cluster, Engine
+from .engine import Engine
 from .utils import KubeConfig, fail, MyConfig
 
 
@@ -27,11 +27,9 @@ def main(argv: List[str]):
 def main2(args):
     if args.update and args.no_update:
         fail("Cannot specify both --no-update and --update")
-
     config = MyConfig()
-    cluster = Cluster(config, KubeConfig().current_context(),
-                      ALWAYS if args.update else NEVER if args.no_update else CHECK)
-    kd = Engine(config, cluster)
+    engine = Engine(config, KubeConfig().current_context(),
+                    ALWAYS if args.update else NEVER if args.no_update else CHECK)
     if " " not in args.sql:
-        args.sql = cluster.canned_query(args.sql)
-    print(kd.query_and_format(args.sql))
+        args.sql = engine.canned_query(args.sql)
+    print(engine.query_and_format(args.sql))
