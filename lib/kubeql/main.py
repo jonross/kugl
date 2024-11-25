@@ -31,9 +31,9 @@ def main2(args):
         fail("Cannot use both --cache and --update")
     if args.all_namespaces and args.namespace:
         fail("Cannot use both --all-namespaces and --namespace")
+    cache_flag = ALWAYS if args.update else NEVER if args.cache else CHECK
     config = MyConfig()
-    engine = Engine(config, KubeConfig().current_context(),
-                    ALWAYS if args.update else NEVER if args.cache else CHECK)
+    engine = Engine(config, KubeConfig().current_context())
     if " " not in args.sql:
         args.sql = config.canned_query(args.sql)
-    print(engine.query_and_format(args.sql))
+    print(engine.query_and_format(args.sql, cache_flag))

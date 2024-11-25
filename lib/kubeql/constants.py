@@ -1,8 +1,11 @@
 
 from datetime import timedelta
+from typing import Literal
 
 # Cache behaviors
+# TODO consider an enum
 ALWAYS, CHECK, NEVER = 1, 2, 3
+CacheFlag = Literal[ALWAYS, CHECK, NEVER]
 
 # Cache expiration time
 CACHE_EXPIRATION = timedelta(minutes=2)
