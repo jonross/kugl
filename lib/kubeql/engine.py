@@ -55,22 +55,13 @@ class Engine:
                 _, output, _ = run(["kubectl", "get", kind, "-o", "json"])
             elif kind == "pod_statuses":
                 _, output, _= run(["kubectl", "get", "pods", "--all-namespaces"])
-                output = json.dumps(self._pod_status_from_pod_list(output))
+                output = json.dumps(_pod_status_from_pod_list(output))
             else:
                 _, output, _= run(["kubectl", "get", kind, "--all-namespaces", "-o", "json"])
             cache_file.write_text(output)
         if not cache_file.exists():
             fail(f"Internal error: no cache file exists for {kind} table in {self.context_name}.")
         return json.loads(cache_file.read_text())
-
-    def _pod_status_from_pod_list(self, output):
-        rows = [WHITESPACE.split(line.strip()) for line in output.strip().split("\n")]
-        header, rows = rows[0], rows[1:]
-        name_index = header.index("NAME")
-        status_index = header.index("STATUS")
-        if name_index is None or status_index is None:
-            raise ValueError("Can't find NAME and STATUS columns in 'kubectl get pods' output")
-        return {row[name_index]: row[status_index] for row in rows}
 
     def query_and_format(self, kql):
         rows, headers = self.query(kql)
@@ -130,3 +121,12 @@ class Engine:
         rows = self.db.query(kql, names=column_names)
         return rows, column_names
 
+
+def _pod_status_from_pod_list(output):
+    rows = [WHITESPACE.split(line.strip()) for line in output.strip().split("\n")]
+    header, rows = rows[0], rows[1:]
+    name_index = header.index("NAME")
+    status_index = header.index("STATUS")
+    if name_index is None or status_index is None:
+        raise ValueError("Can't find NAME and STATUS columns in 'kubectl get pods' output")
+    return {row[name_index]: row[status_index] for row in rows}
