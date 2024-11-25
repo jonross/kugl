@@ -39,20 +39,13 @@ def main2(args):
     if args.update and args.no_update:
         fail("Cannot specify both --no-update and --update")
 
-    cluster = Cluster(MyConfig(), KubeConfig().current_context(),
+    config = MyConfig()
+    cluster = Cluster(config, KubeConfig().current_context(),
                       ALWAYS if args.update else NEVER if args.no_update else CHECK)
-    kd = KubeData(cluster)
-
+    kd = KubeData(config, cluster)
     if " " not in args.sql:
         args.sql = cluster.canned_query(args.sql)
-
-    rows, headers = kd.query(cluster, args.sql)
-    # %g is susceptible to outputting scientific notation, which we don't want.
-    # but %f always outputs trailing zeros, which we also don't want.
-    # So turn every value x in each row into an int if x == float(int(x))
-    truncate = lambda x: int(x) if isinstance(x, float) and x == float(int(x)) else x
-    rows = [[truncate(x) for x in row] for row in rows]
-    print(tabulate(rows, tablefmt="plain", floatfmt=".1f", headers=headers))
+    print(kd.query_and_format(args.sql))
 
 
 class Cluster:
@@ -108,18 +101,28 @@ class Cluster:
 
 class KubeData:
 
-    def __init__(self, cluster: Cluster):
+    def __init__(self, config: MyConfig, cluster: Cluster):
         """
         :param update_cache: how to consult the cache, one of ALWAYS, CHECK, NEVER
         :param context_name: a Kubernetes context name from .kube/config
         """
         self.data = {}
+        self.config = config
         self.cluster = cluster
         self.db = SqliteDb()
         self.db_lock = Lock()
         add_custom_functions(self.db.conn)
 
-    def query(self, config, kql):
+    def query_and_format(self, kql):
+        rows, headers = self.query(kql)
+        # %g is susceptible to outputting scientific notation, which we don't want.
+        # but %f always outputs trailing zeros, which we also don't want.
+        # So turn every value x in each row into an int if x == float(int(x))
+        truncate = lambda x: int(x) if isinstance(x, float) and x == float(int(x)) else x
+        rows = [[truncate(x) for x in row] for row in rows]
+        return tabulate(rows, tablefmt="plain", floatfmt=".1f", headers=headers)
+
+    def query(self, kql):
 
         table_classes = [PodsTable, JobsTable, NodesTable, NodeTaintsTable, WorkflowsTable]
 
@@ -162,7 +165,7 @@ class KubeData:
 
         # Create tables in SQLite
         for t in tables_used:
-            t.create(self.db, config, self.data[t.NAME])
+            t.create(self.db, self.config, self.data[t.NAME])
 
         column_names = []
         rows = self.db.query(kql, names=column_names)

@@ -86,9 +86,12 @@ class PodHelper(ItemHelper):
     def main(self):
         """
         Return the main container in the pod, if any, defined as the first container with a name
-        of "main" or "notebook".
+        in MAIN_CONTAINERS.  If there are none of those, return the first one.
         """
-        return fn.first(fn.filter(lambda c: c["name"] in MAIN_CONTAINERS, self.containers))
+        if not self.containers:
+            return None
+        main = fn.first(fn.filter(lambda c: c["name"] in MAIN_CONTAINERS, self.containers))
+        return main or self.containers[0]
 
     def resources(self, tag):
         return sum(Resources.extract(c["resources"].get(tag)) for c in self.containers)

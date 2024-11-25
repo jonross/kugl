@@ -1,6 +1,4 @@
-from pathlib import Path
-
-import pytest
+import textwrap
 
 from kubeql.constants import ALWAYS
 from kubeql.main import KubeData, Cluster
@@ -26,11 +24,11 @@ def test_by_cpu(mockdir):
         pod-3  Init:3
         pod-4  Init:4
     """)
-    verify(mockdir, "SELECT name, status FROM pods WHERE cpu_req > 1 ORDER BY name",
-           [
-               ("pod-3", "Init:3"),
-               ("pod-4", "Init:4"),
-           ])
+    verify(mockdir, "SELECT name, status FROM pods WHERE cpu_req > 1 ORDER BY name", """
+        name    status
+        pod-3   Init:3
+        pod-4   Init:4
+    """)
 
 
 def test_job_status(mockdir):
@@ -47,20 +45,22 @@ def test_job_status(mockdir):
             make_job("job-9", condition=("SuccessCriteriaMet", "False", None)),
         ]
     })
-    verify(mockdir, "SELECT name, status FROM jobs ORDER BY 1",
-           [
-               ("job-1", "Unknown"),
-               ("job-2", "Running"),
-               ("job-3", "Unknown"),
-               ("job-4", "Failed"),
-               ("job-5", "DeadlineExceeded"),
-               ("job-6", "Suspended"),
-               ("job-7", "Complete"),
-               ("job-8", "Failed"),
-               ("job-9", "Complete"),
-           ])
+    verify(mockdir, "SELECT name, status FROM jobs ORDER BY 1", """
+        name    status
+        job-1   Unknown
+        job-2   Running
+        job-3   Unknown
+        job-4   Failed
+        job-5   DeadlineExceeded
+        job-6   Suspended
+        job-7   Complete
+        job-8   Failed
+        job-9   Complete
+    """)
+
 
 def verify(mockdir, kql, expected):
-    cluster = Cluster(MyConfig(mockdir), "nocontext", ALWAYS)
-    actual, _ = KubeData(cluster).query(MyConfig(), kql)
-    assert actual == expected
+    config = MyConfig(mockdir)
+    cluster = Cluster(config, "nocontext", ALWAYS)
+    actual = KubeData(config, cluster).query_and_format(kql)
+    assert actual.strip() == textwrap.dedent(expected).strip()
