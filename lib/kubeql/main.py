@@ -108,12 +108,12 @@ class Cluster:
 
 class KubeData:
 
-    def __init__(self, cluster: Cluster, data: Optional[dict] = None):
+    def __init__(self, cluster: Cluster):
         """
         :param update_cache: how to consult the cache, one of ALWAYS, CHECK, NEVER
         :param context_name: a Kubernetes context name from .kube/config
         """
-        self.data = data or {}
+        self.data = {}
         self.cluster = cluster
         self.db = SqliteDb()
         self.db_lock = Lock()
@@ -138,14 +138,12 @@ class KubeData:
             # This is fake, get_objects knows to get it via "kubectl get pods" not as JSON
             resources_used.add("pod_statuses")
 
-        # Go get stuff in parallel.  The "if" statement here is for unit tests, where the data is
-        # already supplied.
+        # Go get stuff in parallel.
         def fetch(kind):
-            if kind not in self.data:
-                try:
-                    self.data[kind] = self.cluster.get_objects(kind)
-                except Exception as e:
-                    fail(f"Failed to get {kind} objects: {e}")
+            try:
+                self.data[kind] = self.cluster.get_objects(kind)
+            except Exception as e:
+                fail(f"Failed to get {kind} objects: {e}")
         with ThreadPoolExecutor(max_workers=8) as pool:
             for _ in pool.map(fetch, resources_used):
                 pass
