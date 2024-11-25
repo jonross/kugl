@@ -1,7 +1,7 @@
 import textwrap
 
 from kubeql.constants import ALWAYS
-from kubeql.main import KubeData, Cluster
+from kubeql.main import Engine
 from kubeql.utils import MyConfig
 
 from .testing import make_pod, make_job, kubectl_response
@@ -61,6 +61,5 @@ def test_job_status(mockdir):
 
 def verify(mockdir, kql, expected):
     config = MyConfig(mockdir)
-    cluster = Cluster(config, "nocontext", ALWAYS)
-    actual = KubeData(config, cluster).query_and_format(kql)
+    actual = Engine(config, "nocontext", ALWAYS).query_and_format(kql)
     assert actual.strip() == textwrap.dedent(expected).strip()
