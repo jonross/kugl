@@ -61,6 +61,6 @@ def test_job_status(mockdir):
            ])
 
 def verify(mockdir, kql, expected):
-    cluster = Cluster("nocontext", ALWAYS, mockdir)
+    cluster = Cluster(MyConfig(mockdir), "nocontext", ALWAYS)
     actual, _ = KubeData(cluster, data={}).query(MyConfig(), kql)
     assert actual == expected

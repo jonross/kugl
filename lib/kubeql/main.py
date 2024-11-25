@@ -11,7 +11,7 @@ from typing import Literal, Optional, List
 from tabulate import tabulate
 
 from .constants import ALWAYS, CHECK, NEVER
-from .constants import CACHE, CACHE_EXPIRATION
+from .constants import CACHE_EXPIRATION
 from .jross import SqliteDb, run
 from .tables import *
 from .utils import add_custom_functions, to_age, KubeConfig, fail, MyConfig
@@ -39,15 +39,14 @@ def main2(args):
     if args.update and args.no_update:
         fail("Cannot specify both --no-update and --update")
 
-    cluster = Cluster(KubeConfig().current_context(),
+    cluster = Cluster(MyConfig(), KubeConfig().current_context(),
                       ALWAYS if args.update else NEVER if args.no_update else CHECK)
     kd = KubeData(cluster)
-    kc = MyConfig()
 
     if " " not in args.sql:
-        args.sql = kc.canned_query(args.sql)
+        args.sql = cluster.canned_query(args.sql)
 
-    rows, headers = kd.query(kc, args.sql)
+    rows, headers = kd.query(cluster, args.sql)
     # %g is susceptible to outputting scientific notation, which we don't want.
     # but %f always outputs trailing zeros, which we also don't want.
     # So turn every value x in each row into an int if x == float(int(x))
@@ -58,11 +57,10 @@ def main2(args):
 
 class Cluster:
 
-    def __init__(self, context_name: str, update_cache: Literal[ALWAYS, CHECK, NEVER],
-                 cache_dir: Path = CACHE):
+    def __init__(self, config: MyConfig, context_name: str, update_cache: Literal[ALWAYS, CHECK, NEVER]):
+        self.config = config
         self.context_name = context_name
         self.update_cache = update_cache
-        self.cache_dir = cache_dir
 
     def get_objects(self, kind: str)-> dict:
         """
@@ -74,8 +72,8 @@ class Cluster:
         :param kind: known K8S resource kind e.g. "pods", "nodes", "jobs" etc..
         :return: raw JSON objects as output by "kubectl get {kind}"
         """
-        cache_dir = self.cache_dir / self.context_name
-        cache_dir.mkdir(exist_ok=True)
+        cache_dir = self.config.cache_dir / self.context_name
+        cache_dir.mkdir(parents=True, exist_ok=True)
         cache_file = cache_dir / f"{kind}.json"
         if self.update_cache == NEVER:
             run_kubectl = False
