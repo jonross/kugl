@@ -7,7 +7,6 @@ import dateutil
 from datetime import datetime
 import yaml
 
-from .constants import CONFIG
 from .jross import to_footprint
 
 
@@ -50,16 +49,20 @@ class KubeConfig:
 
 class MyConfig:
 
-    def __init__(self, content: Union[str, Path] = CONFIG):
+    def __init__(self, home: Path = Path.home() / ".kubeql"):
         """
         Create a utility wrapper around the KubeQL configuration file.
-        :param content str|Path: The content of the configuration file, or a path to it.
+        :param home The directory containing the configuration file and caches; defaults to ~/.kubeql
         :raises Exception: Anything that can be raised by the built-in open() function or
             by yaml.safe_load()
         """
-        if isinstance(content, Path):
-            content = content.read_text()
-        self.data = yaml.safe_load(content)
+        self.home_dir = home
+        self.cache_dir = home / "cache"
+        init_file = home / "init.yaml"
+        if init_file.exists():
+            self.data = yaml.safe_load(init_file.read_text())
+        else:
+            self.data = {}
 
     def canned_query(self, name: str) -> str:
         """

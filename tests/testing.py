@@ -260,14 +260,9 @@ BASE_JOB_YAML = """
             - echo
             - "Hello, world"
             image: alpine:latest
-            imagePullPolicy: IfNotPresent
             name: example-job
             resources:
               requests:
                 cpu: "1"
-            terminationMessagePath: /dev/termination-log
-            terminationMessagePolicy: File
-          dnsPolicy: ClusterFirst
-          restartPolicy: Never
     status: {}
 """

@@ -11,7 +11,7 @@ from typing import Literal, Optional, List
 from tabulate import tabulate
 
 from .constants import ALWAYS, CHECK, NEVER
-from .constants import CACHE, CACHE_EXPIRATION
+from .constants import CACHE_EXPIRATION
 from .jross import SqliteDb, run
 from .tables import *
 from .utils import add_custom_functions, to_age, KubeConfig, fail, MyConfig
@@ -39,30 +39,21 @@ def main2(args):
     if args.update and args.no_update:
         fail("Cannot specify both --no-update and --update")
 
-    cluster = Cluster(KubeConfig().current_context(),
+    config = MyConfig()
+    cluster = Cluster(config, KubeConfig().current_context(),
                       ALWAYS if args.update else NEVER if args.no_update else CHECK)
-    kd = KubeData(cluster)
-    kc = MyConfig()
-
+    kd = KubeData(config, cluster)
     if " " not in args.sql:
-        args.sql = kc.canned_query(args.sql)
-
-    rows, headers = kd.query(kc, args.sql)
-    # %g is susceptible to outputting scientific notation, which we don't want.
-    # but %f always outputs trailing zeros, which we also don't want.
-    # So turn every value x in each row into an int if x == float(int(x))
-    truncate = lambda x: int(x) if isinstance(x, float) and x == float(int(x)) else x
-    rows = [[truncate(x) for x in row] for row in rows]
-    print(tabulate(rows, tablefmt="plain", floatfmt=".1f", headers=headers))
+        args.sql = cluster.canned_query(args.sql)
+    print(kd.query_and_format(args.sql))
 
 
 class Cluster:
 
-    def __init__(self, context_name: str, update_cache: Literal[ALWAYS, CHECK, NEVER],
-                 cache_dir: Path = CACHE):
+    def __init__(self, config: MyConfig, context_name: str, update_cache: Literal[ALWAYS, CHECK, NEVER]):
+        self.config = config
         self.context_name = context_name
         self.update_cache = update_cache
-        self.cache_dir = cache_dir
 
     def get_objects(self, kind: str)-> dict:
         """
@@ -74,8 +65,8 @@ class Cluster:
         :param kind: known K8S resource kind e.g. "pods", "nodes", "jobs" etc..
         :return: raw JSON objects as output by "kubectl get {kind}"
         """
-        cache_dir = self.cache_dir / self.context_name
-        cache_dir.mkdir(exist_ok=True)
+        cache_dir = self.config.cache_dir / self.context_name
+        cache_dir.mkdir(parents=True, exist_ok=True)
         cache_file = cache_dir / f"{kind}.json"
         if self.update_cache == NEVER:
             run_kubectl = False
@@ -110,18 +101,28 @@ class Cluster:
 
 class KubeData:
 
-    def __init__(self, cluster: Cluster, data: Optional[dict] = None):
+    def __init__(self, config: MyConfig, cluster: Cluster):
         """
         :param update_cache: how to consult the cache, one of ALWAYS, CHECK, NEVER
         :param context_name: a Kubernetes context name from .kube/config
         """
-        self.data = data or {}
+        self.data = {}
+        self.config = config
         self.cluster = cluster
         self.db = SqliteDb()
         self.db_lock = Lock()
         add_custom_functions(self.db.conn)
 
-    def query(self, config, kql):
+    def query_and_format(self, kql):
+        rows, headers = self.query(kql)
+        # %g is susceptible to outputting scientific notation, which we don't want.
+        # but %f always outputs trailing zeros, which we also don't want.
+        # So turn every value x in each row into an int if x == float(int(x))
+        truncate = lambda x: int(x) if isinstance(x, float) and x == float(int(x)) else x
+        rows = [[truncate(x) for x in row] for row in rows]
+        return tabulate(rows, tablefmt="plain", floatfmt=".1f", headers=headers)
+
+    def query(self, kql):
 
         table_classes = [PodsTable, JobsTable, NodesTable, NodeTaintsTable, WorkflowsTable]
 
@@ -140,14 +141,12 @@ class KubeData:
             # This is fake, get_objects knows to get it via "kubectl get pods" not as JSON
             resources_used.add("pod_statuses")
 
-        # Go get stuff in parallel.  The "if" statement here is for unit tests, where the data is
-        # already supplied.
+        # Go get stuff in parallel.
         def fetch(kind):
-            if kind not in self.data:
-                try:
-                    self.data[kind] = self.cluster.get_objects(kind)
-                except Exception as e:
-                    fail(f"Failed to get {kind} objects: {e}")
+            try:
+                self.data[kind] = self.cluster.get_objects(kind)
+            except Exception as e:
+                fail(f"Failed to get {kind} objects: {e}")
         with ThreadPoolExecutor(max_workers=8) as pool:
             for _ in pool.map(fetch, resources_used):
                 pass
@@ -166,7 +165,7 @@ class KubeData:
 
         # Create tables in SQLite
         for t in tables_used:
-            t.create(self.db, config, self.data[t.NAME])
+            t.create(self.db, self.config, self.data[t.NAME])
 
         column_names = []
         rows = self.db.query(kql, names=column_names)
