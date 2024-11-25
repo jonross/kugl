@@ -10,7 +10,7 @@ from .utils import KubeConfig, fail, MyConfig
 
 def main(argv: List[str]):
     ap = ArgumentParser()
-    ap.add_argument("-n", "--no_update", default=False, action="store_true")
+    ap.add_argument("-c", "--cache", default=False, action="store_true")
     ap.add_argument("-u", "--update", default=False, action="store_true")
     ap.add_argument("-v", "--verbose", default=False, action="store_true")
     ap.add_argument("sql")
@@ -25,11 +25,11 @@ def main(argv: List[str]):
 
 
 def main2(args):
-    if args.update and args.no_update:
-        fail("Cannot specify both --no-update and --update")
+    if args.cache and args.update:
+        fail("Cannot specify both --cache and --update")
     config = MyConfig()
     engine = Engine(config, KubeConfig().current_context(),
-                    ALWAYS if args.update else NEVER if args.no_update else CHECK)
+                    ALWAYS if args.update else NEVER if args.cache else CHECK)
     if " " not in args.sql:
         args.sql = config.canned_query(args.sql)
     print(engine.query_and_format(args.sql))
