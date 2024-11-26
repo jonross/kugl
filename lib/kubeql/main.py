@@ -3,9 +3,9 @@ from argparse import ArgumentParser
 import sys
 from typing import List
 
-from .constants import ALWAYS, CHECK, NEVER, ALL_NAMESPACE
+from .constants import CHECK, ALL_NAMESPACE, NEVER_UPDATE, ALWAYS_UPDATE
 from .engine import Engine, Query
-from .utils import KubeConfig, fail, MyConfig
+from .utils import KubeConfig, fail, MyConfig, set_verbosity
 
 
 def main(argv: List[str]):
@@ -17,6 +17,7 @@ def main(argv: List[str]):
     ap.add_argument("-v", "--verbose", default=False, action="store_true")
     ap.add_argument("sql")
     args = ap.parse_args(argv)
+    set_verbosity(1 if args.verbose else 0)
     try:
         main2(args)
     except Exception as e:
@@ -29,7 +30,7 @@ def main(argv: List[str]):
 def main2(args):
     if args.cache and args.update:
         fail("Cannot use both --cache and --update")
-    cache_flag = ALWAYS if args.update else NEVER if args.cache else CHECK
+    cache_flag = ALWAYS_UPDATE if args.update else NEVER_UPDATE if args.cache else CHECK
     if args.all_namespaces and args.namespace:
         fail("Cannot use both --all-namespaces and --namespace")
     namespace = ALL_NAMESPACE if args.all_namespaces else args.namespace or "default"

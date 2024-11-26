@@ -1,12 +1,16 @@
+from datetime import datetime
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
 import json
+from pathlib import Path
 import re
+import sys
 from threading import Lock
+from typing import Tuple, Set, Optional
 
 from tabulate import tabulate
 
-from kubeql.constants import ALWAYS, CHECK, NEVER, CACHE_EXPIRATION, CacheFlag, ALL_NAMESPACE, WHITESPACE
+from kubeql.constants import CHECK, CACHE_EXPIRATION, CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
 from kubeql.jross import run, SqliteDb
 from kubeql.tables import PodsTable, JobsTable, NodesTable, NodeTaintsTable, WorkflowsTable
 from kubeql.utils import MyConfig, to_age, fail, add_custom_functions
@@ -22,6 +26,8 @@ class Engine:
         """
         self.config = config
         self.context_name = context_name
+        self.cache_dir = self.config.cache_dir / self.context_name
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.data = {}
         self.db = SqliteDb()
         self.db_lock = Lock()
@@ -30,16 +36,13 @@ class Engine:
     def get_objects(self, kind: str, query: Query)-> dict:
         """
         Fetch Kubernetes objects either via the API or from our cache.
-        TODO: make the cache a persistent SQLite DB; don't parse JSON each time.
         Special handling if kind is "pod_statuses" -- return a dict mapping pod name to
         status as shown by "kubectl get pods".
 
         :param kind: known K8S resource kind e.g. "pods", "nodes", "jobs" etc..
         :return: raw JSON objects as output by "kubectl get {kind}"
         """
-        cache_dir = self.config.cache_dir / self.context_name
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        cache_file = cache_dir / f"{query.namespace}.{kind}.json"
+        cache_file = self.cache_dir / f"{query.namespace}.{kind}.json"
         if query.cache_flag == NEVER:
             run_kubectl = False
         elif query.cache_flag == ALWAYS or not cache_file.exists():
@@ -90,6 +93,11 @@ class Engine:
             # This is fake, get_objects knows to get it via "kubectl get pods" not as JSON
             resources_used.add("pod_statuses")
 
+        cache = DataCache(self.cache_dir)
+        resources_fetched, max_stale_age = cache.advise_refresh(query.namespace, resources_used, query.cache_flag)
+        if max_stale_age is not None:
+            print(f"Data may be up to {max_stale_age} seconds old.", file=sys.stderr)
+
         # Go get stuff in parallel.
         def fetch(kind):
             try:
@@ -97,7 +105,7 @@ class Engine:
             except Exception as e:
                 fail(f"Failed to get {kind} objects: {e}")
         with ThreadPoolExecutor(max_workers=8) as pool:
-            for _ in pool.map(fetch, resources_used):
+            for _ in pool.map(fetch, resources_fetched):
                 pass
 
         # There won't really be a pod_statuses table, just grab the statuses and put them
@@ -120,6 +128,14 @@ class Engine:
         rows = self.db.query(kql, names=column_names)
         return rows, column_names
 
+    def cache_path(self, namespace: str, kind: str) -> Path:
+        """
+        Return the data cache path for a given namespace and kind.
+        :param namespace: A Kubernetes namespace
+        :param kind: A resource kind, e.g. "pods", "jobs", "nodes"
+        """
+        return self.cache_dir / f"{namespace}.{kind}.json"
+
 
 def _pod_status_from_pod_list(output):
     rows = [WHITESPACE.split(line.strip()) for line in output.strip().split("\n")]
@@ -129,3 +145,46 @@ def _pod_status_from_pod_list(output):
     if name_index is None or status_index is None:
         raise ValueError("Can't find NAME and STATUS columns in 'kubectl get pods' output")
     return {row[name_index]: row[status_index] for row in rows}
+
+
+class DataCache:
+    """
+    Manage the cached JSON data we get from Kubectl.
+    This is a separate class for ease of unit testing.
+    """
+
+    def __init__(self, dir: Path):
+        self.dir = dir
+
+    def advise_refresh(self, namespace: str, kinds: Set[str], flag: CacheFlag) -> Tuple[Set[str], int]:
+        if flag == ALWAYS_UPDATE:
+            # Refresh everything and don't issue a "stale data" warning
+            return kinds, None
+        # Find what's expired or missing
+        cache_paths = {kind: self.cache_path(namespace, kind) for kind in kinds}
+        cache_ages = {kind: self.age(path) for kind, path in cache_paths.items()}
+        expired = {kind for kind, age in cache_ages.items() if age is not None and age >= CACHE_EXPIRATION}
+        missing = {kind for kind, age in cache_ages.items() if age is None}
+        # Always refresh what's missing, and possibly also what's expired
+        refreshable = missing if flag == NEVER_UPDATE else expired | missing
+        # Stale data warning for everything else
+        max_stale_age = max((cache_ages[kind] for kind in (kinds - refreshable)), default=None)
+        return refreshable, max_stale_age
+
+    def cache_path(self, namespace: str, kind: str) -> Path:
+        return self.dir / f"{namespace}.{kind}.json"
+
+    def dump(self, namespace: str, kind: str, data: dict):
+        self.cache_path(namespace, kind).write_text(json.dumps(data))
+
+    def load(self, namespace: str, kind: str) -> dict:
+        return json.loads(self.cache_path(namespace, kind).read_text())
+
+    def age(path: Path) -> Optional[int]:
+        """
+        Return the age of a file in seconds, relative to the current time.
+        If the file doesn't exist, return None.
+        """
+        if not path.exists():
+            return None
+        return int((datetime.now() - datetime.fromtimestamp(path.stat().st_mtime)).total_seconds())
