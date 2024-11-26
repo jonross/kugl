@@ -26,8 +26,7 @@ class Engine:
         """
         self.config = config
         self.context_name = context_name
-        self.cache_dir = self.config.cache_dir / self.context_name
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.cache = DataCache(self.config.cache_dir / self.context_name)
         self.data = {}
         self.db = SqliteDb()
         self.db_lock = Lock()
@@ -35,6 +34,8 @@ class Engine:
 
     def get_objects(self, kind: str, query: Query)-> dict:
         """
+        TODO: update comment
+
         Fetch Kubernetes objects either via the API or from our cache.
         Special handling if kind is "pod_statuses" -- return a dict mapping pod name to
         status as shown by "kubectl get pods".
@@ -42,28 +43,16 @@ class Engine:
         :param kind: known K8S resource kind e.g. "pods", "nodes", "jobs" etc..
         :return: raw JSON objects as output by "kubectl get {kind}"
         """
-        cache_file = self.cache_dir / f"{query.namespace}.{kind}.json"
-        if query.cache_flag == NEVER:
-            run_kubectl = False
-        elif query.cache_flag == ALWAYS or not cache_file.exists():
-            run_kubectl = True
-        elif to_age(cache_file.stat().st_mtime) > CACHE_EXPIRATION:
-            run_kubectl = True
+        namespace_flag = ["--all-namespaces"] if query.namespace == ALL_NAMESPACE else ["-n", query.namespace]
+        if kind == "nodes":
+            _, output, _ = run(["kubectl", "get", kind, "-o", "json"])
+            return json.loads(output)
+        elif kind == "pod_statuses":
+            _, output, _= run(["kubectl", "get", "pods", *namespace_flag])
+            return _pod_status_from_pod_list(output)
         else:
-            run_kubectl = False
-        if run_kubectl:
-            namespace_flag = ["--all-namespaces"] if query.namespace == ALL_NAMESPACE else ["-n", query.namespace]
-            if kind == "nodes":
-                _, output, _ = run(["kubectl", "get", kind, "-o", "json"])
-            elif kind == "pod_statuses":
-                _, output, _= run(["kubectl", "get", "pods", *namespace_flag])
-                output = json.dumps(_pod_status_from_pod_list(output))
-            else:
-                _, output, _= run(["kubectl", "get", kind, *namespace_flag, "-o", "json"])
-            cache_file.write_text(output)
-        if not cache_file.exists():
-            fail(f"Internal error: no cache file exists for {kind} table in {self.context_name}.")
-        return json.loads(cache_file.read_text())
+            _, output, _= run(["kubectl", "get", kind, *namespace_flag, "-o", "json"])
+            return json.loads(output)
 
     def query_and_format(self, query: Query):
         rows, headers = self.query(query)
@@ -93,19 +82,23 @@ class Engine:
             # This is fake, get_objects knows to get it via "kubectl get pods" not as JSON
             resources_used.add("pod_statuses")
 
-        cache = DataCache(self.cache_dir)
-        resources_fetched, max_stale_age = cache.advise_refresh(query.namespace, resources_used, query.cache_flag)
+        resources_fetched, max_stale_age = self.cache.advise_refresh(query.namespace, resources_used, query.cache_flag)
         if max_stale_age is not None:
             print(f"Data may be up to {max_stale_age} seconds old.", file=sys.stderr)
 
-        # Go get stuff in parallel.
+        # Retrieve resource data in parallel.  If fetching from Kubernetes, update the cache;
+        # otherwise just read from the cache.
         def fetch(kind):
             try:
-                self.data[kind] = self.get_objects(kind, query)
+                if kind in resources_fetched:
+                    self.data[kind] = self.get_objects(kind, query)
+                    self.cache.dump(query.namespace, kind, self.data[kind])
+                else:
+                    self.data[kind] = self.cache.load(query.namespace, kind)
             except Exception as e:
                 fail(f"Failed to get {kind} objects: {e}")
         with ThreadPoolExecutor(max_workers=8) as pool:
-            for _ in pool.map(fetch, resources_fetched):
+            for _ in pool.map(fetch, resources_used):
                 pass
 
         # There won't really be a pod_statuses table, just grab the statuses and put them
@@ -155,6 +148,7 @@ class DataCache:
 
     def __init__(self, dir: Path):
         self.dir = dir
+        dir.mkdir(parents=True, exist_ok=True)
 
     def advise_refresh(self, namespace: str, kinds: Set[str], flag: CacheFlag) -> Tuple[Set[str], int]:
         if flag == ALWAYS_UPDATE:
