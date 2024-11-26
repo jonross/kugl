@@ -3,8 +3,8 @@ from argparse import ArgumentParser
 import sys
 from typing import List
 
-from .constants import ALWAYS, CHECK, NEVER
-from .engine import Engine
+from .constants import ALWAYS, CHECK, NEVER, ALL_NAMESPACE
+from .engine import Engine, Query
 from .utils import KubeConfig, fail, MyConfig
 
 
@@ -29,11 +29,12 @@ def main(argv: List[str]):
 def main2(args):
     if args.cache and args.update:
         fail("Cannot use both --cache and --update")
+    cache_flag = ALWAYS if args.update else NEVER if args.cache else CHECK
     if args.all_namespaces and args.namespace:
         fail("Cannot use both --all-namespaces and --namespace")
-    cache_flag = ALWAYS if args.update else NEVER if args.cache else CHECK
+    namespace = ALL_NAMESPACE if args.all_namespaces else args.namespace or "default"
     config = MyConfig()
     engine = Engine(config, KubeConfig().current_context())
     if " " not in args.sql:
         args.sql = config.canned_query(args.sql)
-    print(engine.query_and_format(args.sql, cache_flag))
+    print(engine.query_and_format(Query(args.sql, namespace, cache_flag)))

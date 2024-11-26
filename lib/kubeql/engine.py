@@ -1,6 +1,7 @@
+from collections import namedtuple
+from concurrent.futures import ThreadPoolExecutor
 import json
 import re
-from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 
 from tabulate import tabulate
@@ -11,6 +12,8 @@ from kubeql.tables import PodsTable, JobsTable, NodesTable, NodeTaintsTable, Wor
 from kubeql.utils import MyConfig, to_age, fail, add_custom_functions
 
 WHITESPACE = re.compile(r"\s+")
+
+Query = namedtuple("Query", ["sql", "namespace", "cache_flag"])
 
 
 class Engine:
@@ -26,7 +29,7 @@ class Engine:
         self.db_lock = Lock()
         add_custom_functions(self.db.conn)
 
-    def get_objects(self, kind: str, cache_flag: CacheFlag)-> dict:
+    def get_objects(self, kind: str, query: Query)-> dict:
         """
         Fetch Kubernetes objects either via the API or from our cache.
         TODO: make the cache a persistent SQLite DB; don't parse JSON each time.
@@ -39,9 +42,9 @@ class Engine:
         cache_dir = self.config.cache_dir / self.context_name
         cache_dir.mkdir(parents=True, exist_ok=True)
         cache_file = cache_dir / f"{kind}.json"
-        if cache_flag == NEVER:
+        if query.cache_flag == NEVER:
             run_kubectl = False
-        elif cache_flag == ALWAYS or not cache_file.exists():
+        elif query.cache_flag == ALWAYS or not cache_file.exists():
             run_kubectl = True
         elif to_age(cache_file.stat().st_mtime) > CACHE_EXPIRATION:
             run_kubectl = True
@@ -60,8 +63,8 @@ class Engine:
             fail(f"Internal error: no cache file exists for {kind} table in {self.context_name}.")
         return json.loads(cache_file.read_text())
 
-    def query_and_format(self, kql, cache_flag: CacheFlag):
-        rows, headers = self.query(kql, cache_flag)
+    def query_and_format(self, query: Query):
+        rows, headers = self.query(query)
         # %g is susceptible to outputting scientific notation, which we don't want.
         # but %f always outputs trailing zeros, which we also don't want.
         # So turn every value x in each row into an int if x == float(int(x))
@@ -69,12 +72,12 @@ class Engine:
         rows = [[truncate(x) for x in row] for row in rows]
         return tabulate(rows, tablefmt="plain", floatfmt=".1f", headers=headers)
 
-    def query(self, kql, cache_flag: CacheFlag):
+    def query(self, query: Query):
 
         table_classes = [PodsTable, JobsTable, NodesTable, NodeTaintsTable, WorkflowsTable]
 
         # Determine which tables are needed for the query
-        kql = kql.replace("\n", " ")
+        kql = query.sql.replace("\n", " ")
         table_names = (set(re.findall(r"(?<=from|join)\s+(\w+)", kql, re.IGNORECASE)) -
                        set(re.findall(r"(?<=with)\s+(\w+)\s+(?=as)", kql, re.IGNORECASE)))
         bad_names = table_names - {c.NAME for c in table_classes}
@@ -91,7 +94,7 @@ class Engine:
         # Go get stuff in parallel.
         def fetch(kind):
             try:
-                self.data[kind] = self.get_objects(kind, cache_flag)
+                self.data[kind] = self.get_objects(kind, query)
             except Exception as e:
                 fail(f"Failed to get {kind} objects: {e}")
         with ThreadPoolExecutor(max_workers=8) as pool:
