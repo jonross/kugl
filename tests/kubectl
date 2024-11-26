@@ -5,19 +5,20 @@
 
 import os
 from pathlib import Path
+import re
 import sys
 
-args = sys.argv[1:]
-if args == ["get", "pods", "--all-namespaces", "-o", "json"]:
+args = " ".join(sys.argv[1:])
+if re.match("get pods (-n default|--all-namespaces) -o json", args):
     kind = "pods"
-elif args == ["get", "jobs", "--all-namespaces", "-o", "json"]:
-    kind = "jobs"
-elif args == ["get", "nodes", "-o", "json"]:
-    kind = "nodes"
-elif args == ["get", "pods", "--all-namespaces"]:
+elif re.match("get pods (-n default|--all-namespaces)", args):
     kind = "pod_statuses"
+elif re.match("get jobs (-n default|--all-namespaces) -o json", args):
+    kind = "jobs"
+elif re.match("get nodes -o json", args):
+    kind = "nodes"
 else:
-    sys.exit("Unhandled command line: " + " ".join(args))
+    sys.exit(f"Unhandled command line: {args}")
 
 mockdir = Path(os.environ["KUBEQL_MOCKDIR"])
 content = mockdir.joinpath(kind).read_text()

@@ -1,35 +1,33 @@
+from collections import namedtuple
+from concurrent.futures import ThreadPoolExecutor
 import json
 import re
-from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
-from typing import Literal
 
 from tabulate import tabulate
 
-from kubeql.constants import ALWAYS, CHECK, NEVER, CACHE_EXPIRATION
+from kubeql.constants import ALWAYS, CHECK, NEVER, CACHE_EXPIRATION, CacheFlag, ALL_NAMESPACE, WHITESPACE
 from kubeql.jross import run, SqliteDb
 from kubeql.tables import PodsTable, JobsTable, NodesTable, NodeTaintsTable, WorkflowsTable
 from kubeql.utils import MyConfig, to_age, fail, add_custom_functions
 
-WHITESPACE = re.compile(r"\s+")
+Query = namedtuple("Query", ["sql", "namespace", "cache_flag"])
 
 
 class Engine:
 
-    def __init__(self, config: MyConfig, context_name: str, update_cache: Literal[ALWAYS, CHECK, NEVER]):
+    def __init__(self, config: MyConfig, context_name: str):
         """
-        :param update_cache: how to consult the cache, one of ALWAYS, CHECK, NEVER
         :param context_name: a Kubernetes context name from .kube/config
         """
         self.config = config
         self.context_name = context_name
-        self.update_cache = update_cache
         self.data = {}
         self.db = SqliteDb()
         self.db_lock = Lock()
         add_custom_functions(self.db.conn)
 
-    def get_objects(self, kind: str)-> dict:
+    def get_objects(self, kind: str, query: Query)-> dict:
         """
         Fetch Kubernetes objects either via the API or from our cache.
         TODO: make the cache a persistent SQLite DB; don't parse JSON each time.
@@ -41,30 +39,31 @@ class Engine:
         """
         cache_dir = self.config.cache_dir / self.context_name
         cache_dir.mkdir(parents=True, exist_ok=True)
-        cache_file = cache_dir / f"{kind}.json"
-        if self.update_cache == NEVER:
+        cache_file = cache_dir / f"{query.namespace}.{kind}.json"
+        if query.cache_flag == NEVER:
             run_kubectl = False
-        elif self.update_cache == ALWAYS or not cache_file.exists():
+        elif query.cache_flag == ALWAYS or not cache_file.exists():
             run_kubectl = True
         elif to_age(cache_file.stat().st_mtime) > CACHE_EXPIRATION:
             run_kubectl = True
         else:
             run_kubectl = False
         if run_kubectl:
+            namespace_flag = ["--all-namespaces"] if query.namespace == ALL_NAMESPACE else ["-n", query.namespace]
             if kind == "nodes":
                 _, output, _ = run(["kubectl", "get", kind, "-o", "json"])
             elif kind == "pod_statuses":
-                _, output, _= run(["kubectl", "get", "pods", "--all-namespaces"])
+                _, output, _= run(["kubectl", "get", "pods", *namespace_flag])
                 output = json.dumps(_pod_status_from_pod_list(output))
             else:
-                _, output, _= run(["kubectl", "get", kind, "--all-namespaces", "-o", "json"])
+                _, output, _= run(["kubectl", "get", kind, *namespace_flag, "-o", "json"])
             cache_file.write_text(output)
         if not cache_file.exists():
             fail(f"Internal error: no cache file exists for {kind} table in {self.context_name}.")
         return json.loads(cache_file.read_text())
 
-    def query_and_format(self, kql):
-        rows, headers = self.query(kql)
+    def query_and_format(self, query: Query):
+        rows, headers = self.query(query)
         # %g is susceptible to outputting scientific notation, which we don't want.
         # but %f always outputs trailing zeros, which we also don't want.
         # So turn every value x in each row into an int if x == float(int(x))
@@ -72,12 +71,12 @@ class Engine:
         rows = [[truncate(x) for x in row] for row in rows]
         return tabulate(rows, tablefmt="plain", floatfmt=".1f", headers=headers)
 
-    def query(self, kql):
+    def query(self, query: Query):
 
         table_classes = [PodsTable, JobsTable, NodesTable, NodeTaintsTable, WorkflowsTable]
 
         # Determine which tables are needed for the query
-        kql = kql.replace("\n", " ")
+        kql = query.sql.replace("\n", " ")
         table_names = (set(re.findall(r"(?<=from|join)\s+(\w+)", kql, re.IGNORECASE)) -
                        set(re.findall(r"(?<=with)\s+(\w+)\s+(?=as)", kql, re.IGNORECASE)))
         bad_names = table_names - {c.NAME for c in table_classes}
@@ -94,7 +93,7 @@ class Engine:
         # Go get stuff in parallel.
         def fetch(kind):
             try:
-                self.data[kind] = self.get_objects(kind)
+                self.data[kind] = self.get_objects(kind, query)
             except Exception as e:
                 fail(f"Failed to get {kind} objects: {e}")
         with ThreadPoolExecutor(max_workers=8) as pool:
