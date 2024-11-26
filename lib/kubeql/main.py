@@ -13,6 +13,7 @@ def main(argv: List[str]):
     ap.add_argument("-a", "--all-namespaces", default=False, action="store_true")
     ap.add_argument("-c", "--cache", default=False, action="store_true")
     ap.add_argument("-n", "--namespace", type=str)
+    ap.add_argument("-r", "--reckless", default=False, action="store_true")
     ap.add_argument("-u", "--update", default=False, action="store_true")
     ap.add_argument("-v", "--verbose", default=False, action="store_true")
     ap.add_argument("sql")
@@ -38,4 +39,4 @@ def main2(args):
     engine = Engine(config, KubeConfig().current_context())
     if " " not in args.sql:
         args.sql = config.canned_query(args.sql)
-    print(engine.query_and_format(Query(args.sql, namespace, cache_flag)))
+    print(engine.query_and_format(Query(args.sql, namespace, cache_flag, args.reckless)))

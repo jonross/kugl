@@ -62,5 +62,5 @@ def test_job_status(mockdir):
 
 def verify(mockdir, kql, expected):
     config = MyConfig(mockdir)
-    actual = Engine(config, "nocontext").query_and_format(Query(kql, "default", ALWAYS_UPDATE))
+    actual = Engine(config, "nocontext").query_and_format(Query(kql, "default", ALWAYS_UPDATE, True))
     assert actual.strip() == textwrap.dedent(expected).strip()

@@ -16,7 +16,7 @@ from kubeql.jross import run, SqliteDb
 from kubeql.tables import PodsTable, JobsTable, NodesTable, NodeTaintsTable, WorkflowsTable
 from kubeql.utils import MyConfig, fail, add_custom_functions
 
-Query = namedtuple("Query", ["sql", "namespace", "cache_flag"])
+Query = namedtuple("Query", ["sql", "namespace", "cache_flag", "reckless"])
 
 
 class Engine:
@@ -59,17 +59,17 @@ class Engine:
             # This is fake, _get_objects knows to get it via "kubectl get pods" not as JSON
             resources_used.add("pod_statuses")
 
-        # Identify what to fetch vs what's stale or expire.
-        resources_fetched, max_stale_age = self.cache.advise_refresh(query.namespace, resources_used, query.cache_flag)
-        if max_stale_age is not None:
-            print(f"(Data may be up to {max_stale_age} seconds old.)", file=sys.stderr)
+        # Identify what to fetch vs what's stale or expired.
+        refreshable, max_staleness = self.cache.advise_refresh(query.namespace, resources_used, query.cache_flag)
+        if not query.reckless and max_staleness is not None:
+            print(f"(Data may be up to {max_staleness} seconds old.)", file=sys.stderr)
             time.sleep(0.5)
 
         # Retrieve resource data in parallel.  If fetching from Kubernetes, update the cache;
         # otherwise just read from the cache.
         def fetch(kind):
             try:
-                if kind in resources_fetched:
+                if kind in refreshable:
                     self.data[kind] = self._get_objects(kind, query)
                     self.cache.dump(query.namespace, kind, self.data[kind])
                 else:
