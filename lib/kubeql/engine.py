@@ -10,10 +10,10 @@ from typing import Tuple, Set, Optional
 
 from tabulate import tabulate
 
-from kubeql.constants import CHECK, CACHE_EXPIRATION, CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
+from kubeql.constants import CACHE_EXPIRATION, CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
 from kubeql.jross import run, SqliteDb
 from kubeql.tables import PodsTable, JobsTable, NodesTable, NodeTaintsTable, WorkflowsTable
-from kubeql.utils import MyConfig, to_age, fail, add_custom_functions
+from kubeql.utils import MyConfig, fail, add_custom_functions
 
 Query = namedtuple("Query", ["sql", "namespace", "cache_flag"])
 
@@ -21,9 +21,6 @@ Query = namedtuple("Query", ["sql", "namespace", "cache_flag"])
 class Engine:
 
     def __init__(self, config: MyConfig, context_name: str):
-        """
-        :param context_name: a Kubernetes context name from .kube/config
-        """
         self.config = config
         self.context_name = context_name
         self.cache = DataCache(self.config.cache_dir / self.context_name)
@@ -31,28 +28,6 @@ class Engine:
         self.db = SqliteDb()
         self.db_lock = Lock()
         add_custom_functions(self.db.conn)
-
-    def get_objects(self, kind: str, query: Query)-> dict:
-        """
-        TODO: update comment
-
-        Fetch Kubernetes objects either via the API or from our cache.
-        Special handling if kind is "pod_statuses" -- return a dict mapping pod name to
-        status as shown by "kubectl get pods".
-
-        :param kind: known K8S resource kind e.g. "pods", "nodes", "jobs" etc..
-        :return: raw JSON objects as output by "kubectl get {kind}"
-        """
-        namespace_flag = ["--all-namespaces"] if query.namespace == ALL_NAMESPACE else ["-n", query.namespace]
-        if kind == "nodes":
-            _, output, _ = run(["kubectl", "get", kind, "-o", "json"])
-            return json.loads(output)
-        elif kind == "pod_statuses":
-            _, output, _= run(["kubectl", "get", "pods", *namespace_flag])
-            return _pod_status_from_pod_list(output)
-        else:
-            _, output, _= run(["kubectl", "get", kind, *namespace_flag, "-o", "json"])
-            return json.loads(output)
 
     def query_and_format(self, query: Query):
         rows, headers = self.query(query)
@@ -67,7 +42,8 @@ class Engine:
 
         table_classes = [PodsTable, JobsTable, NodesTable, NodeTaintsTable, WorkflowsTable]
 
-        # Determine which tables are needed for the query
+        # Determine which tables are needed for the query by looking for symmbols that follow
+        # FROM, JOIN, and WITH
         kql = query.sql.replace("\n", " ")
         table_names = (set(re.findall(r"(?<=from|join)\s+(\w+)", kql, re.IGNORECASE)) -
                        set(re.findall(r"(?<=with)\s+(\w+)\s+(?=as)", kql, re.IGNORECASE)))
@@ -75,13 +51,14 @@ class Engine:
         if bad_names:
             fail(f"Not available for query: {', '.join(bad_names)}")
 
-        # What do we need from kubectl
+        # Based on the tables used, what resources are needed from Kubernetes
         tables_used = [c() for c in table_classes if c.NAME in table_names]
         resources_used = {t.RESOURCE_KIND for t in tables_used}
         if "pods" in resources_used:
-            # This is fake, get_objects knows to get it via "kubectl get pods" not as JSON
+            # This is fake, _get_objects knows to get it via "kubectl get pods" not as JSON
             resources_used.add("pod_statuses")
 
+        # Identify what to fetch vs what's stale or expire.
         resources_fetched, max_stale_age = self.cache.advise_refresh(query.namespace, resources_used, query.cache_flag)
         if max_stale_age is not None:
             print(f"Data may be up to {max_stale_age} seconds old.", file=sys.stderr)
@@ -91,7 +68,7 @@ class Engine:
         def fetch(kind):
             try:
                 if kind in resources_fetched:
-                    self.data[kind] = self.get_objects(kind, query)
+                    self.data[kind] = self._get_objects(kind, query)
                     self.cache.dump(query.namespace, kind, self.data[kind])
                 else:
                     self.data[kind] = self.cache.load(query.namespace, kind)
@@ -121,23 +98,36 @@ class Engine:
         rows = self.db.query(kql, names=column_names)
         return rows, column_names
 
-    def cache_path(self, namespace: str, kind: str) -> Path:
+    def _get_objects(self, kind: str, query: Query)-> dict:
         """
-        Return the data cache path for a given namespace and kind.
-        :param namespace: A Kubernetes namespace
-        :param kind: A resource kind, e.g. "pods", "jobs", "nodes"
+        TODO: update comment
+
+        Fetch Kubernetes objects either via the API or from our cache.
+        Special handling if kind is "pod_statuses" -- return a dict mapping pod name to
+        status as shown by "kubectl get pods".
+
+        :param kind: known K8S resource kind e.g. "pods", "nodes", "jobs" etc..
+        :return: raw JSON objects as output by "kubectl get {kind}"
         """
-        return self.cache_dir / f"{namespace}.{kind}.json"
+        namespace_flag = ["--all-namespaces"] if query.namespace == ALL_NAMESPACE else ["-n", query.namespace]
+        if kind == "nodes":
+            _, output, _ = run(["kubectl", "get", kind, "-o", "json"])
+            return json.loads(output)
+        elif kind == "pod_statuses":
+            _, output, _= run(["kubectl", "get", "pods", *namespace_flag])
+            return self._pod_status_from_pod_list(output)
+        else:
+            _, output, _= run(["kubectl", "get", kind, *namespace_flag, "-o", "json"])
+            return json.loads(output)
 
-
-def _pod_status_from_pod_list(output):
-    rows = [WHITESPACE.split(line.strip()) for line in output.strip().split("\n")]
-    header, rows = rows[0], rows[1:]
-    name_index = header.index("NAME")
-    status_index = header.index("STATUS")
-    if name_index is None or status_index is None:
-        raise ValueError("Can't find NAME and STATUS columns in 'kubectl get pods' output")
-    return {row[name_index]: row[status_index] for row in rows}
+    def _pod_status_from_pod_list(self, output):
+        rows = [WHITESPACE.split(line.strip()) for line in output.strip().split("\n")]
+        header, rows = rows[0], rows[1:]
+        name_index = header.index("NAME")
+        status_index = header.index("STATUS")
+        if name_index is None or status_index is None:
+            raise ValueError("Can't find NAME and STATUS columns in 'kubectl get pods' output")
+        return {row[name_index]: row[status_index] for row in rows}
 
 
 class DataCache:
