@@ -18,7 +18,7 @@ kubectl get jobs -o json --all-namespaces | jq -r '
 when you could
 
 ```shell
-kubeql "select name, owner from jobs where cpu_req > 6 and status = 'Suspended'"
+kubeql -a "select name, owner from jobs where cpu_req > 6 and status = 'Suspended'"
 ```
 
 ## Installation

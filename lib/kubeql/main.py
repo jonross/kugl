@@ -12,7 +12,7 @@ def main(argv: List[str]):
     ap = ArgumentParser()
     ap.add_argument("-a", "--all-namespaces", default=False, action="store_true")
     ap.add_argument("-c", "--cache", default=False, action="store_true")
-    ap.add_argument("-n", "--namespace", type=str, default="kube-system")
+    ap.add_argument("-n", "--namespace", type=str)
     ap.add_argument("-u", "--update", default=False, action="store_true")
     ap.add_argument("-v", "--verbose", default=False, action="store_true")
     ap.add_argument("sql")
