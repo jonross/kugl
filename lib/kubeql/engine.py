@@ -161,15 +161,14 @@ class DataCache:
             # Refresh everything and don't issue a "stale data" warning
             return kinds, None
         # Find what's expired or missing
-        cache_paths = {kind: self.cache_path(namespace, kind) for kind in kinds}
-        cache_ages = {kind: self.age(path) for kind, path in cache_paths.items()}
+        cache_ages = {kind: self.age(self.cache_path(namespace, kind)) for kind in kinds}
         expired = {kind for kind, age in cache_ages.items() if age is not None and age >= CACHE_EXPIRATION}
         missing = {kind for kind, age in cache_ages.items() if age is None}
         # Always refresh what's missing, and possibly also what's expired
-        refreshable = missing if flag == NEVER_UPDATE else expired | missing
         # Stale data warning for everything else
-        max_stale_age = max((cache_ages[kind] for kind in (kinds - refreshable)), default=None)
-        return refreshable, max_stale_age
+        refreshable = missing if flag == NEVER_UPDATE else expired | missing
+        max_age = max((cache_ages[kind] for kind in (kinds - refreshable)), default=None)
+        return refreshable, max_age
 
     def cache_path(self, namespace: str, kind: str) -> Path:
         return self.dir / f"{namespace}.{kind}.json"
