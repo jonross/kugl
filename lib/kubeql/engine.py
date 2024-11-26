@@ -6,12 +6,10 @@ from threading import Lock
 
 from tabulate import tabulate
 
-from kubeql.constants import ALWAYS, CHECK, NEVER, CACHE_EXPIRATION, CacheFlag
+from kubeql.constants import ALWAYS, CHECK, NEVER, CACHE_EXPIRATION, CacheFlag, ALL_NAMESPACE, WHITESPACE
 from kubeql.jross import run, SqliteDb
 from kubeql.tables import PodsTable, JobsTable, NodesTable, NodeTaintsTable, WorkflowsTable
 from kubeql.utils import MyConfig, to_age, fail, add_custom_functions
-
-WHITESPACE = re.compile(r"\s+")
 
 Query = namedtuple("Query", ["sql", "namespace", "cache_flag"])
 
@@ -41,7 +39,7 @@ class Engine:
         """
         cache_dir = self.config.cache_dir / self.context_name
         cache_dir.mkdir(parents=True, exist_ok=True)
-        cache_file = cache_dir / f"{kind}.json"
+        cache_file = cache_dir / f"{query.namespace}.{kind}.json"
         if query.cache_flag == NEVER:
             run_kubectl = False
         elif query.cache_flag == ALWAYS or not cache_file.exists():
@@ -51,13 +49,14 @@ class Engine:
         else:
             run_kubectl = False
         if run_kubectl:
+            namespace_flag = ["--all-namespaces"] if query.namespace == ALL_NAMESPACE else ["-n", query.namespace]
             if kind == "nodes":
                 _, output, _ = run(["kubectl", "get", kind, "-o", "json"])
             elif kind == "pod_statuses":
-                _, output, _= run(["kubectl", "get", "pods", "--all-namespaces"])
+                _, output, _= run(["kubectl", "get", "pods", *namespace_flag])
                 output = json.dumps(_pod_status_from_pod_list(output))
             else:
-                _, output, _= run(["kubectl", "get", kind, "--all-namespaces", "-o", "json"])
+                _, output, _= run(["kubectl", "get", kind, *namespace_flag, "-o", "json"])
             cache_file.write_text(output)
         if not cache_file.exists():
             fail(f"Internal error: no cache file exists for {kind} table in {self.context_name}.")

@@ -1,5 +1,6 @@
 
 from datetime import timedelta
+import re
 from typing import Literal
 
 # Cache behaviors
@@ -15,3 +16,5 @@ MAIN_CONTAINERS = ["main", "notebook", "app"]
 
 # Fake namespace if "--all-namespaces" option is used
 ALL_NAMESPACE = "__all"
+
+WHITESPACE = re.compile(r"\s+")
