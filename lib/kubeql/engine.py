@@ -1,3 +1,4 @@
+import time
 from datetime import datetime
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
@@ -61,7 +62,8 @@ class Engine:
         # Identify what to fetch vs what's stale or expire.
         resources_fetched, max_stale_age = self.cache.advise_refresh(query.namespace, resources_used, query.cache_flag)
         if max_stale_age is not None:
-            print(f"Data may be up to {max_stale_age} seconds old.", file=sys.stderr)
+            print(f"(Data may be up to {max_stale_age} seconds old.)", file=sys.stderr)
+            time.sleep(0.5)
 
         # Retrieve resource data in parallel.  If fetching from Kubernetes, update the cache;
         # otherwise just read from the cache.
@@ -163,7 +165,7 @@ class DataCache:
     def load(self, namespace: str, kind: str) -> dict:
         return json.loads(self.cache_path(namespace, kind).read_text())
 
-    def age(path: Path) -> Optional[int]:
+    def age(self, path: Path) -> Optional[int]:
         """
         Return the age of a file in seconds, relative to the current time.
         If the file doesn't exist, return None.
