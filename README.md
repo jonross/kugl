@@ -11,8 +11,7 @@ kubectl get jobs -o json --all-namespaces | jq -r '
     | select( (.status.conditions[]? | select(.type == "Suspended" and .status == "True")) ) 
     | select( ([.spec.template.spec.containers[]?.resources.requests.cpu // "0"] 
                | map( if test("m$") then (.[:-1] | tonumber / 1000) else tonumber end ) | add) > 6 ) 
-    | "\(.metadata.name) \(.metadata.labels["com.mycompany/job-owner"])"
-'
+    | "\(.metadata.name) \(.metadata.labels["com.mycompany/job-owner"])"'
 ```
 
 when you could
@@ -28,7 +27,7 @@ kubeql -a "select name, owner from jobs where cpu_req > 6 and status = 'Suspende
   Try
 
 ```shell
-kubeql "select name, cpu_req, command from pods where namespace = 'kube-system'"
+kubeql -a "select name, cpu_req, command from pods limit 10"
 ```
 
 ## How it works (important)

@@ -9,6 +9,18 @@ import yaml
 
 from .jross import to_footprint
 
+VERBOSITY = 0
+
+
+def set_verbosity(v: int):
+    global VERBOSITY
+    VERBOSITY = v
+
+
+def vprint(*args, **kwargs):
+    if VERBOSITY > 0:
+        print(*args, **kwargs)
+
 
 def add_custom_functions(db):
     """
