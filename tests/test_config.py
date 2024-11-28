@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from kubeql.config import Settings, Config
+from kubeql.config import Settings, Config, validate_config
 
 import yaml
 
@@ -31,7 +31,7 @@ def test_empty_config():
 
 
 def test_config_with_table_extension():
-    c = Config(**yaml.safe_load("""
+    c = validate_config(yaml.safe_load("""
         extend:
           pods:
             columns:
@@ -50,7 +50,7 @@ def test_config_with_table_extension():
 
 
 def test_config_with_table_creation():
-    c = Config(**yaml.safe_load("""
+    c = validate_config(yaml.safe_load("""
         create:
           pods:
             resource: pods
@@ -74,36 +74,40 @@ def test_config_with_table_creation():
 
 
 def test_unknown_type():
-    with pytest.raises(ValidationError, match="foo.type\n.*Input should be"):
-        Config(**yaml.safe_load("""
-            extend:
-              pods:
-                columns:
-                  foo:
-                    type: unknown_type
-                    source: metadata.name
-        """))
+    errors = validate_config(yaml.safe_load("""
+        extend:
+          pods:
+            columns:
+              foo:
+                type: unknown_type
+                source: metadata.name
+    """))
+    assert errors == ["extend.pods.columns.foo.type: Input should be 'str', 'int' or 'float'"]
 
 
 def test_missing_fields_for_create():
-    with pytest.raises(ValidationError, match="Field required"):
-        Config(**yaml.safe_load("""
-            create:
-              pods:
-                columns:
-                  foo:
-                    source: metadata.name
-        """))
+    errors = validate_config(yaml.safe_load("""
+        create:
+          pods:
+            columns:
+              foo:
+                source: metadata.name
+    """))
+    assert set(errors) == set([
+        "create.pods.columns.foo.type: Field required",
+        "create.pods.resource: Field required",
+        "create.pods.namespaced: Field required",
+    ])
 
 
 def test_unexpected_keys():
-    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
-        Config(**yaml.safe_load("""
-            extend:
-              pods:
-                columns:
-                  foo:
-                    type: str
-                    source: metadata.name
-                    unexpected: 42
-        """))
+    errors = validate_config(yaml.safe_load("""
+        extend:
+          pods:
+            columns:
+              foo:
+                type: str
+                source: metadata.name
+                unexpected: 42
+    """))
+    assert errors == ["extend.pods.columns.foo.unexpected: Extra inputs are not permitted"]
