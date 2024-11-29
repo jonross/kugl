@@ -1,7 +1,10 @@
 import json
-from typing import Literal, Optional, Union
+from pathlib import Path
+from typing import Literal, Optional, Union, Tuple
 
 from pydantic import BaseModel, NonNegativeInt, ConfigDict, ValidationError
+
+from kubeql.constants import KUBEQL_HOME
 
 
 class Settings(BaseModel):
@@ -22,6 +25,9 @@ class ExtendTable(BaseModel):
     columns: dict[str, ColumnDef]
 
 
+EMPTY_EXTENSION = ExtendTable(columns={})
+
+
 class CreateTable(ExtendTable):
     resource: str
     namespaced: bool
@@ -29,18 +35,19 @@ class CreateTable(ExtendTable):
 
 class Config(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    cache_dir: Path = KUBEQL_HOME / "cache"
     settings: Optional[Settings] = Settings()
     extend: dict[str, ExtendTable] = {}
     create: dict[str, CreateTable] = {}
     canned: dict[str, str] = {}
 
 
-def validate_config(root) -> Union[Config, list[str]]:
+def validate_config(root) -> Tuple[Config, list[str]]:
     """
     Validated the config file structure and contents.  Returns the validated config or a list
     of Pydantic errors as strings.
     """
     try:
-        return Config.parse_obj(root)
+        return Config.parse_obj(root), None
     except ValidationError as e:
-        return [f"{'.'.join(x['loc'])}: {x['msg']}" for x in e.errors()]
+        return None, [f"{'.'.join(x['loc'])}: {x['msg']}" for x in e.errors()]

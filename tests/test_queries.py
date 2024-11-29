@@ -1,9 +1,9 @@
 import textwrap
 
+from kubeql.config import Config
 from kubeql.constants import ALWAYS_UPDATE
 from kubeql.engine import Query
 from kubeql.main import Engine
-from kubeql.utils import MyConfig
 
 from .testing import make_pod, make_job, kubectl_response
 
@@ -61,6 +61,6 @@ def test_job_status(mockdir):
 
 
 def verify(mockdir, kql, expected):
-    config = MyConfig(mockdir)
+    config = Config(cache_dir=mockdir)
     actual = Engine(config, "nocontext").query_and_format(Query(kql, "default", ALWAYS_UPDATE, True))
     assert actual.strip() == textwrap.dedent(expected).strip()

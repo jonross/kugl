@@ -5,12 +5,12 @@ from kubeql.utils import KubeQLError
 
 
 def test_enforce_one_cache_option():
-    with pytest.raises(KubeQLError, match="Cannot use both --cache and --update"):
+    with pytest.raises(KubeQLError, match="Cannot use both -c/--cache and -u/--update"):
         main("-c -u foo".split(" "))
 
 
 def test_enforce_one_namespace_option():
-    with pytest.raises(KubeQLError, match="Cannot use both --all-namespaces and --namespace"):
+    with pytest.raises(KubeQLError, match="Cannot use both -a/--all-namespaces and -n/--namespace"):
         main("-a -n x foo".split(" "))
 
 

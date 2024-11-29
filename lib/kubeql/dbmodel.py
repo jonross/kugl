@@ -2,7 +2,8 @@
 from dataclasses import dataclass
 import jmespath
 
-from .utils import rcfail, MyConfig
+from .config import Config, EMPTY_EXTENSION
+from .utils import fail
 
 
 @dataclass
@@ -31,19 +32,14 @@ class Column:
     finder: jmespath.parser.ParsedResult
 
     @staticmethod
-    def from_config(name: str, table_name: str, obj: dict):
+    def from_config(name: str, table_name: str, type, source):
         what = f"column '{name}' in table '{table_name}'"
-        type, source = obj.get("type"), obj.get("source")
-        if type is None or source is None:
-            rcfail(f"missing type or source for {what}")
         type = COLUMN_TYPES.get(type)
-        if type is None:
-            rcfail(f"type of {what} must be one of {', '.join(COLUMN_TYPES.keys())}")
         try:
             jmesexpr = jmespath.compile(source)
             finder = lambda obj: jmesexpr.search(obj)
         except jmespath.exceptions.ParseError as e:
-            rcfail(f"invalid JMESPath expression for {what}: {e}")
+            fail(f"invalid JMESPath expression for {what}: {e}")
         return Column(type, name, table_name, finder)
 
     def extract(self, obj):
@@ -59,10 +55,10 @@ class Table:
         make_rows   method to convert kubectl output into rows
     """
 
-    def create(self, db, config: MyConfig, kube_data: dict):
+    def create(self, db, config: Config, kube_data: dict):
         schema = self.SCHEMA
-        extra_columns = [Column.from_config(name, self.NAME, detail)
-                         for name, detail in config.extra_columns(self.NAME).items()]
+        extra_columns = [Column.from_config(name, self.NAME, col.type, col.source)
+                         for name, col in config.extend.get(self.NAME, EMPTY_EXTENSION).columns.items()]
         if extra_columns:
             schema += " ".join(f", {column.name} {column.type.sql_type}"
                                for column in extra_columns)

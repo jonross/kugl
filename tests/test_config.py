@@ -31,7 +31,7 @@ def test_empty_config():
 
 
 def test_config_with_table_extension():
-    c = validate_config(yaml.safe_load("""
+    c, _ = validate_config(yaml.safe_load("""
         extend:
           pods:
             columns:
@@ -50,7 +50,7 @@ def test_config_with_table_extension():
 
 
 def test_config_with_table_creation():
-    c = validate_config(yaml.safe_load("""
+    c, _ = validate_config(yaml.safe_load("""
         create:
           pods:
             resource: pods
@@ -74,7 +74,7 @@ def test_config_with_table_creation():
 
 
 def test_unknown_type():
-    errors = validate_config(yaml.safe_load("""
+    _, errors = validate_config(yaml.safe_load("""
         extend:
           pods:
             columns:
@@ -86,7 +86,7 @@ def test_unknown_type():
 
 
 def test_missing_fields_for_create():
-    errors = validate_config(yaml.safe_load("""
+    _, errors = validate_config(yaml.safe_load("""
         create:
           pods:
             columns:
@@ -101,7 +101,7 @@ def test_missing_fields_for_create():
 
 
 def test_unexpected_keys():
-    errors = validate_config(yaml.safe_load("""
+    _, errors = validate_config(yaml.safe_load("""
         extend:
           pods:
             columns:
