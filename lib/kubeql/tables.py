@@ -1,3 +1,5 @@
+from abc import abstractmethod
+
 from .config import Config, EMPTY_EXTENSION, ColumnDef
 from .helpers import Resources, ItemHelper, PodHelper, JobHelper
 
@@ -9,6 +11,10 @@ class Table:
         SCHEMA      chunk of DDL with column names and types
         make_rows   method to convert kubectl output into rows
     """
+
+    @abstractmethod
+    def make_rows(self, kube_data: list[dict]) -> list[tuple]:
+        pass
 
     def create(self, db, config: Config, kube_data: dict):
         schema = self.SCHEMA
@@ -37,8 +43,6 @@ class NodesTable(Table):
     SCHEMA = """
         name TEXT,
         provider TEXT,
-        node_family TEXT,
-        amp_type TEXT,
         cpu_alloc REAL,
         gpu_alloc REAL,
         mem_alloc INTEGER,
@@ -52,8 +56,6 @@ class NodesTable(Table):
         return [(
             node.name,
             node.obj.get("spec", {}).get("providerID"),
-            node.label("pathai.com/node-family") or node.label("mle.pathai.com/node-family"),
-            node.label("amp.pathai.com/node-type"),
             *Resources.extract(node["status"]["allocatable"]).as_tuple(),
             *Resources.extract(node["status"]["capacity"]).as_tuple(),
             ",".join(taint["key"] for taint in node.obj.get("spec", {}).get("taints", [])
@@ -137,7 +139,6 @@ class WorkflowsTable(Table):
     SCHEMA = """
         name TEXT,
         namespace TEXT,
-        url TEXT,
         phase TEXT
     """
 
@@ -145,6 +146,5 @@ class WorkflowsTable(Table):
         return [(
             w.name,
             w.namespace,
-            f'http://app.mle.pathai.com/jabba/workflows/view/{w.label("jabba.pathai.com/workflow-id")}',
             w.label("workflows.argoproj.io/phase"),
         ) for w in map(ItemHelper, kube_data)]
