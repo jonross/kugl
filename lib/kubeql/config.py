@@ -51,7 +51,7 @@ EMPTY_EXTENSION = ExtendTable(columns={})
 class CreateTable(ExtendTable):
     resource: str
     namespaced: bool  # TODO use this in engine query
-    builder: str = "kubeql.tables.Table"
+    builder: str = "kubeql.tables.TableMaker"
 
 
 class Config(BaseModel):

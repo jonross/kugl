@@ -5,7 +5,7 @@ from .config import Config, EMPTY_EXTENSION, ColumnDef
 from .helpers import Resources, ItemHelper, PodHelper, JobHelper
 
 
-class Table:
+class TableMaker:
 
     def __init__(self, name: str, resource: str, namespaced: bool, schema: Optional[str] = None):
         """
@@ -48,7 +48,7 @@ class Table:
         return None if value is None else column._pytype(value)
 
 
-class NodesTable(Table):
+class NodesTable(TableMaker):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs, schema="""
@@ -74,7 +74,7 @@ class NodesTable(Table):
         ) for node in map(ItemHelper, kube_data)]
 
 
-class TaintsTable(Table):
+class TaintsTable(TableMaker):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs, schema="""
@@ -92,7 +92,7 @@ class TaintsTable(Table):
         ) for node in nodes for taint in node.obj.get("spec", {}).get("taints", [])]
 
 
-class PodsTable(Table):
+class PodsTable(TableMaker):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs, schema="""
@@ -123,7 +123,7 @@ class PodsTable(Table):
         ) for pod in map(PodHelper, kube_data)]
 
 
-class JobsTable(Table):
+class JobsTable(TableMaker):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs, schema="""
@@ -140,7 +140,7 @@ class JobsTable(Table):
         ) for job in map(JobHelper, kube_data)]
 
 
-class WorkflowsTable(Table):
+class WorkflowsTable(TableMaker):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs, schema="""
