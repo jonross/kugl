@@ -1,8 +1,10 @@
 import json
 from pathlib import Path
-from typing import Literal, Optional, Union, Tuple
+from typing import Literal, Optional, Union, Tuple, Annotated
 
-from pydantic import BaseModel, NonNegativeInt, ConfigDict, ValidationError
+import jmespath
+from pydantic import BaseModel, Field, NonNegativeInt, ConfigDict, ValidationError, root_validator
+from pydantic.functional_validators import model_validator
 
 from kubeql.constants import KUBEQL_HOME
 
@@ -15,9 +17,31 @@ class Settings(BaseModel):
 
 
 class ColumnDef(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     type: Literal["str", "int", "float"]
     source: str
+    _finder: jmespath.parser.Parser
+    _sqltype: str
+    _pytype: type
+
+    @model_validator(mode="after")
+    @classmethod
+    def parse_source(cls, config: 'ColumnDef') -> 'ColumnDef':
+        try:
+            jmesexpr = jmespath.compile(config.source)
+            config._finder = lambda obj: jmesexpr.search(obj)
+        except jmespath.exceptions.ParseError as e:
+            raise ValueError(f"invalid JMESPath source  for {values['source']}") from e
+        config._sqltype, config._pytype = {
+            "str": ("TEXT", str),
+            "int": ("INTEGER", int),
+            "float": ("REAL", float),
+        }[config.type]
+        return config
+
+    def extract(self, obj):
+        value = self._finder(obj)
+        return None if value is None else self._pytype(value)
 
 
 class ExtendTable(BaseModel):
