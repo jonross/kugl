@@ -39,10 +39,6 @@ class ColumnDef(BaseModel):
         }[config.type]
         return config
 
-    def extract(self, obj):
-        value = self._finder(obj)
-        return None if value is None else self._pytype(value)
-
 
 class ExtendTable(BaseModel):
     model_config = ConfigDict(extra="forbid")

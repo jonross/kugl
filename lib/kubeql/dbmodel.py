@@ -1,5 +1,5 @@
 
-from .config import Config, EMPTY_EXTENSION
+from .config import Config, EMPTY_EXTENSION, ColumnDef
 
 
 class Table:
@@ -20,7 +20,12 @@ class Table:
         rows = self.make_rows(kube_data["items"])
         if rows:
             if extra_columns:
-                rows = [row + tuple(column.extract(item) for column in extra_columns.values())
+                rows = [row + tuple(self._convert(item, column) for column in extra_columns.values())
                         for item, row in zip(kube_data["items"], rows)]
             placeholders = ", ".join("?" * len(rows[0]))
             db.execute(f"INSERT INTO {self.NAME} VALUES({placeholders})", rows)
+
+    def _convert(self, obj: object, column: ColumnDef) -> object:
+        value = column._finder(obj)
+        return None if value is None else column._pytype(value)
+
