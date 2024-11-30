@@ -1,28 +1,31 @@
 from abc import abstractmethod
+from typing import Optional
 
 from .config import Config, EMPTY_EXTENSION, ColumnDef
 from .helpers import Resources, ItemHelper, PodHelper, JobHelper
 
 
 class Table:
-    """
-    Turn 'kubectl get ... -o json" output into a database table.  Subclasses define
-        make_rows   method to convert kubectl output into rows
-    """
 
-    def __init__(self, name, resource_kind, schema=None):
+    def __init__(self, name: str, resource: str, namespaced: bool, schema: Optional[str] = None):
         """
         :param name: The table name
-        :param resource_kind: The Kubernetes resource kind, e.g. "pods", "nodes", "jobs"
-        :param schema: If present, the schema defining built-in columns
+        :param resource: The Kubernetes resource type, e.g. "pods", "nodes", "jobs"
+        :param namespaced: True if the resource is namespaced
+        :param schema: If present, the schema defining built-in columns, and the subclass must
+            also define a make_rows method.
         """
         self.name = name
-        self.resource_kind = resource_kind
+        self.resource = resource
+        self.namespaced = namespaced
         self.schema = schema
 
-    @abstractmethod
     def make_rows(self, kube_data: list[dict]) -> list[tuple]:
-        pass
+        """
+        Convert the JSON output of "kubectl get {resource} -o json" into a list of rows
+        matching the columns provided in the built-in schema.
+        """
+        return []
 
     def create(self, db, config: Config, kube_data: dict):
         schema = self.schema or ""
@@ -47,8 +50,8 @@ class Table:
 
 class NodesTable(Table):
 
-    def __init__(self):
-        super().__init__("nodes", "nodes", """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs, schema="""
             name TEXT,
             provider TEXT,
             cpu_alloc REAL,
@@ -71,10 +74,10 @@ class NodesTable(Table):
         ) for node in map(ItemHelper, kube_data)]
 
 
-class NodeTaintsTable(Table):
+class TaintsTable(Table):
 
-    def __init__(self):
-        super().__init__("taints", "nodes", """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs, schema="""
             name TEXT,
             key TEXT,
             effect TEXT
@@ -91,8 +94,8 @@ class NodeTaintsTable(Table):
 
 class PodsTable(Table):
 
-    def __init__(self):
-        super().__init__("pods", "pods", """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs, schema="""
             name TEXT,
             is_daemon INTEGER,
             namespace TEXT,
@@ -122,8 +125,8 @@ class PodsTable(Table):
 
 class JobsTable(Table):
 
-    def __init__(self):
-        super().__init__("jobs", "jobs", """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs, schema="""
             name TEXT,
             namespace TEXT,
             status TEXT
@@ -139,8 +142,8 @@ class JobsTable(Table):
 
 class WorkflowsTable(Table):
 
-    def __init__(self):
-        super().__init__("workflows", "workflows", """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs, schema="""
             name TEXT,
             namespace TEXT,
             phase TEXT

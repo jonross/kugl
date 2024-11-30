@@ -42,7 +42,7 @@ class ColumnDef(BaseModel):
 
 class ExtendTable(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    columns: dict[str, ColumnDef]
+    columns: dict[str, ColumnDef] = {}
 
 
 EMPTY_EXTENSION = ExtendTable(columns={})
@@ -50,7 +50,8 @@ EMPTY_EXTENSION = ExtendTable(columns={})
 
 class CreateTable(ExtendTable):
     resource: str
-    namespaced: bool
+    namespaced: bool  # TODO use this in engine query
+    builder: str = "kubeql.tables.Table"
 
 
 class Config(BaseModel):

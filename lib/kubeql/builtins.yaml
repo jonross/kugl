@@ -1,0 +1,27 @@
+
+create:
+
+    pods:
+        resource: pods
+        namespaced: true
+        builder: kubeql.tables.PodsTable
+
+    jobs:
+        resource: jobs
+        namespaced: true
+        builder: kubeql.tables.JobsTable
+
+    nodes:
+        resource: nodes
+        namespaced: false
+        builder: kubeql.tables.NodesTable
+
+    taints:
+        resource: nodes
+        namespaced: false
+        builder: kubeql.tables.TaintsTable
+
+    workflows:
+        resource: workflows
+        namespaced: true
+        builder: kubeql.tables.WorkflowsTable
