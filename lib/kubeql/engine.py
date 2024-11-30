@@ -42,20 +42,20 @@ class Engine:
 
     def query(self, query: Query):
 
-        table_classes = [PodsTable, JobsTable, NodesTable, NodeTaintsTable, WorkflowsTable]
+        tables = [t() for t in (PodsTable, JobsTable, NodesTable, NodeTaintsTable, WorkflowsTable)]
 
         # Determine which tables are needed for the query by looking for symmbols that follow
         # FROM, JOIN, and WITH
         kql = query.sql.replace("\n", " ")
-        table_names = (set(re.findall(r"(?<=from|join)\s+(\w+)", kql, re.IGNORECASE)) -
-                       set(re.findall(r"(?<=with)\s+(\w+)\s+(?=as)", kql, re.IGNORECASE)))
-        bad_names = table_names - {c.NAME for c in table_classes}
+        tables_wanted = (set(re.findall(r"(?<=from|join)\s+(\w+)", kql, re.IGNORECASE)) -
+                         set(re.findall(r"(?<=with)\s+(\w+)\s+(?=as)", kql, re.IGNORECASE)))
+        bad_names = tables_wanted - {t.name for t in tables}
         if bad_names:
             fail(f"Not available for query: {', '.join(bad_names)}")
 
         # Based on the tables used, what resources are needed from Kubernetes
-        tables_used = [c() for c in table_classes if c.NAME in table_names]
-        resources_used = {t.RESOURCE_KIND for t in tables_used}
+        tables_used = [t for t in tables if t.name in tables_wanted]
+        resources_used = {t.resource_kind for t in tables_used}
         if "pods" in resources_used:
             # This is fake, _get_objects knows to get it via "kubectl get pods" not as JSON
             resources_used.add("pod_statuses")
@@ -95,7 +95,7 @@ class Engine:
 
         # Create tables in SQLite
         for t in tables_used:
-            t.create(self.db, self.config, self.data[t.NAME])
+            t.create(self.db, self.config, self.data[t.name])
 
         column_names = []
         rows = self.db.query(kql, names=column_names)
