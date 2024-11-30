@@ -31,7 +31,7 @@ class ColumnDef(BaseModel):
             jmesexpr = jmespath.compile(config.source)
             config._finder = lambda obj: jmesexpr.search(obj)
         except jmespath.exceptions.ParseError as e:
-            raise ValueError(f"invalid JMESPath source  for {values['source']}") from e
+            raise ValueError(f"invalid JMESPath expression {config.source}") from e
         config._sqltype, config._pytype = {
             "str": ("TEXT", str),
             "int": ("INTEGER", int),
