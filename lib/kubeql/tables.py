@@ -1,6 +1,39 @@
+from abc import abstractmethod
 
-from .dbmodel import Table
+from .config import Config, EMPTY_EXTENSION, ColumnDef
 from .helpers import Resources, ItemHelper, PodHelper, JobHelper
+
+
+class Table:
+    """
+    Turn 'kubectl get ... -o json" output into a database table.  Subclasses define
+        NAME        the table name
+        SCHEMA      chunk of DDL with column names and types
+        make_rows   method to convert kubectl output into rows
+    """
+
+    @abstractmethod
+    def make_rows(self, kube_data: list[dict]) -> list[tuple]:
+        pass
+
+    def create(self, db, config: Config, kube_data: dict):
+        schema = self.SCHEMA
+        extra_columns = config.extend.get(self.NAME, EMPTY_EXTENSION).columns
+        if extra_columns:
+            schema += " ".join(f", {name} {column._sqltype}"
+                               for name, column in extra_columns.items())
+        db.execute(f"CREATE TABLE {self.NAME} ({schema})")
+        rows = self.make_rows(kube_data["items"])
+        if rows:
+            if extra_columns:
+                rows = [row + tuple(self._convert(item, column) for column in extra_columns.values())
+                        for item, row in zip(kube_data["items"], rows)]
+            placeholders = ", ".join("?" * len(rows[0]))
+            db.execute(f"INSERT INTO {self.NAME} VALUES({placeholders})", rows)
+
+    def _convert(self, obj: object, column: ColumnDef) -> object:
+        value = column._finder(obj)
+        return None if value is None else column._pytype(value)
 
 
 class NodesTable(Table):
@@ -10,8 +43,6 @@ class NodesTable(Table):
     SCHEMA = """
         name TEXT,
         provider TEXT,
-        node_family TEXT,
-        amp_type TEXT,
         cpu_alloc REAL,
         gpu_alloc REAL,
         mem_alloc INTEGER,
@@ -25,8 +56,6 @@ class NodesTable(Table):
         return [(
             node.name,
             node.obj.get("spec", {}).get("providerID"),
-            node.label("pathai.com/node-family") or node.label("mle.pathai.com/node-family"),
-            node.label("amp.pathai.com/node-type"),
             *Resources.extract(node["status"]["allocatable"]).as_tuple(),
             *Resources.extract(node["status"]["capacity"]).as_tuple(),
             ",".join(taint["key"] for taint in node.obj.get("spec", {}).get("taints", [])
@@ -110,7 +139,6 @@ class WorkflowsTable(Table):
     SCHEMA = """
         name TEXT,
         namespace TEXT,
-        url TEXT,
         phase TEXT
     """
 
@@ -118,6 +146,5 @@ class WorkflowsTable(Table):
         return [(
             w.name,
             w.namespace,
-            f'http://app.mle.pathai.com/jabba/workflows/view/{w.label("jabba.pathai.com/workflow-id")}',
             w.label("workflows.argoproj.io/phase"),
         ) for w in map(ItemHelper, kube_data)]

@@ -11,17 +11,18 @@ from typing import Tuple, Set, Optional
 
 from tabulate import tabulate
 
+from kubeql.config import Config
 from kubeql.constants import CACHE_EXPIRATION, CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
 from kubeql.jross import run, SqliteDb
 from kubeql.tables import PodsTable, JobsTable, NodesTable, NodeTaintsTable, WorkflowsTable
-from kubeql.utils import MyConfig, fail, add_custom_functions
+from kubeql.utils import fail, add_custom_functions
 
 Query = namedtuple("Query", ["sql", "namespace", "cache_flag", "reckless"])
 
 
 class Engine:
 
-    def __init__(self, config: MyConfig, context_name: str):
+    def __init__(self, config: Config, context_name: str):
         self.config = config
         self.context_name = context_name
         self.cache = DataCache(self.config.cache_dir / self.context_name)

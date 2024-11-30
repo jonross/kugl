@@ -1,5 +1,6 @@
 
 from datetime import timedelta
+from pathlib import Path
 import re
 from typing import Literal
 
@@ -18,3 +19,5 @@ MAIN_CONTAINERS = ["main", "notebook", "app"]
 ALL_NAMESPACE = "__all"
 
 WHITESPACE = re.compile(r"\s+")
+
+KUBEQL_HOME = Path.home() / ".kubeql"
