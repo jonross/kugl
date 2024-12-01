@@ -20,8 +20,3 @@ create:
         resource: nodes
         namespaced: false
         builder: kubeql.tables.TaintsTable
-
-    workflows:
-        resource: workflows
-        namespaced: true
-        builder: kubeql.tables.WorkflowsTable

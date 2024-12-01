@@ -140,20 +140,3 @@ class JobsTable(TableBuilder):
             job.namespace,
             job.status,
         ) for job in map(JobHelper, kube_data)]
-
-
-class WorkflowsTable(TableBuilder):
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs, schema="""
-            name TEXT,
-            namespace TEXT,
-            phase TEXT
-        """)
-
-    def make_rows(self, kube_data: list[dict]) -> list[tuple]:
-        return [(
-            w.name,
-            w.namespace,
-            w.label("workflows.argoproj.io/phase"),
-        ) for w in map(ItemHelper, kube_data)]
