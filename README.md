@@ -78,7 +78,7 @@ In any case, please be mindful of stale data and server load.
 
 * Command-line syntax
 * Settings
-* Built-in tables and functions
+* [Built-in tables and functions](./docs/builtins.md)
 * Canned queries and views
 * Adding columns to built-in tables
 * Adding tables for other resources

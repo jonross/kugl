@@ -55,6 +55,7 @@ class NodesTable(TableBuilder):
     def __init__(self, **kwargs):
         super().__init__(**kwargs, schema="""
             name TEXT,
+            -- TODO replace this with instance type
             provider TEXT,
             cpu_alloc REAL,
             gpu_alloc REAL,
