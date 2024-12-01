@@ -1,23 +1,23 @@
 from abc import abstractmethod
 from typing import Optional
 
-from .config import Config, EMPTY_EXTENSION, ColumnDef
+from .config import Config, EMPTY_EXTENSION, ColumnDef, ExtendTable, CreateTable
 from .helpers import Resources, ItemHelper, PodHelper, JobHelper
 
 
 class TableBuilder:
 
-    def __init__(self, name: str, resource: str, namespaced: bool, schema: Optional[str] = None):
+    def __init__(self, name, creator: CreateTable, extender: Optional[ExtendTable], schema: Optional[str] = None):
         """
-        :param name: The table name
-        :param resource: The Kubernetes resource type, e.g. "pods", "nodes", "jobs"
-        :param namespaced: True if the resource is namespaced
+        :param name: The name of the table
+        :param creator: The configuration for creating the table
+        :param extender: The configuration for extending the table, if any
         :param schema: If present, the schema defining built-in columns, and the subclass must
             also define a make_rows method.
         """
         self.name = name
-        self.resource = resource
-        self.namespaced = namespaced
+        self.creator = creator
+        self.extender = extender
         self.schema = schema
 
     def make_rows(self, kube_data: list[dict]) -> list[tuple]:
@@ -27,13 +27,12 @@ class TableBuilder:
         """
         return []
 
-    def create(self, db, config: Config, kube_data: dict):
+    def build(self, db, config: Config, kube_data: dict):
         schema = self.schema or ""
-        extra_columns = config.extend.get(self.name, EMPTY_EXTENSION).columns
+        extra_columns = self.extender.columns if self.extender else {}
         if extra_columns:
             schema += ", " if schema else ""
-            schema += ", ".join(f"{name} {column._sqltype}"
-                               for name, column in extra_columns.items())
+            schema += ", ".join(f"{name} {column._sqltype}" for name, column in extra_columns.items())
         db.execute(f"CREATE TABLE {self.name} ({schema})")
         rows = self.make_rows(kube_data["items"])
         if rows:

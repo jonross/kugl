@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 import sys
 from threading import Lock
-from typing import Tuple, Set, Optional
+from typing import Tuple, Set, Optional, Dict
 
 import yaml
 from tabulate import tabulate
@@ -15,6 +15,7 @@ from tabulate import tabulate
 from kubeql.config import Config
 from kubeql.constants import CACHE_EXPIRATION, CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
 from kubeql.jross import run, SqliteDb
+from kubeql.tables import TableBuilder
 from kubeql.utils import fail, add_custom_functions
 
 # Needed to locate the built-in table builders by class name.
@@ -47,21 +48,21 @@ class Engine:
 
         # Make the builders for built-in tables
         builtins = Config(**yaml.safe_load((Path(__file__).parent / "builtins.yaml").read_text()))
-        builders = [eval(create.builder)(name=name, resource=create.resource, namespaced=create.namespaced)
+        builders = [eval(create.builder)(name=name, creator=create, extender=self.config.extend.get(name))
                     for name, create in builtins.create.items()]
 
         # Determine which tables are needed for the query by looking for symmbols that follow
         # FROM, JOIN, and WITH
         kql = query.sql.replace("\n", " ")
-        tables_wanted = (set(re.findall(r"(?<=from|join)\s+(\w+)", kql, re.IGNORECASE)) -
-                         set(re.findall(r"(?<=with)\s+(\w+)\s+(?=as)", kql, re.IGNORECASE)))
-        bad_names = tables_wanted - {t.name for t in builders}
+        tables_named = (set(re.findall(r"(?<=from|join)\s+(\w+)", kql, re.IGNORECASE)) -
+                        set(re.findall(r"(?<=with)\s+(\w+)\s+(?=as)", kql, re.IGNORECASE)))
+        bad_names = tables_named - {table.name for table in builders}
         if bad_names:
             fail(f"Not available for query: {', '.join(bad_names)}")
 
         # Based on the tables used, what resources are needed from Kubernetes
-        tables_used = [t for t in builders if t.name in tables_wanted]
-        resources_used = {t.resource for t in tables_used}
+        tables_used= {table for table in builders if table.name in tables_named}
+        resources_used = {table.creator.resource for table in tables_used}
         if "pods" in resources_used:
             # This is fake, _get_objects knows to get it via "kubectl get pods" not as JSON
             resources_used.add("pod_statuses")
@@ -100,8 +101,8 @@ class Engine:
             del self.data["pod_statuses"]
 
         # Create tables in SQLite
-        for t in tables_used:
-            t.create(self.db, self.config, self.data[t.name])
+        for table in tables_used:
+            table.build(self.db, self.config, self.data[table.creator.resource])
 
         column_names = []
         rows = self.db.query(kql, names=column_names)
