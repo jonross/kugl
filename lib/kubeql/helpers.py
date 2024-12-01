@@ -11,7 +11,7 @@ from .jross import from_footprint
 
 
 @dataclass
-class Resources:
+class Resources:  # TODO: Rename this, it can be confused with resource type e.g. pods
     cpu: float
     gpu: float
     mem: int
