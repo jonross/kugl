@@ -9,13 +9,13 @@ import sys
 from threading import Lock
 from typing import Tuple, Set, Optional, Dict
 
-import yaml
+import funcy as fn
 from tabulate import tabulate
+import yaml
 
 from kubeql.config import Config
 from kubeql.constants import CACHE_EXPIRATION, CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
 from kubeql.jross import run, SqliteDb
-from kubeql.tables import TableBuilder
 from kubeql.utils import fail, add_custom_functions
 
 # Needed to locate the built-in table builders by class name.
@@ -49,7 +49,7 @@ class Engine:
         # Make the builders for built-in tables
         builtins = Config(**yaml.safe_load((Path(__file__).parent / "builtins.yaml").read_text()))
         builders = [eval(create.builder)(name=name, creator=create, extender=self.config.extend.get(name))
-                    for name, create in builtins.create.items()]
+                    for name, create in fn.concat(builtins.create.items(), self.config.create.items())]
 
         # Determine which tables are needed for the query by looking for symmbols that follow
         # FROM, JOIN, and WITH

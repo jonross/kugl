@@ -23,21 +23,24 @@ class TableBuilder:
     def make_rows(self, kube_data: list[dict]) -> list[tuple]:
         """
         Convert the JSON output of "kubectl get {resource} -o json" into a list of rows
-        matching the columns provided in the built-in schema.
+        matching the columns provided in the built-in schema.  For tables without a built-in
+        schema, this returns an empty row per item.
         """
-        return []
+        return [tuple()] * len(kube_data)
 
     def build(self, db, config: Config, kube_data: dict):
         schema = self.schema or ""
-        extra_columns = self.extender.columns if self.extender else {}
-        if extra_columns:
+        columns = {**self.creator.columns}
+        if self.extender:
+            columns.update(self.extender.columns)
+        if columns:
             schema += ", " if schema else ""
-            schema += ", ".join(f"{name} {column._sqltype}" for name, column in extra_columns.items())
+            schema += ", ".join(f"{name} {column._sqltype}" for name, column in columns.items())
         db.execute(f"CREATE TABLE {self.name} ({schema})")
         rows = self.make_rows(kube_data["items"])
         if rows:
-            if extra_columns:
-                rows = [row + tuple(self._convert(item, column) for column in extra_columns.values())
+            if columns:
+                rows = [row + tuple(self._convert(item, column) for column in columns.values())
                         for item, row in zip(kube_data["items"], rows)]
             placeholders = ", ".join("?" * len(rows[0]))
             db.execute(f"INSERT INTO {self.name} VALUES({placeholders})", rows)
