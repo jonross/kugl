@@ -29,6 +29,7 @@ Built from `kubectl get jobs`, one row per job
 | name                            | TEXT    | Job name, from `metadata.name`                                                                                                                                                                            |
 | namespace                       | TEXT    | Job namespace, from `metadata.namespace`                                                                                                                                                                  |
 | status                          | TEXT    | Job status as described by [V1JobStatus](https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1JobStatus.md) -- this is one of `Running`, `Complete`, `Suspended`, Failed`, `Unknown` |
+
 ### nodes
 
 Built from `kubectl get nodes`, one row per node
