@@ -55,8 +55,7 @@ class NodesTable(TableBuilder):
     def __init__(self, **kwargs):
         super().__init__(**kwargs, schema="""
             name TEXT,
-            -- TODO replace this with instance type
-            provider TEXT,
+            instance_type TEXT,
             cpu_alloc REAL,
             gpu_alloc REAL,
             mem_alloc INTEGER,
@@ -69,7 +68,7 @@ class NodesTable(TableBuilder):
     def make_rows(self, kube_data: list[dict]) -> list[tuple]:
         return [(
             node.name,
-            node.obj.get("spec", {}).get("providerID"),
+            node.label("node.kubernetes.io/instance-type") or node.label("beta.kubernetes.io/instance-type"),
             *Resources.extract(node["status"]["allocatable"]).as_tuple(),
             *Resources.extract(node["status"]["capacity"]).as_tuple(),
             ",".join(taint["key"] for taint in node.obj.get("spec", {}).get("taints", [])
