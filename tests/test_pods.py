@@ -1,5 +1,5 @@
 
-from kubeql.helpers import PodHelper
+from kugel.helpers import PodHelper
 
 from .testing import make_pod
 

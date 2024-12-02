@@ -1,9 +1,9 @@
 import textwrap
 
-from kubeql.config import Config
-from kubeql.constants import ALWAYS_UPDATE
-from kubeql.engine import Query
-from kubeql.main import Engine
+from kugel.config import Config
+from kugel.constants import ALWAYS_UPDATE
+from kugel.engine import Query
+from kugel.main import Engine
 
 from .testing import make_pod, make_job, kubectl_response
 

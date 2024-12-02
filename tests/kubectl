@@ -20,6 +20,6 @@ elif re.match("get nodes -o json", args):
 else:
     sys.exit(f"Unhandled command line: {args}")
 
-mockdir = Path(os.environ["KUBEQL_MOCKDIR"])
+mockdir = Path(os.environ["KUGEL_MOCKDIR"])
 content = mockdir.joinpath(kind).read_text()
 print(content)

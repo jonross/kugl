@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from kubeql.config import Settings, Config, validate_config
+from kugel.config import Settings, Config, validate_config
 
 import yaml
 
