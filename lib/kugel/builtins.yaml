@@ -4,19 +4,19 @@ create:
     pods:
         resource: pods
         namespaced: true
-        builder: kubeql.tables.PodsTable
+        builder: kugel.tables.PodsTable
 
     jobs:
         resource: jobs
         namespaced: true
-        builder: kubeql.tables.JobsTable
+        builder: kugel.tables.JobsTable
 
     nodes:
         resource: nodes
         namespaced: false
-        builder: kubeql.tables.NodesTable
+        builder: kugel.tables.NodesTable
 
     taints:
         resource: nodes
         namespaced: false
-        builder: kubeql.tables.TaintsTable
+        builder: kugel.tables.TaintsTable

@@ -6,7 +6,7 @@ import jmespath
 from pydantic import BaseModel, Field, NonNegativeInt, ConfigDict, ValidationError, root_validator
 from pydantic.functional_validators import model_validator
 
-from kubeql.constants import KUBEQL_HOME
+from kugel.constants import KUGEL_HOME
 
 
 class Settings(BaseModel):
@@ -51,12 +51,12 @@ EMPTY_EXTENSION = ExtendTable(columns={})
 class CreateTable(ExtendTable):
     resource: str
     namespaced: bool  # TODO use this in engine query
-    builder: str = "kubeql.tables.TableBuilder"
+    builder: str = "kugel.tables.TableBuilder"
 
 
 class Config(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    cache_dir: Path = KUBEQL_HOME / "cache"
+    cache_dir: Path = KUGEL_HOME / "cache"
     settings: Optional[Settings] = Settings()
     extend: dict[str, ExtendTable] = {}
     create: dict[str, CreateTable] = {}
