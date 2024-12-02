@@ -1,5 +1,8 @@
 # Kugel
+
 View Kubernetes resources through the lens of SQLite
+
+![](./docs/under-construction.jpg)
 
 ## Rationale
 
