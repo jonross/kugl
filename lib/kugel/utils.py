@@ -36,8 +36,8 @@ def to_age(x: Union[datetime,str]):
 
 
 def fail(message: str):
-    raise KubeQLError(message)
+    raise KugelError(message)
 
 
-class KubeQLError(Exception):
+class KugelError(Exception):
     pass

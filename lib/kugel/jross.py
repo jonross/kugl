@@ -1,5 +1,5 @@
 # These are from my personal library and are under the MIT license.
-# They have no unit tests in kubeql because they are tested elsewhere.
+# They have no unit tests in Kugel because they are tested elsewhere.
 
 
 import collections as co

@@ -7,7 +7,7 @@ from typing import List
 import yaml
 
 from .config import validate_config, Config
-from .constants import CHECK, ALL_NAMESPACE, NEVER_UPDATE, ALWAYS_UPDATE, KUBEQL_HOME
+from .constants import CHECK, ALL_NAMESPACE, NEVER_UPDATE, ALWAYS_UPDATE, KUGEL_HOME
 from .engine import Engine, Query
 from .utils import fail, set_verbosity
 
@@ -42,8 +42,8 @@ def main(argv: List[str]):
         if not current_context:
             fail("No current context, please run kubectl config use-context ...")
 
-        KUBEQL_HOME.mkdir(exist_ok=True)
-        init_file = KUBEQL_HOME / "init.yaml"
+        KUGEL_HOME.mkdir(exist_ok=True)
+        init_file = KUGEL_HOME / "init.yaml"
         if init_file.exists():
             config, errors = validate_config(yaml.safe_load(init_file.read_text()))
             if errors:
@@ -60,7 +60,7 @@ def main(argv: List[str]):
         print(engine.query_and_format(Query(query, namespace, cache_flag, args.reckless)))
 
     except Exception as e:
-        if args.verbose or os.getenv("KUBEQL_NEVER_EXIT") == "true":
+        if args.verbose or os.getenv("KUGEL_NEVER_EXIT") == "true":
             raise
         print(e, file=sys.stderr)
         sys.exit(1)

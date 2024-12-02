@@ -13,13 +13,13 @@ import funcy as fn
 from tabulate import tabulate
 import yaml
 
-from kubeql.config import Config
-from kubeql.constants import CACHE_EXPIRATION, CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
-from kubeql.jross import run, SqliteDb
-from kubeql.utils import fail, add_custom_functions
+from kugel.config import Config
+from kugel.constants import CACHE_EXPIRATION, CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
+from kugel.jross import run, SqliteDb
+from kugel.utils import fail, add_custom_functions
 
 # Needed to locate the built-in table builders by class name.
-import kubeql.tables
+import kugel.tables
 
 Query = namedtuple("Query", ["sql", "namespace", "cache_flag", "reckless"])
 

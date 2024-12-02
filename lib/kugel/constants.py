@@ -20,4 +20,4 @@ ALL_NAMESPACE = "__all"
 
 WHITESPACE = re.compile(r"\s+")
 
-KUBEQL_HOME = Path.home() / ".kubeql"
+KUGEL_HOME = Path.home() / ".kugel"
