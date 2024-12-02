@@ -4,7 +4,7 @@ PYTHONPATH=$(dirname "$0")/../lib
 
 exec python3 -c 'if True:
     import sys
-    from kubeql.main import main
+    from kugel.main import main
     main(sys.argv[1:])
 ' "$@"
 
