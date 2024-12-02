@@ -1,48 +1,85 @@
 # kubeql
-Examine Kubernetes resources via SQLite
+View Kubernetes resources through the lens of SQLite
 
-**UNDER CONSTRUCTION**
+## Rationale
 
-Because why 
+Filtering and summarizing Kubernetes resources at the command line is a pain.
+KubeQL can help.  Compare
 
 ```shell
-kubectl get jobs -o json --all-namespaces | jq -r ' 
-    .items[] 
-    | select( (.status.conditions[]? | select(.type == "Suspended" and .status == "True")) ) 
-    | select( ([.spec.template.spec.containers[]?.resources.requests.cpu // "0"] 
-               | map( if test("m$") then (.[:-1] | tonumber / 1000) else tonumber end ) | add) > 6 ) 
-    | "\(.metadata.name) \(.metadata.labels["com.mycompany/job-owner"])"'
+kubeql -a "select sum(gpu_req), owner
+          from pods join nodes on pods.node_name = node.name
+          where nodes.instance_type = 'a40' and pods.status in ('Running', 'Terminating')
+          group by owner"
 ```
 
-when you could
+with the equivalent kubectl / jq pipeline
 
 ```shell
-kubeql -a "select name, owner from jobs where cpu_req > 6 and status = 'Suspended'"
+nodes=$(kubectl get nodes -o json | jq -r '.items[] 
+        | select(.metadata.labels["beta.kubernetes.io/instance-type"] == "a40") | .metadata.name')
+kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
+  .items[]
+  | select(.spec.nodeName as $node | $nodes | index($node))
+  | select(.status.phase == "Running")
+  | . as $pod | $pod.spec.containers[]
+  | select(.resources.requests["nvidia.com/gpu"] != null)
+  | {owner: $pod.metadata.labels["com.mycompany/job-owner"], 
+     gpu: .resources.requests["nvidia.com/gpu"], 
+     cpu: .resources.requests["cpu"]}
+  | group_by(.owner) 
+  | map({owner: .[0].owner, 
+         gpu: map(.gpu | tonumber) | add, 
+         cpu: map(.cpu | sub("m$"; "") | tonumber / (if test("m$") then 1000 else 1 end)) | add})
+  | .[] | "\(.owner) \(.gpu) \(.cpu)"'
 ```
 
-## Installation
+## Installing
 
-**UNDER CONSTRUCTION**
+If you don't mind KubeQL cluttering your Python with its [dependencies](./requirements.txt), run
 
-  Try
+```
+pip install ...
+```
+
+If you do, here's a shell alias to use the Docker image
 
 ```shell
-kubeql -a "select name, cpu_req, command from pods limit 10"
+kubeql() {
+    docker run \
+        -v $HOME/.kube:/root/.kube 
+        -v $HOME/.kubeql:/root/.kubeql \
+        "$@"
+}
 ```
 
 ## How it works (important)
 
-KubeQL is dumb.  It knows `SELECT ... FROM pods` really means 
-`kubectl get pods`, and it maps fields from the response JSON to columns
+KubeQL is simple-minded.  It knows `SELECT ... FROM pods` really means 
+`kubectl get pods -o json`, and it maps fields from the response to columns
 in SQLite.  If you `JOIN` to other resource tables like `nodes` it calls `kubectl get`
-for those too.  If you need more columns than are built in, there's a config file for that.
+for those too.  If you need more columns or tables than are built in, there's a config file for that.
 
 Because KubeQL always fetches all resources from a namespace (or everything, if 
 `-a/--all-namespaces` is used), it tries
-to ease Kubernetes API Server load by caching responses for up to
-two minutes.  This is why it often prints "Data delayed up to ..." messages.
-You can suppress that warning with the `-r` / `--reckless` option, or
-force a cache update with the `-u` / `--update` option.
+to ease Kubernetes API Server load by **caching responses for 
+two minutes**.  This is why it often prints "Data delayed up to ..." messages.
 
-In any case, please be cognizant of stale data and server load.
+Depending on your cluster size, the cache can be a help or a hindrance.
+You can suppress the "delayed" messages with the `-r` / `--reckless` option, or
+always update data using the `-u` / `--update` option.  These behaviors, and
+the cache expiration time, can be set in the config file as well.
+
+In any case, please be mindful of stale data and server load.
+
+## Learn more
+
+(coming soon)
+
+* Command-line syntax
+* Settings
+* [Built-in tables and functions](./docs/builtins.md)
+* Canned queries and views
+* Adding columns to built-in tables
+* Adding tables for other resources
 
