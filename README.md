@@ -1,13 +1,13 @@
-# kubeql
+# Kugel
 View Kubernetes resources through the lens of SQLite
 
 ## Rationale
 
 Filtering and summarizing Kubernetes resources at the command line is a pain.
-KubeQL can help.  Compare
+Kugel can help.  Compare
 
 ```shell
-kubeql -a "select sum(gpu_req), owner
+kugel -a "select sum(gpu_req), owner
           from pods join nodes on pods.node_name = node.name
           where nodes.instance_type = 'a40' and pods.status in ('Running', 'Terminating')
           group by owner"
@@ -36,7 +36,7 @@ kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
 
 ## Installing
 
-If you don't mind KubeQL cluttering your Python with its [dependencies](./requirements.txt), run
+If you don't mind Kugel cluttering your Python with its [dependencies](./requirements.txt), run
 
 ```
 pip install ...
@@ -45,22 +45,23 @@ pip install ...
 If you do, here's a shell alias to use the Docker image
 
 ```shell
-kubeql() {
+kugel() {
     docker run \
         -v $HOME/.kube:/root/.kube 
-        -v $HOME/.kubeql:/root/.kubeql \
+        -v $HOME/.kugel:/root/.kugel \
+        insert-docker-image-here \
         "$@"
 }
 ```
 
 ## How it works (important)
 
-KubeQL is simple-minded.  It knows `SELECT ... FROM pods` really means 
+Kugel is simple-minded.  It knows `SELECT ... FROM pods` really means 
 `kubectl get pods -o json`, and it maps fields from the response to columns
 in SQLite.  If you `JOIN` to other resource tables like `nodes` it calls `kubectl get`
 for those too.  If you need more columns or tables than are built in, there's a config file for that.
 
-Because KubeQL always fetches all resources from a namespace (or everything, if 
+Because Kugel always fetches all resources from a namespace (or everything, if 
 `-a/--all-namespaces` is used), it tries
 to ease Kubernetes API Server load by **caching responses for 
 two minutes**.  This is why it often prints "Data delayed up to ..." messages.
