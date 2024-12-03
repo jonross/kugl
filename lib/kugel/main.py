@@ -7,15 +7,15 @@ from typing import List
 import yaml
 
 from .config import validate_config, Config
-from .constants import CHECK, ALL_NAMESPACE, NEVER_UPDATE, ALWAYS_UPDATE, KUGEL_HOME
+from .constants import CHECK, ALL_NAMESPACE, NEVER_UPDATE, ALWAYS_UPDATE
 from .engine import Engine, Query
-from .utils import fail, set_verbosity
+from .utils import fail, set_verbosity, kugel_home
 
 
 def main(argv: List[str]):
 
     if "KUGEL_UNIT_TESTING" in os.environ and "KUGEL_MOCKDIR" not in os.environ:
-        # Never enter main in tests unless test_home fixture is in use, otherwise we could read
+        # Never enter main in tests unless test_home fixture is in use, else we could read
         # the user's init file.
         sys.exit("Unit test state error")
 
@@ -47,14 +47,14 @@ def main(argv: List[str]):
         if not current_context:
             fail("No current context, please run kubectl config use-context ...")
 
-        KUGEL_HOME.mkdir(exist_ok=True)
-        init_file = KUGEL_HOME / "init.yaml"
+        kugel_home().mkdir(exist_ok=True)
+        init_file = kugel_home() / "init.yaml"
         if init_file.exists():
             config, errors = validate_config(yaml.safe_load(init_file.read_text()))
             if errors:
                 fail("\n".join(errors))
         else:
-            config = Config({})
+            config = Config()
 
         if " " in args.sql:
             query = args.sql

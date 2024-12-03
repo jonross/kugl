@@ -16,7 +16,7 @@ import yaml
 from kugel.config import Config
 from kugel.constants import CACHE_EXPIRATION, CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
 from kugel.jross import run, SqliteDb
-from kugel.utils import fail, add_custom_functions
+from kugel.utils import fail, add_custom_functions, kugel_home
 
 # Needed to locate the built-in table builders by class name.
 import kugel.tables
@@ -29,7 +29,7 @@ class Engine:
     def __init__(self, config: Config, context_name: str):
         self.config = config
         self.context_name = context_name
-        self.cache = DataCache(self.config.cache_dir / self.context_name)
+        self.cache = DataCache(kugel_home() / "cache" / self.context_name)
         self.data = {}
         self.db = SqliteDb()
         self.db_lock = Lock()

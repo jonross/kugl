@@ -63,6 +63,5 @@ def test_job_status(test_home):
 
 
 def verify(kql, expected):
-    config = Config(cache_dir=Path(os.getenv("KUGEL_MOCKDIR")))
-    actual = Engine(config, "nocontext").query_and_format(Query(kql, "default", ALWAYS_UPDATE, True))
+    actual = Engine(Config(), "nocontext").query_and_format(Query(kql, "default", ALWAYS_UPDATE, True))
     assert actual.strip() == textwrap.dedent(expected).strip()

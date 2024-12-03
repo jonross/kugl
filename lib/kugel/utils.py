@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Union
@@ -10,6 +11,12 @@ import yaml
 from .jross import to_footprint
 
 VERBOSITY = 0
+
+
+def kugel_home() -> Path:
+    if "KUGEL_HOME" in os.environ:
+        return Path(os.environ["KUGEL_HOME"])
+    return Path.home() / ".kugel"
 
 
 def set_verbosity(v: int):

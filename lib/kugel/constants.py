@@ -19,5 +19,3 @@ MAIN_CONTAINERS = ["main", "notebook", "app"]
 ALL_NAMESPACE = "__all"
 
 WHITESPACE = re.compile(r"\s+")
-
-KUGEL_HOME = Path.home() / ".kugel"
