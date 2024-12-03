@@ -12,7 +12,7 @@ os.environ["KUGEL_UNIT_TESTING"] = "true"
 
 
 @pytest.fixture(scope="function")
-def mockdir(tmp_path, monkeypatch):
-    """Stores mock responses for use by ./kubectl"""
-    monkeypatch.setenv("KUGEL_MOCKDIR", str(tmp_path))
+def test_home(tmp_path, monkeypatch):
+    monkeypatch.setenv("KUGEL_HOME", tmp_path)
+    monkeypatch.setenv("KUGEL_MOCKDIR", str(tmp_path / "mocks"))
     yield tmp_path

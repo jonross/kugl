@@ -14,6 +14,11 @@ from .utils import fail, set_verbosity
 
 def main(argv: List[str]):
 
+    if "KUGEL_UNIT_TESTING" in os.environ and "KUGEL_MOCKDIR" not in os.environ:
+        # Never enter main in tests unless test_home fixture is in use, otherwise we could read
+        # the user's init file.
+        sys.exit("Unit test state error")
+
     ap = ArgumentParser()
     ap.add_argument("-a", "--all-namespaces", default=False, action="store_true")
     ap.add_argument("-c", "--cache", default=False, action="store_true")
@@ -60,7 +65,7 @@ def main(argv: List[str]):
         print(engine.query_and_format(Query(query, namespace, cache_flag, args.reckless)))
 
     except Exception as e:
-        if args.verbose or os.getenv("KUGEL_UNIT_TESTING") == "true":
+        if args.verbose or "KUGEL_UNIT_TESTING" in os.environ:
             raise
         print(e, file=sys.stderr)
         sys.exit(1)

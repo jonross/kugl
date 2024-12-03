@@ -1,3 +1,5 @@
+import os
+from pathlib import Path
 import textwrap
 
 from kugel.config import Config
@@ -8,8 +10,8 @@ from kugel.main import Engine
 from .testing import make_pod, make_job, kubectl_response
 
 
-def test_by_cpu(mockdir):
-    kubectl_response(mockdir, "pods", {
+def test_by_cpu(test_home):
+    kubectl_response("pods", {
         "items": [
             make_pod("pod-1"),
             make_pod("pod-2"),
@@ -18,22 +20,22 @@ def test_by_cpu(mockdir):
             make_pod("pod-5", cpu_req=2),  # should get dropped because no status available
         ]
     })
-    kubectl_response(mockdir, "pod_statuses", """
+    kubectl_response("pod_statuses", """
         NAME   STATUS
         pod-1  Init:1
         pod-2  Init:2
         pod-3  Init:3
         pod-4  Init:4
     """)
-    verify(mockdir, "SELECT name, status FROM pods WHERE cpu_req > 1 ORDER BY name", """
+    verify("SELECT name, status FROM pods WHERE cpu_req > 1 ORDER BY name", """
         name    status
         pod-3   Init:3
         pod-4   Init:4
     """)
 
 
-def test_job_status(mockdir):
-    kubectl_response(mockdir, "jobs", {
+def test_job_status(test_home):
+    kubectl_response("jobs", {
         "items": [
             make_job("job-1"),
             make_job("job-2", active_count=1),
@@ -46,7 +48,7 @@ def test_job_status(mockdir):
             make_job("job-9", condition=("SuccessCriteriaMet", "False", None)),
         ]
     })
-    verify(mockdir, "SELECT name, status FROM jobs ORDER BY 1", """
+    verify("SELECT name, status FROM jobs ORDER BY 1", """
         name    status
         job-1   Unknown
         job-2   Running
@@ -60,7 +62,7 @@ def test_job_status(mockdir):
     """)
 
 
-def verify(mockdir, kql, expected):
-    config = Config(cache_dir=mockdir)
+def verify(kql, expected):
+    config = Config(cache_dir=Path(os.getenv("KUGEL_MOCKDIR")))
     actual = Engine(config, "nocontext").query_and_format(Query(kql, "default", ALWAYS_UPDATE, True))
     assert actual.strip() == textwrap.dedent(expected).strip()
