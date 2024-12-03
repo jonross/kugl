@@ -1,7 +1,4 @@
 
-Contents of the build-in nodes table
-(show this as a markdown table)
-
 ## Built-in tables
 
 ### pods
