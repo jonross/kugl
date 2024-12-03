@@ -1,22 +1,25 @@
 # Kugel
 
-View Kubernetes resources through the lens of SQLite
+Explore Kubernetes resources using SQLite.
 
 ![](./docs/under-construction.jpg)
 
 ## Rationale
 
 Filtering and summarizing Kubernetes resources at the command line is a pain.
-Kugel can help.  Compare
+Kugel can help.
+
+Let's say you want to know who is hogging a GPU pool, based on instance type and a team-specific pod label.
+With Kugel that could be
 
 ```shell
-kugel -a "select sum(gpu_req), owner
+kugel -a "select owner, sum(gpu_req), sum(cpu_req)
           from pods join nodes on pods.node_name = node.name
-          where nodes.instance_type = 'a40' and pods.status in ('Running', 'Terminating')
-          group by owner"
+          where instance_type = 'a40' and pods.status in ('Running', 'Terminating')
+          group by 1 order by 2 desc limit 10"
 ```
 
-with the equivalent kubectl / jq pipeline
+Without Kugel
 
 ```shell
 nodes=$(kubectl get nodes -o json | jq -r '.items[] 
@@ -33,8 +36,8 @@ kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
   | group_by(.owner) 
   | map({owner: .[0].owner, 
          gpu: map(.gpu | tonumber) | add, 
-         cpu: map(.cpu | sub("m$"; "") | tonumber / (if test("m$") then 1000 else 1 end)) | add})
-  | .[] | "\(.owner) \(.gpu) \(.cpu)"'
+         cpu: map(.cpu | if test("m$") then (sub("m$"; "") | tonumber / 1000) else tonumber end) | add})
+  | .[] | "\(.owner) \(.gpu) \(.cpu)"' | sort -nrk2 | head -10
 ```
 
 ## Installing
@@ -83,7 +86,7 @@ In any case, please be mindful of stale data and server load.
 * Command-line syntax
 * Settings
 * [Built-in tables and functions](./docs/builtins.md)
-* Canned queries and views
-* Adding columns to built-in tables
-* Adding tables for other resources
+* [Adding columns and tables](./docs/extending.md)
+* Adding views
+
 
