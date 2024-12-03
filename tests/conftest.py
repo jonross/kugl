@@ -7,8 +7,8 @@ import pytest
 # Add tests/ folder to $PATH so 'kubectl ...' invokes our mock
 os.environ["PATH"] = f"{Path(__file__).parent}:{os.environ['PATH']}"
 
-# Don't sys.exit on fatal errors; allows tests to verify exceptions
-os.environ["KUGEL_NEVER_EXIT"] = "true"
+# Some behaviors have to change in tests, sorry
+os.environ["KUGEL_UNIT_TESTING"] = "true"
 
 
 @pytest.fixture(scope="function")

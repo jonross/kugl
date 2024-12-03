@@ -60,7 +60,7 @@ def main(argv: List[str]):
         print(engine.query_and_format(Query(query, namespace, cache_flag, args.reckless)))
 
     except Exception as e:
-        if args.verbose or os.getenv("KUGEL_NEVER_EXIT") == "true":
+        if args.verbose or os.getenv("KUGEL_UNIT_TESTING") == "true":
             raise
         print(e, file=sys.stderr)
         sys.exit(1)
