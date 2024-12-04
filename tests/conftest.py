@@ -7,12 +7,12 @@ import pytest
 # Add tests/ folder to $PATH so 'kubectl ...' invokes our mock
 os.environ["PATH"] = f"{Path(__file__).parent}:{os.environ['PATH']}"
 
-# Don't sys.exit on fatal errors; allows tests to verify exceptions
-os.environ["KUGEL_NEVER_EXIT"] = "true"
+# Some behaviors have to change in tests, sorry
+os.environ["KUGEL_UNIT_TESTING"] = "true"
 
 
 @pytest.fixture(scope="function")
-def mockdir(tmp_path, monkeypatch):
-    """Stores mock responses for use by ./kubectl"""
-    monkeypatch.setenv("KUGEL_MOCKDIR", str(tmp_path))
+def test_home(tmp_path, monkeypatch):
+    monkeypatch.setenv("KUGEL_HOME", tmp_path)
+    monkeypatch.setenv("KUGEL_MOCKDIR", str(tmp_path / "cache"))
     yield tmp_path

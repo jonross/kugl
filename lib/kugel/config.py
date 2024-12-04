@@ -6,8 +6,6 @@ import jmespath
 from pydantic import BaseModel, Field, NonNegativeInt, ConfigDict, ValidationError, root_validator
 from pydantic.functional_validators import model_validator
 
-from kugel.constants import KUGEL_HOME
-
 
 class Settings(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -56,7 +54,6 @@ class CreateTable(ExtendTable):
 
 class Config(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    cache_dir: Path = KUGEL_HOME / "cache"
     settings: Optional[Settings] = Settings()
     extend: dict[str, ExtendTable] = {}
     create: dict[str, CreateTable] = {}

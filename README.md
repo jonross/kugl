@@ -2,14 +2,16 @@
 
 Explore Kubernetes resources using SQLite.
 
+Need custom columns and tables?  Ready in minutes.
+
 ![](./docs/under-construction.jpg)
 
-## Rationale
+## In brief
 
-Filtering and summarizing Kubernetes resources at the command line is a pain.
+Filtering and summarizing Kubernetes resources at the command line is painful.
 Kugel can help.
 
-Let's say you want to know who is hogging a GPU pool, based on instance type and a team-specific pod label.
+Example: find the top users of a GPU pool, based on instance type and a team-specific pod label.
 With Kugel that could be
 
 ```shell
@@ -42,6 +44,8 @@ kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
 
 ## Installing
 
+**This is an alpha release.**  Please expect bugs and backward-incompatible changes.
+
 If you don't mind Kugel cluttering your Python with its [dependencies](./requirements.txt), run
 
 ```
@@ -62,8 +66,8 @@ kugel() {
 
 ## How it works (important)
 
-Kugel is simple-minded.  It knows `SELECT ... FROM pods` really means 
-`kubectl get pods -o json`, and it maps fields from the response to columns
+Kugel is just a thin wrapper on Kubectl and SQLite.  It turns `SELECT ... FROM pods`into 
+`kubectl get pods -o json`, then maps fields from the response to columns
 in SQLite.  If you `JOIN` to other resource tables like `nodes` it calls `kubectl get`
 for those too.  If you need more columns or tables than are built in, there's a config file for that.
 
@@ -72,7 +76,7 @@ Because Kugel always fetches all resources from a namespace (or everything, if
 to ease Kubernetes API Server load by **caching responses for 
 two minutes**.  This is why it often prints "Data delayed up to ..." messages.
 
-Depending on your cluster size, the cache can be a help or a hindrance.
+Depending on your cluster activity, the cache can be a help or a hindrance.
 You can suppress the "delayed" messages with the `-r` / `--reckless` option, or
 always update data using the `-u` / `--update` option.  These behaviors, and
 the cache expiration time, can be set in the config file as well.
@@ -89,4 +93,15 @@ In any case, please be mindful of stale data and server load.
 * [Adding columns and tables](./docs/extending.md)
 * Adding views
 
+## Rationale
+
+Prior art
+
+* [kubeql](https://github.com/saracen/kubeql) is a SQL-like query language for Kubernetes. It appears unmaintained (last commit October 2017.)
+* [kube-query](https://github.com/aquasecurity/kube-query) is an [osquery](https://osquery.io/) extension. It appears unmaintained (last commit July 2020.)
+* [ksql](https://github.com/brendandburns/ksql) is built on Node.js and AlaSQL.  It appears unmaintained (last commit November 2016.)
+* [cyphernetes](https://github.com/AvitalTamir/cyphernetes) is in active development.  It uses Cypher, a graph query language.
+
+Kugel seeks minimalism and immediate utility.
+SQLite is ubiquitous and ships with Python, so let's use it.
 
