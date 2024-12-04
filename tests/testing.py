@@ -1,7 +1,7 @@
 import json
 import os
 import textwrap
-from dataclasses import dataclass
+from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Optional, Tuple, Union, List
 
@@ -12,17 +12,26 @@ from kugel.constants import ALWAYS_UPDATE
 from kugel.engine import Engine, Query
 
 
+class SafeDictable:
+    """Helper trait for dataclasses"""
+    def safe_dict(self):
+        return {k: v for k, v in asdict(self).items() if v is not None}
+
+
 @dataclass
-class Taint:
+class Taint(SafeDictable):
+    """Helper class for creating taints in test nodes"""
     key: str
     effect: str
     value: Optional[str] = None
 
-    def to_dict(self):
-        result = {"key": self.key, "effect": self.effect}
-        if self.value:
-            result["value"] = self.value
-        return result
+
+@dataclass
+class CGM(SafeDictable):
+    """Helper class for creating CPU/GPU/Memory resources in test containers"""
+    cpu: Union[int, str, None]
+    gpu: Union[int, str, None] = field(metadata={"asdict_key": "nvidia.com/gpu"})
+    mem: Union[int, str, None]
 
 
 def kubectl_response(kind: str, output: Union[str, dict]):
@@ -50,7 +59,7 @@ def make_node(name: str, taints: Optional[List[Taint]] = None):
     node = yaml.safe_load(_resource("sample_node.yaml"))
     node["metadata"]["name"] = name
     if taints:
-        node["spec"]["taints"] = [taint.to_dict() for taint in taints]
+        node["spec"]["taints"] = [taint.safe_dict() for taint in taints]
     return node
 
 
@@ -130,6 +139,7 @@ def assert_query(sql: str, expected: str):
 
 
 def _resource(filename: str):
+    # TODO: rename me
     return Path(__file__).parent.joinpath("resources", filename).read_text()
 
 
