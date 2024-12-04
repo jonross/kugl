@@ -2,13 +2,15 @@ import json
 import os
 import textwrap
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, List
 
 import yaml
 
 from kugel.config import Config
 from kugel.constants import ALWAYS_UPDATE
 from kugel.engine import Engine, Query
+
+Taint = Union[Tuple[str, str], Tuple[str, str, str]]
 
 
 def kubectl_response(kind: str, output: Union[str, dict]):
@@ -27,12 +29,17 @@ def kubectl_response(kind: str, output: Union[str, dict]):
     folder.joinpath(kind).write_text(output)
 
 
-def make_node():
+def make_node(name: str, taints: Optional[List[Taint]] = None):
     """
     Construct a Node dict from a generic chunk of node YAML that we can alter to simulate different
     responses from the K8S API.
+    :param name: Node name
     """
-    return yaml.safe_load(_resource("sample_node.yaml"))
+    node = yaml.safe_load(_resource("sample_node.yaml"))
+    node["metadata"]["name"] = name
+    if taints:
+        node["spec"]["taints"] = [_taint(tup) for tup in taints]
+    return node
 
 
 def make_pod(name: str,
@@ -112,3 +119,9 @@ def assert_query(sql: str, expected: str):
 
 def _resource(filename: str):
     return Path(__file__).parent.joinpath("resources", filename).read_text()
+
+
+def _taint(tup: Taint):
+    if len(tup) == 3:
+        return {"key": tup[0], "effect": tup[1], "value": tup[2]}
+    return {"key": tup[0], "effect": tup[1]}
