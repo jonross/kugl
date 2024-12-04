@@ -17,10 +17,10 @@ def test_taint_query(test_home):
     kubectl_response("nodes", {
         "items": [
             make_node("node-1"),
-            make_node("node-2", taints=[Taint("node.kubernetes.io/unschedulable", "NoSchedule"),
-                                        Taint("node.kubernetes.io/unreachable", "NoExecute")
+            make_node("node-2", taints=[Taint(key="node.kubernetes.io/unschedulable", effect="NoSchedule"),
+                                        Taint(key="node.kubernetes.io/unreachable", effect="NoExecute")
                                         ]),
-            make_node("node-3", taints=[Taint("mycompany.com/priority", "NoSchedule", "true")
+            make_node("node-3", taints=[Taint(key="mycompany.com/priority", effect="NoSchedule", value="true")
                                         ]),
         ]
     })

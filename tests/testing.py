@@ -1,11 +1,11 @@
 import json
 import os
 import textwrap
-from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Optional, Tuple, Union, List
 
 import yaml
+from pydantic import Field, BaseModel
 
 from kugel.config import Config
 from kugel.constants import ALWAYS_UPDATE
@@ -13,24 +13,22 @@ from kugel.engine import Engine, Query
 
 
 class SafeDictable:
-    """Helper trait for dataclasses"""
-    def safe_dict(self):
-        return {k: v for k, v in asdict(self).items() if v is not None}
+    """BaseModel subclass to strip Nones when turned into a dict"""
+    def dict(self, *args, **kwargs):
+        return {k: v for k, v in super().dict(*args, **kwargs) if v is not None}
 
 
-@dataclass
-class Taint(SafeDictable):
+class Taint(BaseModel, SafeDictable):
     """Helper class for creating taints in test nodes"""
     key: str
     effect: str
     value: Optional[str] = None
 
 
-@dataclass
-class CGM(SafeDictable):
+class CGM(BaseModel, SafeDictable):
     """Helper class for creating CPU/GPU/Memory resources in test containers"""
     cpu: Union[int, str, None]
-    gpu: Union[int, str, None] = field(metadata={"asdict_key": "nvidia.com/gpu"})
+    gpu: Union[int, str, None] = Field(alias="nvidia.com/gpu")
     mem: Union[int, str, None]
 
 
@@ -59,7 +57,7 @@ def make_node(name: str, taints: Optional[List[Taint]] = None):
     node = yaml.safe_load(_resource("sample_node.yaml"))
     node["metadata"]["name"] = name
     if taints:
-        node["spec"]["taints"] = [taint.safe_dict() for taint in taints]
+        node["spec"]["taints"] = [taint.dict() for taint in taints]
     return node
 
 
@@ -141,9 +139,3 @@ def assert_query(sql: str, expected: str):
 def _resource(filename: str):
     # TODO: rename me
     return Path(__file__).parent.joinpath("resources", filename).read_text()
-
-
-def _taint(tup: Taint):
-    if len(tup) == 3:
-        return {"key": tup[0], "effect": tup[1], "value": tup[2]}
-    return {"key": tup[0], "effect": tup[1]}
