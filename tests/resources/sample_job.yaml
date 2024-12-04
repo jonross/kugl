@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  creationTimestamp: "2024-11-20T01:05:00Z"
+  generation: 1
+  labels:
+    controller-uid: 60848f11-1ecb-4a20-b9aa-bc039cb98b88
+    job-name: example-job-1
+  name: example-job-1
+  namespace: example
+  resourceVersion: "3479929701"
+  uid: 60848f11-1ecb-4a20-b9aa-bc039cb98b88
+spec:
+  backoffLimit: 0
+  completionMode: NonIndexed
+  completions: 1
+  parallelism: 1
+  selector:
+    matchLabels:
+      controller-uid: 60848f11-1ecb-4a20-b9aa-bc039cb98b88
+  suspend: false
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        controller-uid: 60848f11-1ecb-4a20-b9aa-bc039cb98b88
+        job-name: example-job-28867745
+    spec:
+      containers:
+      - command:
+        - echo
+        - "Hello, world"
+        image: alpine:latest
+        name: example-job
+        resources:
+          requests:
+            cpu: "1"
+status: {}
