@@ -1,9 +1,14 @@
 import json
 import os
+import textwrap
 from pathlib import Path
 from typing import Optional, Tuple, Union
 
 import yaml
+
+from kugel.config import Config
+from kugel.constants import ALWAYS_UPDATE
+from kugel.engine import Engine, Query
 
 
 def kubectl_response(kind: str, output: Union[str, dict]):
@@ -20,6 +25,14 @@ def kubectl_response(kind: str, output: Union[str, dict]):
     folder = Path(os.getenv("KUGEL_MOCKDIR"))
     folder.mkdir(exist_ok=True)
     folder.joinpath(kind).write_text(output)
+
+
+def make_node():
+    """
+    Construct a Node dict from a generic chunk of node YAML that we can alter to simulate different
+    responses from the K8S API.
+    """
+    return yaml.safe_load(_resource("sample_node.yaml"))
 
 
 def make_pod(name: str,
@@ -83,6 +96,18 @@ def make_job(name: str,
     if condition is not None:
         obj["status"]["conditions"] = [{"type": condition[0], "status": condition[1], "reason": condition[2]}]
     return obj
+
+
+def assert_query(sql: str, expected: str):
+    """
+    Run a query in the "nocontext" namespace and compare the result with expected output.
+    :param sql: SQL query
+    :param expected: Output as it would be shown at the CLI.  This will be dedented so the
+        caller can indent for neatness.
+    """
+    engine = Engine(Config(), "nocontext")
+    actual = engine.query_and_format(Query(sql, "default", ALWAYS_UPDATE, True))
+    assert actual.strip() == textwrap.dedent(expected).strip()
 
 
 def _resource(filename: str):

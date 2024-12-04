@@ -1,5 +1,3 @@
-import os
-from pathlib import Path
 import textwrap
 
 from kugel.config import Config
@@ -7,7 +5,7 @@ from kugel.constants import ALWAYS_UPDATE
 from kugel.engine import Query
 from kugel.main import Engine
 
-from .testing import make_pod, make_job, kubectl_response
+from .testing import make_pod, make_job, kubectl_response, assert_query
 
 
 def test_by_cpu(test_home):
@@ -27,7 +25,7 @@ def test_by_cpu(test_home):
         pod-3  Init:3
         pod-4  Init:4
     """)
-    verify("SELECT name, status FROM pods WHERE cpu_req > 1 ORDER BY name", """
+    assert_query("SELECT name, status FROM pods WHERE cpu_req > 1 ORDER BY name", """
         name    status
         pod-3   Init:3
         pod-4   Init:4
@@ -48,7 +46,7 @@ def test_job_status(test_home):
             make_job("job-9", condition=("SuccessCriteriaMet", "False", None)),
         ]
     })
-    verify("SELECT name, status FROM jobs ORDER BY 1", """
+    assert_query("SELECT name, status FROM jobs ORDER BY 1", """
         name    status
         job-1   Unknown
         job-2   Running
@@ -60,8 +58,3 @@ def test_job_status(test_home):
         job-8   Failed
         job-9   Complete
     """)
-
-
-def verify(kql, expected):
-    actual = Engine(Config(), "nocontext").query_and_format(Query(kql, "default", ALWAYS_UPDATE, True))
-    assert actual.strip() == textwrap.dedent(expected).strip()
