@@ -1,6 +1,7 @@
 import json
 import os
 import textwrap
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Tuple, Union, List
 
@@ -10,7 +11,18 @@ from kugel.config import Config
 from kugel.constants import ALWAYS_UPDATE
 from kugel.engine import Engine, Query
 
-Taint = Union[Tuple[str, str], Tuple[str, str, str]]
+
+@dataclass
+class Taint:
+    key: str
+    effect: str
+    value: Optional[str] = None
+
+    def to_dict(self):
+        result = {"key": self.key, "effect": self.effect}
+        if self.value:
+            result["value"] = self.value
+        return result
 
 
 def kubectl_response(kind: str, output: Union[str, dict]):
@@ -38,7 +50,7 @@ def make_node(name: str, taints: Optional[List[Taint]] = None):
     node = yaml.safe_load(_resource("sample_node.yaml"))
     node["metadata"]["name"] = name
     if taints:
-        node["spec"]["taints"] = [_taint(tup) for tup in taints]
+        node["spec"]["taints"] = [taint.to_dict() for taint in taints]
     return node
 
 

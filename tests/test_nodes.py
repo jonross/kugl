@@ -1,4 +1,4 @@
-from .testing import make_node, kubectl_response, assert_query
+from .testing import make_node, kubectl_response, assert_query, Taint
 
 
 def test_node_query(test_home):
@@ -17,10 +17,10 @@ def test_taint_query(test_home):
     kubectl_response("nodes", {
         "items": [
             make_node("node-1"),
-            make_node("node-2", taints=[("node.kubernetes.io/unschedulable", "NoSchedule"),
-                                        ("node.kubernetes.io/unreachable", "NoExecute")
+            make_node("node-2", taints=[Taint("node.kubernetes.io/unschedulable", "NoSchedule"),
+                                        Taint("node.kubernetes.io/unreachable", "NoExecute")
                                         ]),
-            make_node("node-3", taints=[("mycompany.com/priority", "NoSchedule", "true")
+            make_node("node-3", taints=[Taint("mycompany.com/priority", "NoSchedule", "true")
                                         ]),
         ]
     })
