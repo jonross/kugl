@@ -28,8 +28,16 @@ class Taint(BaseModel, SafeDictable):
 class CGM(BaseModel, SafeDictable):
     """Helper class for creating CPU/GPU/Memory resources in test containers"""
     cpu: Union[int, str, None]
-    gpu: Union[int, str, None] = Field(alias="nvidia.com/gpu")
+    gpu: Union[int, str, None] = Field(alias="nvidia.com/gpu", default=None)
     mem: Union[int, str, None]
+
+
+class Container(BaseModel, SafeDictable):
+    """Helper class for creating containers in test pods"""
+    name: str = "main"
+    command: List[str] = Field(default_factory = lambda: ["echo", "hello"])
+    requests: Optional[CGM] = CGM(cpu=1, mem="10M")
+    limits: Optional[CGM] = CGM(cpu=1, mem="10M")
 
 
 def kubectl_response(kind: str, output: Union[str, dict]):
@@ -65,11 +73,7 @@ def make_pod(name: str,
              no_metadata: bool = False,
              name_at_root: bool = False,
              no_name: bool = False,
-             cpu_req: int = 1,
-             cpu_lim: int = 2,
-             mem_req: str = "1M",
-             mem_lim: str = "2M",
-             gpu: int = 0,
+             containers: List[Container] = [Container()],
              ):
     """
     Construct a Pod dict from a generic chunk of pod YAML that we can alter to simulate different
@@ -78,11 +82,6 @@ def make_pod(name: str,
     :param no_metadata: Pretend there is no metadata
     :param name_at_root: Put the object name at top level, not in the metadata
     :param no_name: Pretend there is no object name
-    :param cpu_req: CPU requested
-    :param cpu_lim: CPU limit
-    :param mem_req: Memory requested
-    :param mem_lim: Memory limit
-    :param gpu: Number of GPUs requested / limit
     """
     obj = yaml.safe_load(_resource("sample_pod.yaml"))
     if name_at_root:
@@ -91,14 +90,7 @@ def make_pod(name: str,
         obj["metadata"]["name"] = name
     if no_metadata:
         del obj["metadata"]
-    resources = {
-        "requests": {"cpu": f"{cpu_req}", "memory": mem_req},
-        "limits": {"cpu": f"{cpu_lim}", "memory": mem_lim},
-    }
-    if gpu:
-        resources["requests"]["nvidia.com/gpu"] = f"{gpu}"
-        resources["limits"]["nvidia.com/gpu"] = f"{gpu}"
-    obj["spec"]["containers"][0]["resources"] = resources
+    obj["spec"]["containers"] = [c.dict() for c in containers]
     return obj
 
 

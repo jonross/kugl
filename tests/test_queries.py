@@ -5,7 +5,7 @@ from kugel.constants import ALWAYS_UPDATE
 from kugel.engine import Query
 from kugel.main import Engine
 
-from .testing import make_pod, make_job, kubectl_response, assert_query
+from .testing import make_pod, make_job, kubectl_response, assert_query, Container, CGM
 
 
 def test_by_cpu(test_home):
@@ -13,9 +13,10 @@ def test_by_cpu(test_home):
         "items": [
             make_pod("pod-1"),
             make_pod("pod-2"),
-            make_pod("pod-3", cpu_req=2),
-            make_pod("pod-4", cpu_req=2),
-            make_pod("pod-5", cpu_req=2),  # should get dropped because no status available
+            make_pod("pod-3", containers=[Container(requests=CGM(cpu=2))]),
+            make_pod("pod-4", containers=[Container(requests=CGM(cpu=2))]),
+            # should get dropped because no status available
+            make_pod("pod-5", containers=[Container(requests=CGM(cpu=2))]),
         ]
     })
     kubectl_response("pod_statuses", """

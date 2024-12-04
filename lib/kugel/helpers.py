@@ -94,7 +94,7 @@ class PodHelper(ItemHelper):
         return main or self.containers[0]
 
     def resources(self, tag):
-        return sum(Resources.extract(c["resources"].get(tag)) for c in self.containers)
+        return sum(Resources.extract(c.get("resources", {}).get(tag)) for c in self.containers)
 
 
 class JobHelper(ItemHelper):
