@@ -30,9 +30,9 @@ class Resources:  # TODO: Rename this, it can be confused with resource type e.g
     def extract(cls, obj):
         if obj is None:
             return Resources(0, 0, 0)
-        cpu = from_footprint(obj.get("cpu", "0"))
-        gpu = int(obj.get("nvidia.com/gpu", 0))
-        mem = from_footprint(obj.get("memory", "0"))
+        cpu = from_footprint(obj.get("cpu"))
+        gpu = from_footprint(obj.get("nvidia.com/gpu"))
+        mem = from_footprint(obj.get("memory"))
         return Resources(cpu, gpu, mem)
 
 

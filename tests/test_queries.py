@@ -37,13 +37,13 @@ def test_by_cpu(test_home):
 
 @pytest.mark.parametrize("containers,expected", [
     ([Container(requests=CGM(cpu=1, memory="1Mi"), limits=CGM(cpu=1, memory="1Mi"))],
-     [ ["pod-1", 1, 1, 1<<20, 1<<20] ])
+     [ [1, 1, 1<<20, 1<<20, None, None] ]),
 ])
 def test_resource_summing(test_home, containers, expected):
     pod = make_pod("pod-1", containers=containers)
     kubectl_response("pods", {"items": [pod]})
     kubectl_response("pod_statuses", "NAME    STATUS\npod-1  Running")
-    assert_query("SELECT name, cpu_req, cpu_lim, mem_req, mem_lim FROM pods", expected)
+    assert_query("SELECT cpu_req, cpu_lim, mem_req, mem_lim, gpu_req, gpu_lim FROM pods", expected)
 
 
 def test_job_status(test_home):
