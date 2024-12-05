@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional, Tuple, Union, List
 
 import yaml
-from pydantic import Field, BaseModel
+from pydantic import Field, BaseModel, ConfigDict
 
 from kugel.config import Config
 from kugel.constants import ALWAYS_UPDATE
@@ -27,17 +27,17 @@ class Taint(BaseModel, SafeDictable):
 
 class CGM(BaseModel, SafeDictable):
     """Helper class for creating CPU/GPU/Memory resources in test containers"""
-    cpu: Union[int, str, None]
+    cpu: Union[int, str, None] = None
+    memory: Union[int, str, None] = None
     gpu: Union[int, str, None] = Field(alias="nvidia.com/gpu", default=None)
-    mem: Union[int, str, None]
 
 
 class Container(BaseModel, SafeDictable):
     """Helper class for creating containers in test pods"""
     name: str = "main"
     command: List[str] = Field(default_factory = lambda: ["echo", "hello"])
-    requests: Optional[CGM] = CGM(cpu=1, mem="10M")
-    limits: Optional[CGM] = CGM(cpu=1, mem="10M")
+    requests: Optional[CGM] = CGM(cpu=1, memory="10M")
+    limits: Optional[CGM] = CGM(cpu=1, memory="10M")
     # Don't specify this in the constructor, it's a derived field
     resources: Optional[dict] = None
 
@@ -123,16 +123,20 @@ def make_job(name: str,
     return obj
 
 
-def assert_query(sql: str, expected: str):
+def assert_query(sql: str, expected: Union[str, list]):
     """
     Run a query in the "nocontext" namespace and compare the result with expected output.
     :param sql: SQL query
     :param expected: Output as it would be shown at the CLI.  This will be dedented so the
-        caller can indent for neatness.
+        caller can indent for neatness.  Or, if a list, each item will be checked in order.
     """
     engine = Engine(Config(), "nocontext")
-    actual = engine.query_and_format(Query(sql, "default", ALWAYS_UPDATE, True))
-    assert actual.strip() == textwrap.dedent(expected).strip()
+    if isinstance(expected, str):
+        actual = engine.query_and_format(Query(sql, "default", ALWAYS_UPDATE, True))
+        assert actual.strip() == textwrap.dedent(expected).strip()
+    else:
+        actual, _ = engine.query(Query(sql, "default", ALWAYS_UPDATE, True))
+        assert actual == expected
 
 
 def _resource(filename: str):

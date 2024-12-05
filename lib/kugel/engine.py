@@ -39,7 +39,7 @@ class Engine:
         rows, headers = self.query(query)
         return tabulate(rows, tablefmt="plain", floatfmt=".1f", headers=headers)
 
-    def query(self, query: Query):
+    def query(self, query: Query) -> Tuple[list[Tuple], list[str]]:
 
         # Make the builders for built-in tables
         builtins = Config(**yaml.safe_load((Path(__file__).parent / "builtins.yaml").read_text()))

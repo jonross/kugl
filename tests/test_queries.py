@@ -1,5 +1,7 @@
 import textwrap
 
+import pytest
+
 from kugel.config import Config
 from kugel.constants import ALWAYS_UPDATE
 from kugel.engine import Query
@@ -13,10 +15,10 @@ def test_by_cpu(test_home):
         "items": [
             make_pod("pod-1"),
             make_pod("pod-2"),
-            make_pod("pod-3", containers=[Container(requests=CGM(cpu=2, mem="10M"))]),
-            make_pod("pod-4", containers=[Container(requests=CGM(cpu=2, mem="10M"))]),
+            make_pod("pod-3", containers=[Container(requests=CGM(cpu=2, memory="10M"))]),
+            make_pod("pod-4", containers=[Container(requests=CGM(cpu=2, memory="10M"))]),
             # should get dropped because no status available
-            make_pod("pod-5", containers=[Container(requests=CGM(cpu=2, mem="10M"))]),
+            make_pod("pod-5", containers=[Container(requests=CGM(cpu=2, memory="10M"))]),
         ]
     })
     kubectl_response("pod_statuses", """
@@ -31,6 +33,17 @@ def test_by_cpu(test_home):
         pod-3   Init:3
         pod-4   Init:4
     """)
+
+
+@pytest.mark.parametrize("containers,expected", [
+    ([Container(requests=CGM(cpu=1, memory="1Mi"), limits=CGM(cpu=1, memory="1Mi"))],
+     [ ["pod-1", 1, 1, 1<<20, 1<<20] ])
+])
+def test_resource_summing(test_home, containers, expected):
+    pod = make_pod("pod-1", containers=containers)
+    kubectl_response("pods", {"items": [pod]})
+    kubectl_response("pod_statuses", "NAME    STATUS\npod-1  Running")
+    assert_query("SELECT name, cpu_req, cpu_lim, mem_req, mem_lim FROM pods", expected)
 
 
 def test_job_status(test_home):
