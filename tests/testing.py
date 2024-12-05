@@ -38,6 +38,13 @@ class Container(BaseModel, SafeDictable):
     command: List[str] = Field(default_factory = lambda: ["echo", "hello"])
     requests: Optional[CGM] = CGM(cpu=1, mem="10M")
     limits: Optional[CGM] = CGM(cpu=1, mem="10M")
+    # Don't specify this in the constructor, it's a derived field
+    resources: Optional[dict] = None
+
+    def model_post_init(self, *args):
+        # Move requests and limits to resources so they match the Pod layout.
+        self.resources = dict(requests=self.requests, limits=self.limits)
+        self.requests = self.limits = None
 
 
 def kubectl_response(kind: str, output: Union[str, dict]):
