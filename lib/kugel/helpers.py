@@ -3,6 +3,7 @@ Wrappers to make JSON returned by kubectl easier to work with.
 """
 
 from dataclasses import dataclass
+from typing import Optional
 
 import funcy as fn
 
@@ -12,9 +13,9 @@ from .jross import from_footprint
 
 @dataclass
 class Resources:  # TODO: Rename this, it can be confused with resource type e.g. pods
-    cpu: float
-    gpu: float
-    mem: int
+    cpu: Optional[float]
+    gpu: Optional[float]
+    mem: Optional[int]
 
     def __add__(self, other):
         cpu = self.cpu + other.cpu if self.cpu is not None and other.cpu is not None else None
@@ -32,7 +33,7 @@ class Resources:  # TODO: Rename this, it can be confused with resource type e.g
     @classmethod
     def extract(cls, obj):
         if obj is None:
-            return Resources(0, 0, 0)
+            return Resources(None, None, None)
         cpu = from_footprint(obj.get("cpu"))
         gpu = from_footprint(obj.get("nvidia.com/gpu"))
         mem = from_footprint(obj.get("memory"))
