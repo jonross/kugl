@@ -17,10 +17,13 @@ class Resources:  # TODO: Rename this, it can be confused with resource type e.g
     mem: int
 
     def __add__(self, other):
-        return Resources(self.cpu + other.cpu, self.gpu + other.gpu, self.mem + other.mem)
+        cpu = self.cpu + other.cpu if self.cpu is not None and other.cpu is not None else None
+        gpu = self.gpu + other.gpu if self.gpu is not None and other.gpu is not None else None
+        mem = self.mem + other.mem if self.mem is not None and other.mem is not None else None
+        return Resources(cpu, gpu, mem)
 
     def __radd__(self, other):
-        """Needed to support sum()"""
+        """Needed to support sum() -- handles 0 as a starting value"""
         return self if other == 0 else self.__add__(other)
 
     def as_tuple(self):

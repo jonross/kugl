@@ -36,8 +36,16 @@ def test_by_cpu(test_home):
 
 
 @pytest.mark.parametrize("containers,expected", [
+    # Typical pod - cpu/mem requests/limits, no GPU
     ([Container(requests=CGM(cpu=1, memory="1Mi"), limits=CGM(cpu=1, memory="1Mi"))],
      [ [1, 1, 1<<20, 1<<20, None, None] ]),
+    # Same thing but remove limits
+    ([Container(requests=CGM(cpu=1, memory="1Mi"), limits=CGM())],
+     [ [1, None, 1<<20, None, None, None] ]),
+    # Repeat first example but with two containers; should sum the GPU Nones
+    ([Container(requests=CGM(cpu=1, memory="1Mi"), limits=CGM(cpu=1, memory="1Mi")),
+     Container(requests=CGM(cpu=1, memory="1Mi"), limits=CGM(cpu=1, memory="1Mi"))],
+     [ [2, 2, 2<<20, 2<<20, None, None] ]),
 ])
 def test_resource_summing(test_home, containers, expected):
     pod = make_pod("pod-1", containers=containers)
