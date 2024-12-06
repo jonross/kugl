@@ -46,6 +46,9 @@ def test_by_cpu(test_home):
     ([Container(requests=CGM(cpu=1, memory="1Mi"), limits=CGM(cpu=1, memory="1Mi")),
      Container(requests=CGM(cpu=1, memory="1Mi"), limits=CGM(cpu=1, memory="1Mi"))],
      [ [2, 2, 2<<20, 2<<20, None, None] ]),
+    # Add a GPU request
+    ([Container(requests=CGM(cpu=1, memory="1Mi", gpu=3), limits=CGM(cpu=1, memory="1Mi", gpu=3))],
+     [ [1, 1, 1<<20, 1<<20, 3, 3] ]),
 ])
 def test_resource_summing(test_home, containers, expected):
     pod = make_pod("pod-1", containers=containers)

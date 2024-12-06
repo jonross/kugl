@@ -12,34 +12,29 @@ from kugel.constants import ALWAYS_UPDATE
 from kugel.engine import Engine, Query
 
 
-class SafeDictable:
-    """BaseModel subclass to strip Nones when turned into a dict"""
-    def dict(self, *args, **kwargs):
-        return {k: v for k, v in super().dict(*args, **kwargs) if v is not None}
-
-
-class Taint(BaseModel, SafeDictable):
+class Taint(BaseModel):
     """Helper class for creating taints in test nodes"""
     key: str
     effect: str
     value: Optional[str] = None
 
 
-class CGM(BaseModel, SafeDictable):
+class CGM(BaseModel):
     """Helper class for creating CPU/GPU/Memory resources in test containers"""
+    model_config = ConfigDict(populate_by_name=True)
     cpu: Union[int, str, None] = None
     memory: Union[int, str, None] = None
-    gpu: Union[int, str, None] = Field(alias="nvidia.com/gpu", default=None)
+    gpu: Union[int, str, None] = Field(None, alias="nvidia.com/gpu")
 
 
-class Container(BaseModel, SafeDictable):
+class Container(BaseModel):
     """Helper class for creating containers in test pods"""
     name: str = "main"
     command: List[str] = Field(default_factory = lambda: ["echo", "hello"])
     requests: Optional[CGM] = CGM(cpu=1, memory="10M")
     limits: Optional[CGM] = CGM(cpu=1, memory="10M")
     # Don't specify this in the constructor, it's a derived field
-    resources: Optional[dict] = None
+    resources: Optional[dict[str, CGM]] = None
 
     def model_post_init(self, *args):
         # Move requests and limits to resources so they match the Pod layout.
@@ -72,7 +67,7 @@ def make_node(name: str, taints: Optional[List[Taint]] = None):
     node = yaml.safe_load(_resource("sample_node.yaml"))
     node["metadata"]["name"] = name
     if taints:
-        node["spec"]["taints"] = [taint.dict() for taint in taints]
+        node["spec"]["taints"] = [taint.dict(exclude_none=True) for taint in taints]
     return node
 
 
@@ -97,7 +92,7 @@ def make_pod(name: str,
         obj["metadata"]["name"] = name
     if no_metadata:
         del obj["metadata"]
-    obj["spec"]["containers"] = [c.dict() for c in containers]
+    obj["spec"]["containers"] = [c.dict(by_alias=True, exclude_none=True) for c in containers]
     return obj
 
 
