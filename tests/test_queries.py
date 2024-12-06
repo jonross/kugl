@@ -49,6 +49,11 @@ def test_by_cpu(test_home):
     # Add a GPU request
     ([Container(requests=CGM(cpu=1, mem="1Mi", gpu=3), limits=CGM(cpu=1, mem="1Mi", gpu=3))],
      [ [1, 1, 1<<20, 1<<20, 3, 3] ]),
+    # Mixing set and unset limits should result in Nones
+    ([Container(requests=CGM(cpu=1, mem="1Mi"), limits=CGM(cpu=1, mem="1Mi")),
+      Container(requests=CGM(cpu=1, mem="1Mi"), limits=CGM(cpu=1, mem="1Mi")),
+      Container(requests=CGM(cpu=1, mem="1Mi"), limits=CGM())],
+    [ [3, None, 3<<20, None, None, None] ]),
 ])
 def test_resource_summing(test_home, containers, expected):
     pod = make_pod("pod-1", containers=containers)
