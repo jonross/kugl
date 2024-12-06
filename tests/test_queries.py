@@ -15,10 +15,10 @@ def test_by_cpu(test_home):
         "items": [
             make_pod("pod-1"),
             make_pod("pod-2"),
-            make_pod("pod-3", containers=[Container(requests=CGM(cpu=2, memory="10M"))]),
-            make_pod("pod-4", containers=[Container(requests=CGM(cpu=2, memory="10M"))]),
+            make_pod("pod-3", containers=[Container(requests=CGM(cpu=2, mem="10M"))]),
+            make_pod("pod-4", containers=[Container(requests=CGM(cpu=2, mem="10M"))]),
             # should get dropped because no status available
-            make_pod("pod-5", containers=[Container(requests=CGM(cpu=2, memory="10M"))]),
+            make_pod("pod-5", containers=[Container(requests=CGM(cpu=2, mem="10M"))]),
         ]
     })
     kubectl_response("pod_statuses", """
@@ -37,17 +37,17 @@ def test_by_cpu(test_home):
 
 @pytest.mark.parametrize("containers,expected", [
     # Typical pod - cpu/mem requests/limits, no GPU
-    ([Container(requests=CGM(cpu=1, memory="1Mi"), limits=CGM(cpu=1, memory="1Mi"))],
+    ([Container(requests=CGM(cpu=1, mem="1Mi"), limits=CGM(cpu=1, mem="1Mi"))],
      [ [1, 1, 1<<20, 1<<20, None, None] ]),
     # Same thing but remove limits
-    ([Container(requests=CGM(cpu=1, memory="1Mi"), limits=CGM())],
+    ([Container(requests=CGM(cpu=1, mem="1Mi"), limits=CGM())],
      [ [1, None, 1<<20, None, None, None] ]),
     # Repeat first example but with two containers; should sum the GPU Nones
-    ([Container(requests=CGM(cpu=1, memory="1Mi"), limits=CGM(cpu=1, memory="1Mi")),
-     Container(requests=CGM(cpu=1, memory="1Mi"), limits=CGM(cpu=1, memory="1Mi"))],
+    ([Container(requests=CGM(cpu=1, mem="1Mi"), limits=CGM(cpu=1, mem="1Mi")),
+     Container(requests=CGM(cpu=1, mem="1Mi"), limits=CGM(cpu=1, mem="1Mi"))],
      [ [2, 2, 2<<20, 2<<20, None, None] ]),
     # Add a GPU request
-    ([Container(requests=CGM(cpu=1, memory="1Mi", gpu=3), limits=CGM(cpu=1, memory="1Mi", gpu=3))],
+    ([Container(requests=CGM(cpu=1, mem="1Mi", gpu=3), limits=CGM(cpu=1, mem="1Mi", gpu=3))],
      [ [1, 1, 1<<20, 1<<20, 3, 3] ]),
 ])
 def test_resource_summing(test_home, containers, expected):

@@ -23,7 +23,7 @@ class CGM(BaseModel):
     """Helper class for creating CPU/GPU/Memory resources in test containers"""
     model_config = ConfigDict(populate_by_name=True)
     cpu: Union[int, str, None] = None
-    memory: Union[int, str, None] = None
+    mem: Union[int, str, None] = Field(None, alias="memory")
     gpu: Union[int, str, None] = Field(None, alias="nvidia.com/gpu")
 
 
@@ -31,8 +31,8 @@ class Container(BaseModel):
     """Helper class for creating containers in test pods"""
     name: str = "main"
     command: List[str] = Field(default_factory = lambda: ["echo", "hello"])
-    requests: Optional[CGM] = CGM(cpu=1, memory="10M")
-    limits: Optional[CGM] = CGM(cpu=1, memory="10M")
+    requests: Optional[CGM] = CGM(cpu=1, mem="10M")
+    limits: Optional[CGM] = CGM(cpu=1, mem="10M")
     # Don't specify this in the constructor, it's a derived field
     resources: Optional[dict[str, CGM]] = None
 
