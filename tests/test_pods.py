@@ -46,6 +46,31 @@ def test_by_cpu(test_home):
     """)
 
 
+def test_other_pod_fields(test_home):
+    kubectl_response("pods", {
+        "items": [
+            make_pod("pod-1", namespace="xyz"),
+            make_pod("pod-2", is_daemon=True),
+            make_pod("pod-3", node_name="joe"),
+            make_pod("pod-4", containers=[Container(command=["echo", "bye"])]),
+        ]
+    })
+    kubectl_response("pod_statuses", """
+        NAME   STATUS
+        pod-1  Running
+        pod-2  Running
+        pod-3  Running
+        pod-4  Running
+    """)
+    assert_query("SELECT namespace, is_daemon, node_name, command FROM pods ORDER BY name", """
+        namespace      is_daemon  node_name    command
+        xyz                    0  worker5      echo hello
+        research               1  worker5      echo hello
+        research               0  joe          echo hello
+        research               0  worker5      echo bye
+    """)
+
+
 @pytest.mark.parametrize("containers,expected", [
     # Typical pod - cpu/mem requests/limits, no GPU
     ([Container(requests=CGM(cpu=1, mem="1Mi"), limits=CGM(cpu=1, mem="1Mi"))],

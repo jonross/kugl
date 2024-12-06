@@ -75,6 +75,9 @@ def make_pod(name: str,
              no_metadata: bool = False,
              name_at_root: bool = False,
              no_name: bool = False,
+             is_daemon: bool = False,
+             namespace: Optional[str] = None,
+             node_name: Optional[str] = None,
              containers: List[Container] = [Container()],
              ):
     """
@@ -92,6 +95,12 @@ def make_pod(name: str,
         obj["metadata"]["name"] = name
     if no_metadata:
         del obj["metadata"]
+    if is_daemon:
+        obj["metadata"]["ownerReferences"] = [{"kind": "DaemonSet"}]
+    if namespace:
+        obj["metadata"]["namespace"] = namespace
+    if node_name:
+        obj["spec"]["nodeName"] = node_name
     obj["spec"]["containers"] = [c.dict(by_alias=True, exclude_none=True) for c in containers]
     return obj
 
