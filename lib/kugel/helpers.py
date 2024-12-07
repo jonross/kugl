@@ -3,6 +3,7 @@ Wrappers to make JSON returned by kubectl easier to work with.
 """
 
 from dataclasses import dataclass
+from typing import Optional
 
 import funcy as fn
 
@@ -12,15 +13,18 @@ from .jross import from_footprint
 
 @dataclass
 class Resources:  # TODO: Rename this, it can be confused with resource type e.g. pods
-    cpu: float
-    gpu: float
-    mem: int
+    cpu: Optional[float]
+    gpu: Optional[float]
+    mem: Optional[int]
 
     def __add__(self, other):
-        return Resources(self.cpu + other.cpu, self.gpu + other.gpu, self.mem + other.mem)
+        cpu = self.cpu + other.cpu if self.cpu is not None and other.cpu is not None else None
+        gpu = self.gpu + other.gpu if self.gpu is not None and other.gpu is not None else None
+        mem = self.mem + other.mem if self.mem is not None and other.mem is not None else None
+        return Resources(cpu, gpu, mem)
 
     def __radd__(self, other):
-        """Needed to support sum()"""
+        """Needed to support sum() -- handles 0 as a starting value"""
         return self if other == 0 else self.__add__(other)
 
     def as_tuple(self):
@@ -29,10 +33,10 @@ class Resources:  # TODO: Rename this, it can be confused with resource type e.g
     @classmethod
     def extract(cls, obj):
         if obj is None:
-            return Resources(0, 0, 0)
-        cpu = from_footprint(obj.get("cpu", "0"))
-        gpu = int(obj.get("nvidia.com/gpu", 0))
-        mem = from_footprint(obj.get("memory", "0"))
+            return Resources(None, None, None)
+        cpu = from_footprint(obj.get("cpu"))
+        gpu = from_footprint(obj.get("nvidia.com/gpu"))
+        mem = from_footprint(obj.get("memory"))
         return Resources(cpu, gpu, mem)
 
 
@@ -94,7 +98,7 @@ class PodHelper(ItemHelper):
         return main or self.containers[0]
 
     def resources(self, tag):
-        return sum(Resources.extract(c["resources"].get(tag)) for c in self.containers)
+        return sum(Resources.extract(c.get("resources", {}).get(tag)) for c in self.containers)
 
 
 class JobHelper(ItemHelper):

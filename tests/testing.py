@@ -1,9 +1,45 @@
 import json
 import os
+import textwrap
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, List
 
 import yaml
+from pydantic import Field, BaseModel, ConfigDict
+
+from kugel.config import Config
+from kugel.constants import ALWAYS_UPDATE
+from kugel.engine import Engine, Query
+
+
+class Taint(BaseModel):
+    """Helper class for creating taints in test nodes"""
+    key: str
+    effect: str
+    value: Optional[str] = None
+
+
+class CGM(BaseModel):
+    """Helper class for creating CPU/GPU/Memory resources in test containers"""
+    model_config = ConfigDict(populate_by_name=True)
+    cpu: Union[int, str, None] = None
+    mem: Union[int, str, None] = Field(None, alias="memory")
+    gpu: Union[int, str, None] = Field(None, alias="nvidia.com/gpu")
+
+
+class Container(BaseModel):
+    """Helper class for creating containers in test pods"""
+    name: str = "main"
+    command: List[str] = Field(default_factory = lambda: ["echo", "hello"])
+    requests: Optional[CGM] = CGM(cpu=1, mem="10M")
+    limits: Optional[CGM] = CGM(cpu=1, mem="10M")
+    # Don't specify this in the constructor, it's a derived field
+    resources: Optional[dict[str, CGM]] = None
+
+    def model_post_init(self, *args):
+        # Move requests and limits to resources so they match the Pod layout.
+        self.resources = dict(requests=self.requests, limits=self.limits)
+        self.requests = self.limits = None
 
 
 def kubectl_response(kind: str, output: Union[str, dict]):
@@ -22,15 +58,27 @@ def kubectl_response(kind: str, output: Union[str, dict]):
     folder.joinpath(kind).write_text(output)
 
 
+def make_node(name: str, taints: Optional[List[Taint]] = None):
+    """
+    Construct a Node dict from a generic chunk of node YAML that we can alter to simulate different
+    responses from the K8S API.
+    :param name: Node name
+    """
+    node = yaml.safe_load(_resource("sample_node.yaml"))
+    node["metadata"]["name"] = name
+    if taints:
+        node["spec"]["taints"] = [taint.dict(exclude_none=True) for taint in taints]
+    return node
+
+
 def make_pod(name: str,
              no_metadata: bool = False,
              name_at_root: bool = False,
              no_name: bool = False,
-             cpu_req: int = 1,
-             cpu_lim: int = 2,
-             mem_req: str = "1M",
-             mem_lim: str = "2M",
-             gpu: int = 0,
+             is_daemon: bool = False,
+             namespace: Optional[str] = None,
+             node_name: Optional[str] = None,
+             containers: List[Container] = [Container()],
              ):
     """
     Construct a Pod dict from a generic chunk of pod YAML that we can alter to simulate different
@@ -39,174 +87,26 @@ def make_pod(name: str,
     :param no_metadata: Pretend there is no metadata
     :param name_at_root: Put the object name at top level, not in the metadata
     :param no_name: Pretend there is no object name
-    :param cpu_req: CPU requested
-    :param cpu_lim: CPU limit
-    :param mem_req: Memory requested
-    :param mem_lim: Memory limit
-    :param gpu: Number of GPUs requested / limit
     """
-    obj = yaml.safe_load(BASE_POD_YAML)
+    obj = yaml.safe_load(_resource("sample_pod.yaml"))
     if name_at_root:
         obj["name"] = name
     elif not no_name:
         obj["metadata"]["name"] = name
     if no_metadata:
         del obj["metadata"]
-    resources = {
-        "requests": {"cpu": f"{cpu_req}", "memory": mem_req},
-        "limits": {"cpu": f"{cpu_lim}", "memory": mem_lim},
-    }
-    if gpu:
-        resources["requests"]["nvidia.com/gpu"] = f"{gpu}"
-        resources["limits"]["nvidia.com/gpu"] = f"{gpu}"
-    obj["spec"]["containers"][0]["resources"] = resources
+    if is_daemon:
+        obj["metadata"]["ownerReferences"] = [{"kind": "DaemonSet"}]
+    if namespace:
+        obj["metadata"]["namespace"] = namespace
+    if node_name:
+        obj["spec"]["nodeName"] = node_name
+    obj["spec"]["containers"] = [c.dict(by_alias=True, exclude_none=True) for c in containers]
     return obj
 
 
-BASE_POD_YAML = """
-    apiVersion: v1
-    kind: Pod
-    metadata:
-      annotations:
-        example.com/abc: an annotation
-        example.com/def: another annotation
-      creationTimestamp: '2024-02-04T15:15:01Z'
-      labels:
-        example.com/uvw: a label
-        example.com/xyz: another label
-        job-name: my-important-job
-      namespace: research
-      ownerReferences:
-      - apiVersion: batch/v1
-        blockOwnerDeletion: true
-        controller: true
-        kind: Job
-        name: my-important-job
-        uid: f1452695-3268-49ac-8018-a3d91a1d0082
-      resourceVersion: '2385628922'
-      uid: 4e1ba9fe-2483-4881-88c8-a5b14b9998c1
-    spec:
-      containers:
-      - command:
-        - /bin/bash
-        - -c
-        - "echo 'Hello world'"
-        env:
-        - name: MY_JOB_NAME
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.labels['job-name']
-        - name: MY_POD_IP
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: status.podIP
-        - name: SOME_VAR
-          value: SOME_VAL
-        envFrom:
-        - secretRef:
-            name: super-secret-secret
-            optional: true
-        image: example.com/hello-world
-        imagePullPolicy: Always
-        name: main
-        volumeMounts:
-        - mountPath: /utils
-          name: utils-volume
-          readOnly: true
-      dnsPolicy: ClusterFirst
-      enableServiceLinks: true
-      imagePullSecrets:
-      - name: i-can-haz-images
-      - name: i-can-haz-more-images
-      nodeName: worker5
-      preemptionPolicy: PreemptLowerPriority
-      priority: 7500
-      priorityClassName: important-stuff
-      restartPolicy: Never
-      schedulerName: my-scheduler
-      securityContext: {}
-      serviceAccount: default
-      serviceAccountName: default
-      terminationGracePeriodSeconds: 30
-      tolerations:
-      - key: example.com/research-node
-        operator: Equal
-        value: yes
-      - effect: NoExecute
-        key: node.kubernetes.io/not-ready
-        operator: Exists
-        tolerationSeconds: 300
-      - effect: NoExecute
-        key: node.kubernetes.io/unreachable
-        operator: Exists
-        tolerationSeconds: 300
-      volumes:
-      - hostPath:
-          path: /opt/pod-utils
-          type: Directory
-        name: utils-volume
-      - configMap:
-          defaultMode: 420
-          name: extra-utils
-        name: extra-utils
-      - emptyDir:
-          medium: Memory
-        name: dshm
-      - downwardAPI:
-          defaultMode: 420
-          items:
-          - fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.labels
-            path: labels
-          - fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.annotations
-            path: annotations
-        name: podinfo
-    status:
-      conditions:
-      - lastProbeTime: null
-        lastTransitionTime: '2024-02-04T15:15:01Z'
-        status: 'True'
-        type: Initialized
-      - lastProbeTime: null
-        lastTransitionTime: '2024-02-04T15:15:04Z'
-        status: 'True'
-        type: Ready
-      - lastProbeTime: null
-        lastTransitionTime: '2024-02-04T15:15:04Z'
-        status: 'True'
-        type: ContainersReady
-      - lastProbeTime: null
-        lastTransitionTime: '2024-02-04T15:15:01Z'
-        status: 'True'
-        type: PodScheduled
-      containerStatuses:
-      - containerID: docker://8627eb5f689cf5d0c9655a32e558066b0f2ddf566f2a93002b12a24f33b8cca0
-        image: docker.example.com/example-com/hello-world:8eb819ada5834aabb188cd6889abe0f48dba80ed
-        imageID: docker-pullable://docker.example.com/example-com/hello-world@sha256:cc6fc551890fd26d321b326eadf1c5dd249ea0034b6f0328f60593f245b9ed5b
-        lastState: {}
-        name: main
-        ready: true
-        restartCount: 0
-        started: true
-        state:
-          running:
-            startedAt: '2024-02-04T15:15:04Z'
-      hostIP: 10.11.12.13
-      phase: Running
-      podIP: 10.200.201.202
-      podIPs:
-      - ip: 10.200.201.202
-      qosClass: Burstable
-      startTime: '2024-02-04T15:15:01Z'
-"""
-
-
 def make_job(name: str,
+             namespace: str = None,
              active_count: Optional[int] = None,
              condition: Optional[Tuple[str, str, Optional[str]]] = None,
              ):
@@ -218,52 +118,34 @@ def make_job(name: str,
     :param active_count: If present, the number of active pods
     :param condition: If present, a condition tuple (type, status, reason)
     """
-    obj = yaml.safe_load(BASE_JOB_YAML)
+    obj = yaml.safe_load(_resource("sample_job.yaml"))
     obj["metadata"]["name"] = name
     obj["metadata"]["labels"]["job-name"] = name
+    if namespace is not None:
+        obj["metadata"]["namespace"] = namespace
     if active_count is not None:
         obj["status"]["active"] = active_count
     if condition is not None:
         obj["status"]["conditions"] = [{"type": condition[0], "status": condition[1], "reason": condition[2]}]
     return obj
 
-BASE_JOB_YAML = """
-    apiVersion: batch/v1
-    kind: Job
-    metadata:
-      creationTimestamp: "2024-11-20T01:05:00Z"
-      generation: 1
-      labels:
-        controller-uid: 60848f11-1ecb-4a20-b9aa-bc039cb98b88
-        job-name: example-job-1
-      name: example-job-1
-      namespace: example
-      resourceVersion: "3479929701"
-      uid: 60848f11-1ecb-4a20-b9aa-bc039cb98b88
-    spec:
-      backoffLimit: 0
-      completionMode: NonIndexed
-      completions: 1
-      parallelism: 1
-      selector:
-        matchLabels:
-          controller-uid: 60848f11-1ecb-4a20-b9aa-bc039cb98b88
-      suspend: false
-      template:
-        metadata:
-          creationTimestamp: null
-          labels:
-            controller-uid: 60848f11-1ecb-4a20-b9aa-bc039cb98b88
-            job-name: example-job-28867745
-        spec:
-          containers:
-          - command:
-            - echo
-            - "Hello, world"
-            image: alpine:latest
-            name: example-job
-            resources:
-              requests:
-                cpu: "1"
-    status: {}
-"""
+
+def assert_query(sql: str, expected: Union[str, list]):
+    """
+    Run a query in the "nocontext" namespace and compare the result with expected output.
+    :param sql: SQL query
+    :param expected: Output as it would be shown at the CLI.  This will be dedented so the
+        caller can indent for neatness.  Or, if a list, each item will be checked in order.
+    """
+    engine = Engine(Config(), "nocontext")
+    if isinstance(expected, str):
+        actual = engine.query_and_format(Query(sql, "default", ALWAYS_UPDATE, True))
+        assert actual.strip() == textwrap.dedent(expected).strip()
+    else:
+        actual, _ = engine.query(Query(sql, "default", ALWAYS_UPDATE, True))
+        assert actual == expected
+
+
+def _resource(filename: str):
+    # TODO: rename me
+    return Path(__file__).parent.joinpath("resources", filename).read_text()

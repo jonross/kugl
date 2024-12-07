@@ -8,7 +8,7 @@ Need custom columns and tables?  Ready in minutes.
 
 ## In brief
 
-Filtering and summarizing Kubernetes resources at the command line is painful.
+Filtering and summarizing Kubernetes resources at the command line is a pain.
 Kugel can help.
 
 Example: find the top users of a GPU pool, based on instance type and a team-specific pod label.
@@ -44,6 +44,8 @@ kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
 
 ## Installing
 
+Kugel requires Python 3.9 or later, and kubectl.
+
 **This is an alpha release.**  Please expect bugs and backward-incompatible changes.
 
 If you don't mind Kugel cluttering your Python with its [dependencies](./requirements.txt), run
@@ -63,6 +65,20 @@ kugel() {
         "$@"
 }
 ```
+
+### Test it
+
+Count your nodes by instance type and scheduling taint.
+
+```shell
+kugel -a "with t as (select name, group_concat(key) as noschedule from taints
+            where effect = 'NoSchedule' group by 1)
+        select instance_type, count(1), noschedule
+        from nodes left outer join t on t.node_name = nodes.name
+        group by 1, 3 order by 1, 2 desc"
+```
+
+If this query is helpful, [save it](./docs/aliases.md), then you can just run `kugel nodes`.
 
 ## How it works (important)
 
@@ -98,10 +114,10 @@ In any case, please be mindful of stale data and server load.
 Prior art
 
 * [kubeql](https://github.com/saracen/kubeql) is a SQL-like query language for Kubernetes. It appears unmaintained (last commit October 2017.)
-* [kube-query](https://github.com/aquasecurity/kube-query) is an [osquery](https://osquery.io/) extension. It appears unmaintained (last commit July 2020.)
+* [kube-query](https://github.com/aquasecurity/kube-query) is an [osquery](https://osquery.io/) extension. It appears unmaintained (last commit July 2020) and requires recompilation to add columns or tables.
 * [ksql](https://github.com/brendandburns/ksql) is built on Node.js and AlaSQL.  It appears unmaintained (last commit November 2016.)
 * [cyphernetes](https://github.com/AvitalTamir/cyphernetes) is in active development.  It uses Cypher, a graph query language.
 
-Kugel seeks minimalism and immediate utility.
-SQLite is ubiquitous and ships with Python, so let's use it.
+Kugel aims to be minimalist and immediately familiar.
+SQLite and `kubectl` are ubiquitous, let's build on those.
 

@@ -37,14 +37,9 @@ class Engine:
 
     def query_and_format(self, query: Query):
         rows, headers = self.query(query)
-        # %g is susceptible to outputting scientific notation, which we don't want.
-        # but %f always outputs trailing zeros, which we also don't want.
-        # So turn every value x in each row into an int if x == float(int(x))
-        truncate = lambda x: int(x) if isinstance(x, float) and x == float(int(x)) else x
-        rows = [[truncate(x) for x in row] for row in rows]
         return tabulate(rows, tablefmt="plain", floatfmt=".1f", headers=headers)
 
-    def query(self, query: Query):
+    def query(self, query: Query) -> Tuple[list[Tuple], list[str]]:
 
         # Make the builders for built-in tables
         builtins = Config(**yaml.safe_load((Path(__file__).parent / "builtins.yaml").read_text()))
@@ -106,6 +101,11 @@ class Engine:
 
         column_names = []
         rows = self.db.query(kql, names=column_names)
+        # %g is susceptible to outputting scientific notation, which we don't want.
+        # but %f always outputs trailing zeros, which we also don't want.
+        # So turn every value x in each row into an int if x == float(int(x))
+        truncate = lambda x: int(x) if isinstance(x, float) and x == float(int(x)) else x
+        rows = [[truncate(x) for x in row] for row in rows]
         return rows, column_names
 
     def _get_objects(self, kind: str, query: Query)-> dict:

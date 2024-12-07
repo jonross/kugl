@@ -61,8 +61,7 @@ class NodesTable(TableBuilder):
             mem_alloc INTEGER,
             cpu_cap REAL,
             gpu_cap REAL,
-            mem_cap INTEGER,
-            ns_taints TEXT
+            mem_cap INTEGER
         """)
 
     def make_rows(self, kube_data: list[dict]) -> list[tuple]:
@@ -71,8 +70,6 @@ class NodesTable(TableBuilder):
             node.label("node.kubernetes.io/instance-type") or node.label("beta.kubernetes.io/instance-type"),
             *Resources.extract(node["status"]["allocatable"]).as_tuple(),
             *Resources.extract(node["status"]["capacity"]).as_tuple(),
-            ",".join(taint["key"] for taint in node.obj.get("spec", {}).get("taints", [])
-                     if taint["effect"] == "NoSchedule")
         ) for node in map(ItemHelper, kube_data)]
 
 
@@ -80,7 +77,7 @@ class TaintsTable(TableBuilder):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs, schema="""
-            name TEXT,
+            node_name TEXT,
             key TEXT,
             effect TEXT
         """)

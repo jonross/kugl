@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: Node
+metadata:
+  annotations:
+    rke.cattle.io/external-ip: 10.11.12.13
+    rke.cattle.io/internal-ip: 10.11.12.13
+    volumes.kubernetes.io/controller-managed-attach-detach: "true"
+  creationTimestamp: "2023-03-01T23:04:15Z"
+  labels:
+    beta.kubernetes.io/arch: amd64
+    beta.kubernetes.io/instance-type: a40
+    beta.kubernetes.io/os: linux
+    node-role.kubernetes.io/worker: "true"
+  name: sample-node-1
+  resourceVersion: "3530438503"
+  uid: ff87963d-3b45-4b4e-9ecb-f2db29e398a0
+spec:
+  podCIDR: 10.210.127.0/24
+  podCIDRs:
+  - 10.210.127.0/24
+status:
+  addresses:
+  - address: 10.11.12.13
+    type: InternalIP
+  - address: sample-node-1
+    type: Hostname
+  allocatable:
+    cpu: "93"
+    ephemeral-storage: "3543219812630"
+    memory: 788839492Ki
+    nvidia.com/gpu: "4"
+    pods: "50"
+  capacity:
+    cpu: "96"
+    ephemeral-storage: 3844639560Ki
+    memory: 791039044Ki
+    nvidia.com/gpu: "4"
+    pods: "50"
+  conditions:
+  - lastHeartbeatTime: "2023-12-04T01:34:17Z"
+    lastTransitionTime: "2023-09-25T14:43:14Z"
+    message: docker overlay2 is functioning properly
+    reason: NoCorruptDockerOverlay2
+    status: "False"
+    type: CorruptDockerOverlay2
+  - lastHeartbeatTime: "2023-12-04T01:37:03Z"
+    lastTransitionTime: "2023-06-07T23:23:42Z"
+    message: kubelet has sufficient memory available
+    reason: KubeletHasSufficientMemory
+    status: "False"
+    type: MemoryPressure
+  - lastHeartbeatTime: "2023-12-04T01:37:03Z"
+    lastTransitionTime: "2023-09-25T14:35:55Z"
+    message: kubelet has no disk pressure
+    reason: KubeletHasNoDiskPressure
+    status: "False"
+    type: DiskPressure
+  images:
+  - names:
+    - example.com/image3:f86f19c85cce8e17dc6e5b7b9f430f20c726341a2b30a3f39852cbba64b4b948
+    - example.com/image4:6c8e341e150eb18759f207eec3c37b43c501ee4c
+    sizeBytes: 1844516901
+  - names:
+    - example.com/image3:45f33fd5c313579d889962b2a731fd0c4fe1a993
+    - example.com/image4:70fd218213a6e7ed3301b03e0adba8aa55c8df7ac84b3bfbda5835ca6cc293c5
+    sizeBytes: 1350759455
+  nodeInfo:
+    architecture: amd64
+    kubeProxyVersion: v1.29.10
+    kubeletVersion: v1.29.10
+    operatingSystem: linux
+    osImage: Ubuntu 22.04.3 LTS
+    systemUUID: cef2b7e4-6ff6-4c68-9b04-6e70d462a4b3
