@@ -15,10 +15,10 @@ alias:
       WITH t AS (SELECT name, group_concat(key) AS noschedule FROM taints
                  WHERE effect = 'NoSchedule' GROUP BY 1)
       SELECT instance_type, count(1), noschedule
-      FROM nodes LEFT OUTER JOIN t ON t.name = nodes.name
+      FROM nodes LEFT OUTER JOIN t ON t.node_name = nodes.name
       GROUP BY 1, 3 ORDER BY 1, 2 DESC
 ```
 
 Kugel offers this feature so you can keep all your extensions in one place.
 Simple parameter substitution might be offered in the future, but if you
-need more powerful templates, a Bash wrapper function is preferable.
+need more powerful templates, your own wrapper script is the short-term answer.

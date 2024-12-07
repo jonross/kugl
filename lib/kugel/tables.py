@@ -77,7 +77,7 @@ class TaintsTable(TableBuilder):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs, schema="""
-            name TEXT,
+            node_name TEXT,
             key TEXT,
             effect TEXT
         """)

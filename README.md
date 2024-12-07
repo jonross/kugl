@@ -66,14 +66,16 @@ kugel() {
 }
 ```
 
-Try it.  Count your nodes by instance type and scheduling taint.
+### Test it
+
+Count your nodes by instance type and scheduling taint.
 
 ```shell
-kugel -a "WITH t AS (SELECT name, group_concat(key) AS noschedule FROM taints
-            WHERE effect = 'NoSchedule' GROUP BY 1)
-        SELECT instance_type, count(1), noschedule
-        FROM nodes LEFT OUTER JOIN t ON t.name = nodes.name
-        GROUP BY 1, 3 ORDER BY 1, 2 DESC"
+kugel -a "with t as (select name, group_concat(key) as noschedule from taints
+            where effect = 'NoSchedule' group by 1)
+        select instance_type, count(1), noschedule
+        from nodes left outer join t on t.node_name = nodes.name
+        group by 1, 3 order by 1, 2 desc"
 ```
 
 If this query is helpful, [save it](./docs/aliases.md), then you can just run `kugel nodes`.
