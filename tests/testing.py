@@ -106,6 +106,7 @@ def make_pod(name: str,
 
 
 def make_job(name: str,
+             namespace: str = None,
              active_count: Optional[int] = None,
              condition: Optional[Tuple[str, str, Optional[str]]] = None,
              ):
@@ -120,6 +121,8 @@ def make_job(name: str,
     obj = yaml.safe_load(_resource("sample_job.yaml"))
     obj["metadata"]["name"] = name
     obj["metadata"]["labels"]["job-name"] = name
+    if namespace is not None:
+        obj["metadata"]["namespace"] = namespace
     if active_count is not None:
         obj["status"]["active"] = active_count
     if condition is not None:
