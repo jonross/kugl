@@ -8,7 +8,7 @@ import pytest
 
 from kugel.helpers import Resources
 from kugel.main import main
-from kugel.utils import KugelError, kube_home, kugel_home, vprint, set_verbosity
+from kugel.utils import KugelError, kube_home, kugel_home, dprint, debug
 
 
 def test_no_resources():
@@ -45,10 +45,13 @@ def test_kugel_home_without_envar(monkeypatch):
     assert kugel_home() == Path.home() / ".kugel"
 
 
-def test_vprint(capsys):
-    vprint("hello")
+def test_dprint(capsys):
+    FEATURE = "afeature"
+    dprint(FEATURE, "hello")
     assert capsys.readouterr().out == ""
-    set_verbosity(1)
-    vprint("hello")
+    debug([FEATURE])
+    dprint(FEATURE, "hello")
     assert capsys.readouterr().out == "hello\n"
-    set_verbosity(0)
+    debug([FEATURE], False)
+    dprint(FEATURE, "hello")
+    assert capsys.readouterr().out == ""
