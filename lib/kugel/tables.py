@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from typing import Optional
 
 from .config import Config, EMPTY_EXTENSION, ColumnDef, ExtendTable, CreateTable

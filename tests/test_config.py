@@ -5,6 +5,8 @@ from kugel.config import Settings, Config, validate_config
 
 import yaml
 
+from kugel.helpers import Resources
+
 
 def test_settings_defaults():
     s = Settings()
@@ -111,3 +113,15 @@ def test_unexpected_keys():
                 unexpected: 42
     """))
     assert errors == ["extend.pods.columns.foo.unexpected: Extra inputs are not permitted"]
+
+
+def test_invalid_jmespath():
+    _, errors = validate_config(yaml.safe_load("""
+        extend:
+          pods:
+            columns:
+              foo:
+                type: str
+                source: ...name
+    """))
+    assert errors == ["extend.pods.columns.foo: Value error, invalid JMESPath expression ...name"]

@@ -21,6 +21,12 @@ def test_name():
     assert pod.name is None
 
 
+def test_no_main_container():
+    # Not sure when this would apply; it's here for coverage
+    pod = make_pod("pod-1", containers=[])
+    assert PodHelper(pod).main is None
+
+
 def test_by_cpu(test_home):
     kubectl_response("pods", {
         "items": [
