@@ -9,7 +9,7 @@ import yaml
 from .config import validate_config, Config
 from .constants import CHECK, ALL_NAMESPACE, NEVER_UPDATE, ALWAYS_UPDATE
 from .engine import Engine, Query
-from .utils import fail, set_verbosity, kugel_home, kube_home
+from .utils import fail, debug, kugel_home, kube_home
 
 
 def main(argv: List[str]):
@@ -21,14 +21,16 @@ def main(argv: List[str]):
 
     ap = ArgumentParser()
     ap.add_argument("-a", "--all-namespaces", default=False, action="store_true")
+    ap.add_argument("-D", "--debug", type=str)
     ap.add_argument("-c", "--cache", default=False, action="store_true")
     ap.add_argument("-n", "--namespace", type=str)
     ap.add_argument("-r", "--reckless", default=False, action="store_true")
     ap.add_argument("-u", "--update", default=False, action="store_true")
-    ap.add_argument("-v", "--verbose", default=False, action="store_true")
     ap.add_argument("sql")
     args = ap.parse_args(argv)
-    set_verbosity(1 if args.verbose else 0)
+
+    if args.debug:
+        debug(args.debug.split(","))
 
     try:
         if args.cache and args.update:
@@ -65,7 +67,7 @@ def main(argv: List[str]):
         print(engine.query_and_format(Query(query, namespace, cache_flag, args.reckless)))
 
     except Exception as e:
-        if args.verbose or "KUGEL_UNIT_TESTING" in os.environ:
+        if args.debug or "KUGEL_UNIT_TESTING" in os.environ:
             raise
         print(e, file=sys.stderr)
         sys.exit(1)

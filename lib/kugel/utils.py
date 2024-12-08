@@ -8,7 +8,7 @@ from datetime import datetime
 
 from .jross import to_footprint
 
-VERBOSITY = 0
+DEBUG_FLAGS = {}
 
 
 def kugel_home() -> Path:
@@ -23,13 +23,13 @@ def kube_home() -> Path:
     return Path.home() / ".kube"
 
 
-def set_verbosity(v: int):
-    global VERBOSITY
-    VERBOSITY = v
+def debug(features: list[str], on: bool = True):
+    for feature in features:
+        DEBUG_FLAGS[feature] = on
 
 
-def vprint(*args, **kwargs):
-    if VERBOSITY > 0:
+def dprint(feature, *args, **kwargs):
+    if DEBUG_FLAGS.get(feature):
         print(*args, **kwargs)
 
 
