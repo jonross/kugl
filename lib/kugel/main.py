@@ -50,7 +50,7 @@ def main(argv: List[str]):
         kugel_home().mkdir(exist_ok=True)
         init_file = kugel_home() / "init.yaml"
         if init_file.exists():
-            config, errors = validate_config(yaml.safe_load(init_file.read_text()))
+            config, errors = validate_config(yaml.safe_load(init_file.read_text()) or {})
             if errors:
                 fail("\n".join(errors))
         else:
