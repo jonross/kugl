@@ -90,6 +90,7 @@ Here's a more concise way of defining the `workflows` table, above
 
 ## Features planned
 
-Generate multiple rows from one `kubectl get` response item
+Generate multiple rows from one `kubectl get` response item.
+(We do this internally for taints, but it's not available for extensions.)
 
-Write column extractors in Python
+Write column extractors in Python (warning: security hole.)

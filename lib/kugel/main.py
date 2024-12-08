@@ -9,7 +9,7 @@ import yaml
 from .config import validate_config, Config
 from .constants import CHECK, ALL_NAMESPACE, NEVER_UPDATE, ALWAYS_UPDATE
 from .engine import Engine, Query
-from .utils import fail, set_verbosity, kugel_home
+from .utils import fail, set_verbosity, kugel_home, kube_home
 
 
 def main(argv: List[str]):
@@ -39,11 +39,11 @@ def main(argv: List[str]):
             fail("Cannot use both -a/--all-namespaces and -n/--namespace")
         namespace = ALL_NAMESPACE if args.all_namespaces else args.namespace or "default"
 
-        kube_config = Path.home() / ".kube" / "config"
+        kube_config = kube_home() / "config"
         if not kube_config.exists():
             fail(f"Missing {kube_config}, can't determine current context")
 
-        current_context = yaml.safe_load(kube_config.read_text()).get("current-context")
+        current_context = (yaml.safe_load(kube_config.read_text()) or {}).get("current-context")
         if not current_context:
             fail("No current context, please run kubectl config use-context ...")
 

@@ -5,6 +5,8 @@ from pathlib import Path
 import pytest
 
 # Add tests/ folder to $PATH so 'kubectl ...' invokes our mock
+from kugel.utils import kube_home
+
 os.environ["PATH"] = f"{Path(__file__).parent}:{os.environ['PATH']}"
 
 # Some behaviors have to change in tests, sorry
@@ -20,4 +22,6 @@ def pytest_sessionstart(session):
 def test_home(tmp_path, monkeypatch):
     monkeypatch.setenv("KUGEL_HOME", tmp_path)
     monkeypatch.setenv("KUGEL_MOCKDIR", str(tmp_path / "cache"))
+    kube_home().mkdir()
+    kube_home().joinpath("config").write_text("current-context: nocontext")
     yield tmp_path

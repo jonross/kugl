@@ -1,12 +1,10 @@
 import os
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 
 import arrow
 import dateutil
 from datetime import datetime
-import yaml
 
 from .jross import to_footprint
 
@@ -17,6 +15,12 @@ def kugel_home() -> Path:
     if "KUGEL_HOME" in os.environ:
         return Path(os.environ["KUGEL_HOME"])
     return Path.home() / ".kugel"
+
+
+def kube_home() -> Path:
+    if "KUGEL_HOME" in os.environ:
+        return Path(os.environ["KUGEL_HOME"]) / ".kube"
+    return Path.home() / ".kube"
 
 
 def set_verbosity(v: int):
