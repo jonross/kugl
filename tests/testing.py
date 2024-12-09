@@ -10,6 +10,7 @@ from pydantic import Field, BaseModel, ConfigDict
 from kugel.config import Config
 from kugel.constants import ALWAYS_UPDATE
 from kugel.engine import Engine, Query
+from kugel.utils import epoch_to_utc
 
 
 class Taint(BaseModel):
@@ -78,6 +79,7 @@ def make_pod(name: str,
              is_daemon: bool = False,
              namespace: Optional[str] = None,
              node_name: Optional[str] = None,
+             creation_ts: Optional[int] = None,
              containers: List[Container] = [Container()],
              ):
     """
@@ -101,6 +103,8 @@ def make_pod(name: str,
         obj["metadata"]["namespace"] = namespace
     if node_name:
         obj["spec"]["nodeName"] = node_name
+    if creation_ts:
+        obj["metadata"]["creationTimestamp"] = epoch_to_utc(creation_ts)
     obj["spec"]["containers"] = [c.dict(by_alias=True, exclude_none=True) for c in containers]
     return obj
 

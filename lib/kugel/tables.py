@@ -2,6 +2,7 @@ from typing import Optional
 
 from .config import Config, EMPTY_EXTENSION, ColumnDef, ExtendTable, CreateTable
 from .helpers import Resources, ItemHelper, PodHelper, JobHelper
+from .utils import utc_to_epoch
 
 
 class TableBuilder:
@@ -98,6 +99,7 @@ class PodsTable(TableBuilder):
             is_daemon INTEGER,
             namespace TEXT,
             node_name TEXT,
+            creation_ts INTEGER,
             command TEXT,
             status TEXT,
             cpu_req REAL,
@@ -114,6 +116,7 @@ class PodsTable(TableBuilder):
             1 if pod.is_daemon else 0,
             pod.namespace,
             pod["spec"].get("nodeName"),
+            utc_to_epoch(pod.metadata["creationTimestamp"]),
             pod.command,
             pod["kubectl_status"],
             *pod.resources("requests").as_tuple(),
