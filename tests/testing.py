@@ -10,7 +10,7 @@ from pydantic import Field, BaseModel, ConfigDict
 from kugel.config import Config
 from kugel.constants import ALWAYS_UPDATE
 from kugel.engine import Engine, Query
-from kugel.utils import epoch_to_utc
+from kugel.time import epoch_to_utc
 
 
 class Taint(BaseModel):

@@ -3,7 +3,8 @@ import time
 import jmespath
 import pytest
 
-from kugel.utils import dprint, debug, Age
+from kugel.time import Age
+from kugel.utils import dprint, debug
 
 
 @pytest.mark.parametrize("input_args,input_kwargs,expected", [
