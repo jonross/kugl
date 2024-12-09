@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 from .jross import to_footprint
-from .time import Age
+from .time import Age, epoch_to_utc
 import kugel.time as ktime
 
 DEBUG_FLAGS = {}
@@ -37,6 +37,7 @@ def add_custom_functions(db):
     db.create_function("to_size", 1, to_footprint)
     db.create_function("now", 0, lambda: ktime.CLOCK.now())
     db.create_function("to_age", 1, lambda x: Age(x - ktime.CLOCK.now()).render())
+    db.create_function("to_utc", 1, lambda x: epoch_to_utc(x))
 
 
 def fail(message: str):

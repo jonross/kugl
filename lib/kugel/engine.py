@@ -182,4 +182,4 @@ class DataCache:
         """
         if not path.exists():
             return None
-        return ktime.CLOCK.now() - path.stat().st_mtime
+        return int(ktime.CLOCK.now() - path.stat().st_mtime)
