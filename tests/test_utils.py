@@ -1,5 +1,3 @@
-import time
-
 import jmespath
 import pytest
 
@@ -63,6 +61,8 @@ def test_jmespath_performance():
             {"status": {"phase": "Pending"}, "metadata": {"name": "pod-3"}},
         ]
     }
+    # Use true system time
+    import time
     start = time.time()
     for _ in range(10000):
         result = path.search({**data})
