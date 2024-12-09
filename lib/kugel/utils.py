@@ -15,6 +15,7 @@ DEBUG_FLAGS = {}
 class Age(dt.timedelta):
     """
     A specialization of timedelta that handles age strings like "10s", "5m30s", "1h", "2d12h".
+    Also, an Age is always non-negative.
     """
 
     AGE_RE = re.compile(r"(\d+[a-z])+")
@@ -36,7 +37,7 @@ class Age(dt.timedelta):
             if isinstance(arg, str):
                 return super().__new__(cls, **Age.parse(arg))
             elif isinstance(arg, int) or isinstance(arg, float):
-                return super().__new__(cls, seconds=arg)
+                return super().__new__(cls, seconds=abs(arg))
             else:
                 raise ValueError(f"Invalid argument type: {arg}, {type(arg)}")
         elif not kwargs:
@@ -83,6 +84,26 @@ class Age(dt.timedelta):
         if minutes > 0:
             return f"{minutes}m{seconds}s" if seconds else f"{minutes}m"
         return f"{seconds}s"
+
+    def __add__(self, other):
+        """Must override this because timedelta.__add__ doesn't use __class__"""
+        return self.__class__(self.total_seconds() + other.total_seconds())
+
+    def __sub__(self, other):
+        """Must override this because timedelta.__add__ doesn't use __class__"""
+        return self.__class__(self.total_seconds() - other.total_seconds())
+
+    @property
+    def value(self) -> int:
+        return int(self.total_seconds())
+
+
+def utc_to_epoch(utc_str: str) -> int:
+    return arrow.get(utc_str).int_timestamp
+
+
+def epoch_to_utc(epoch: int) -> str:
+    return arrow.get(epoch).to('utc').format('YYYY-MM-DDTHH:mm:ss') + 'Z'
 
 
 def kugel_home() -> Path:
