@@ -132,6 +132,8 @@ class Engine:
 
     def _pod_status_from_pod_list(self, output):
         rows = [WHITESPACE.split(line.strip()) for line in output.strip().split("\n")]
+        if len(rows) < 2:
+            return {}
         header, rows = rows[0], rows[1:]
         name_index = header.index("NAME")
         status_index = header.index("STATUS")

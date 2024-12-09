@@ -1,5 +1,6 @@
 import os
 import re
+import time
 from pathlib import Path
 from typing import Union, Dict
 
@@ -133,6 +134,8 @@ def add_custom_functions(db):
     Given a SQLite database instance, add pretty_size as a custom function.
     """
     db.create_function("to_size", 1, to_footprint)
+    db.create_function("now", 0, lambda: int(time.time()))
+    db.create_function("to_age", 1, lambda x: Age(x).render())
 
 
 def to_age(x: Union[dt.datetime,str]):
