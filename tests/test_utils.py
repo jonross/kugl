@@ -9,7 +9,6 @@ from kugel.utils import dprint, debug, Age
 @pytest.mark.parametrize("input_args,input_kwargs,expected", [
     ([], {}, ValueError("Must specify positional or keyword arguments")),
     ([1], {"x":1}, ValueError("Cannot specify both positional and keyword arguments")),
-    ([1.0], {}, ValueError("Invalid argument type")),
     ([1, 1], {}, ValueError("Too many positional arguments")),
     ([""], {}, ValueError("Empty argument")),
     (["xxx"], {}, ValueError("Invalid age syntax: xxx")),
@@ -18,6 +17,7 @@ from kugel.utils import dprint, debug, Age
     ([], {"minutes": 5}, "5m"),
     ([], {"hours": 3}, "3h"),
     ([], {"days": 2}, "2d"),
+    ([2.5], {}, "2s"),
     (["10d9h"], {}, "10d"),
     (["9d9h"], {}, "9d9h"),
     (["9d"], {}, "9d"),

@@ -32,12 +32,13 @@ class Age(dt.timedelta):
                 raise ValueError("Cannot specify both positional and keyword arguments")
             if len(args) > 1:
                 raise ValueError("Too many positional arguments")
-            if isinstance(args[0], str):
-                return super().__new__(cls, **Age.parse(args[0]))
-            elif isinstance(args[0], int):
-                return super().__new__(cls, seconds=args[0])
+            arg = args[0]
+            if isinstance(arg, str):
+                return super().__new__(cls, **Age.parse(arg))
+            elif isinstance(arg, int) or isinstance(arg, float):
+                return super().__new__(cls, seconds=arg)
             else:
-                raise ValueError("Invalid argument type")
+                raise ValueError(f"Invalid argument type: {arg}, {type(arg)}")
         elif not kwargs:
             raise ValueError("Must specify positional or keyword arguments")
         else:
@@ -78,7 +79,7 @@ class Age(dt.timedelta):
             return f"{hours}h{minutes}m" if minutes else f"{hours}h"
         if minutes > 9:
             return f"{minutes}m"
-        seconds = self.seconds % 60
+        seconds = int(self.seconds % 60)
         if minutes > 0:
             return f"{minutes}m{seconds}s" if seconds else f"{minutes}m"
         return f"{seconds}s"
