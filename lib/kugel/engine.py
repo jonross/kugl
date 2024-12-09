@@ -12,10 +12,10 @@ import funcy as fn
 from tabulate import tabulate
 import yaml
 
-from kugel.config import Config
-from kugel.constants import CACHE_EXPIRATION, CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
-from kugel.jross import run, SqliteDb
-from kugel.utils import fail, add_custom_functions, kugel_home
+from .config import Config
+from .constants import CACHE_EXPIRATION, CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
+from .jross import run, SqliteDb
+from .utils import fail, add_custom_functions, kugel_home
 import kugel.time as ktime
 
 # Needed to locate the built-in table builders by class name.
