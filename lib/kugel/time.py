@@ -65,18 +65,19 @@ class Age(dt.timedelta):
         """
         Render the age as a string like "10s", "5m30s", "1h", "2d12h".
         """
-        if self.days > 9:
-            return f"{self.days}d"
+        days = self.days
+        if days > 9:
+            return f"{days}d"
         hours = self.seconds // 3600
-        if self.days > 0:
-            return f"{self.days}d{hours}h" if hours else f"{self.days}d"
-        if hours > 9:
-            return f"{hours}h"
+        if days > 1:  # kubectl prints hours up to 47
+            return f"{days}d{hours}h" if hours else f"{days}d"
+        if days > 0 or hours > 9:
+            return f"{days * 24 + hours}h"
         minutes = (self.seconds % 3600) // 60
-        if hours > 0:
+        if hours > 2:  # kubectl prints minutes up to 179
             return f"{hours}h{minutes}m" if minutes else f"{hours}h"
-        if minutes > 9:
-            return f"{minutes}m"
+        if hours > 0 or minutes > 9:
+            return f"{hours * 60 + minutes}m"
         seconds = int(self.seconds % 60)
         if minutes > 0:
             return f"{minutes}m{seconds}s" if seconds else f"{minutes}m"
