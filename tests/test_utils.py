@@ -1,9 +1,8 @@
-import time
-
 import jmespath
 import pytest
 
-from kugel.utils import dprint, debug, Age
+from kugel.time import Age
+from kugel.utils import dprint, debug
 
 
 @pytest.mark.parametrize("input_args,input_kwargs,expected", [
@@ -24,13 +23,15 @@ from kugel.utils import dprint, debug, Age
     (["9d9h"], {}, "9d9h"),
     (["9d"], {}, "9d"),
     (["50h"], {}, "2d2h"),
+    (["1d9h"], {}, "33h"),
     (["10h40m"], {}, "10h"),
     (["9h40m"], {}, "9h40m"),
     (["9h40m20s"], {}, "9h40m"),
     (["9h20s"], {}, "9h"),
-    (["2h"], {}, "2h"),
-    (["1h20m"], {}, "1h20m"),
-    (["1h20s"], {}, "1h"),
+    (["3h"], {}, "3h"),
+    (["2h50m"], {}, "170m"),
+    (["1h"], {}, "60m"),
+    (["1h20s"], {}, "60m"),
     (["80s"], {}, "1m20s"),
     (["10m20s"], {}, "10m"),
     (["9m20s"], {}, "9m20s"),
@@ -62,6 +63,8 @@ def test_jmespath_performance():
             {"status": {"phase": "Pending"}, "metadata": {"name": "pod-3"}},
         ]
     }
+    # Use true system time
+    import time
     start = time.time()
     for _ in range(10000):
         result = path.search({**data})

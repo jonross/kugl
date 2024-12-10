@@ -2,7 +2,7 @@ from typing import Optional
 
 from .config import Config, EMPTY_EXTENSION, ColumnDef, ExtendTable, CreateTable
 from .helpers import Resources, ItemHelper, PodHelper, JobHelper
-from .utils import utc_to_epoch
+from .time import utc_to_epoch
 
 
 class TableBuilder:

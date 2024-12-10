@@ -1,4 +1,3 @@
-import time
 from datetime import datetime
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
@@ -13,10 +12,11 @@ import funcy as fn
 from tabulate import tabulate
 import yaml
 
-from kugel.config import Config
-from kugel.constants import CACHE_EXPIRATION, CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
-from kugel.jross import run, SqliteDb
-from kugel.utils import fail, add_custom_functions, kugel_home
+from .config import Config
+from .constants import CACHE_EXPIRATION, CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
+from .jross import run, SqliteDb
+from .utils import fail, add_custom_functions, kugel_home
+import kugel.time as ktime
 
 # Needed to locate the built-in table builders by class name.
 import kugel.tables
@@ -66,7 +66,7 @@ class Engine:
         refreshable, max_staleness = self.cache.advise_refresh(query.namespace, resources_used, query.cache_flag)
         if not query.reckless and max_staleness is not None:
             print(f"(Data may be up to {max_staleness} seconds old.)", file=sys.stderr)
-            time.sleep(0.5)
+            ktime.CLOCK.sleep(0.5)
 
         # Retrieve resource data in parallel.  If fetching from Kubernetes, update the cache;
         # otherwise just read from the cache.
@@ -182,4 +182,4 @@ class DataCache:
         """
         if not path.exists():
             return None
-        return int((datetime.now() - datetime.fromtimestamp(path.stat().st_mtime)).total_seconds())
+        return int(ktime.CLOCK.now() - path.stat().st_mtime)

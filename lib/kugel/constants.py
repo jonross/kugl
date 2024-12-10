@@ -19,3 +19,5 @@ MAIN_CONTAINERS = ["main", "notebook", "app"]
 ALL_NAMESPACE = "__all"
 
 WHITESPACE = re.compile(r"\s+")
+
+UNIT_TEST_TIMEBASE = 1733798942
