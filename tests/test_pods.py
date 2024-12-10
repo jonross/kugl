@@ -1,5 +1,6 @@
 import pytest
 
+from kugel.constants import UNIT_TEST_TIMEBASE
 from kugel.helpers import PodHelper
 
 from .testing import make_pod, kubectl_response, Container, CGM, assert_query
@@ -55,9 +56,8 @@ def test_by_cpu(test_home):
 def test_other_pod_fields(test_home):
     kubectl_response("pods", {
         "items": [
-            make_pod("pod-1", namespace="xyz"),
-            make_pod("pod-2", is_daemon=True),
-            make_pod("pod-3", node_name="joe"),
+            make_pod("pod-1", namespace="xyz", is_daemon=True),
+            make_pod("pod-3", node_name="joe", creation_ts=UNIT_TEST_TIMEBASE + 60),
             make_pod("pod-4", containers=[Container(command=["echo", "bye"])]),
         ]
     })
@@ -68,12 +68,14 @@ def test_other_pod_fields(test_home):
         pod-3  Running
         pod-4  Running
     """)
-    assert_query("SELECT namespace, is_daemon, node_name, command FROM pods ORDER BY name", """
-        namespace      is_daemon  node_name    command
-        xyz                    0  worker5      echo hello
-        research               1  worker5      echo hello
-        research               0  joe          echo hello
-        research               0  worker5      echo bye
+    assert_query("""
+        SELECT namespace, is_daemon, node_name, command, to_utc(creation_ts) AS created
+        FROM pods ORDER BY name
+    """, """
+        namespace      is_daemon  node_name    command     created
+        xyz                    1  worker5      echo hello  2024-12-10T02:49:02Z
+        research               0  joe          echo hello  2024-12-10T02:50:02Z
+        research               0  worker5      echo bye    2024-12-10T02:49:02Z
     """)
 
 

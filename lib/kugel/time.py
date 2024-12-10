@@ -83,18 +83,6 @@ class Age(dt.timedelta):
             return f"{minutes}m{seconds}s" if seconds else f"{minutes}m"
         return f"{seconds}s"
 
-    def __add__(self, other):
-        # Must override this because timedelta.__add__ doesn't use __class__
-        return self.__class__(self.total_seconds() + other.total_seconds())
-
-    def __sub__(self, other):
-        # Must override this because timedelta.__sub__ doesn't use __class__
-        return self.__class__(self.total_seconds() - other.total_seconds())
-
-    @property
-    def value(self) -> int:
-        return int(self.total_seconds())
-
 
 class Clock:
 
