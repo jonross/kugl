@@ -1,6 +1,10 @@
 #!/bin/bash
+#
+# TODO: move beyond dev mode
 
-PYTHONPATH=$(dirname "$0")/../lib
+kugel_home=$(dirname "$0")/..
+. $kugel_home/venv//bin/activate
+PYTHONPATH=$kugel_home/lib
 
 exec python3 -c 'if True:
     import sys
