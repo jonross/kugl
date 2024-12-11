@@ -143,10 +143,10 @@ def assert_query(sql: str, expected: Union[str, list]):
     """
     engine = Engine(Config(), "nocontext")
     if isinstance(expected, str):
-        actual = engine.query_and_format(Query(sql, "default", ALWAYS_UPDATE, True))
+        actual = engine.query_and_format(Query(sql, "default", ALWAYS_UPDATE))
         assert actual.strip() == textwrap.dedent(expected).strip()
     else:
-        actual, _ = engine.query(Query(sql, "default", ALWAYS_UPDATE, True))
+        actual, _ = engine.query(Query(sql, "default", ALWAYS_UPDATE))
         assert actual == expected
 
 

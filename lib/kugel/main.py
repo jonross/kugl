@@ -75,4 +75,4 @@ def _main(argv: List[str]):
         fail("No current context, please run kubectl config use-context ...")
 
     engine = Engine(config, current_context)
-    print(engine.query_and_format(Query(args.sql, namespace, cache_flag, args.reckless)))
+    print(engine.query_and_format(Query(args.sql, namespace, cache_flag)))

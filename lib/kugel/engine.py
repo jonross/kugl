@@ -20,7 +20,7 @@ import kugel.time as ktime
 # Needed to locate the built-in table builders by class name.
 import kugel.tables
 
-Query = namedtuple("Query", ["sql", "namespace", "cache_flag", "reckless"])
+Query = namedtuple("Query", ["sql", "namespace", "cache_flag"])
 
 
 class Engine:
@@ -59,7 +59,7 @@ class Engine:
 
         # Identify what to fetch vs what's stale or expired.
         refreshable, max_staleness = self.cache.advise_refresh(query.namespace, resources_used, query.cache_flag)
-        if not query.reckless and max_staleness is not None:
+        if not self.config.settings.reckless and max_staleness is not None:
             print(f"(Data may be up to {max_staleness} seconds old.)", file=sys.stderr)
             ktime.CLOCK.sleep(0.5)
 
