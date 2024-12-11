@@ -31,12 +31,14 @@ def _main(argv: List[str]):
 
     kugel_home().mkdir(exist_ok=True)
     init_file = kugel_home() / "init.yaml"
-    if init_file.exists():
+    if not init_file.exists():
+        config = Config()
+    elif init_file.is_world_writeable():
+        fail(f"{init_file} is world writeable, refusing to run")
+    else:
         config, errors = validate_config(yaml.safe_load(init_file.read_text()) or {})
         if errors:
             fail("\n".join(errors))
-    else:
-        config = Config()
 
     if len(argv) == 1 and " " not in argv[0]:
         if not (new_argv := config.alias.get(argv[0])):

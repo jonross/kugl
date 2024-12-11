@@ -44,3 +44,10 @@ def test_kugel_home_without_envar(monkeypatch):
     monkeypatch.delenv("KUGEL_HOME")
     assert kugel_home() == Path.home() / ".kugel"
 
+
+def test_reject_world_writeable_config(test_home):
+    init_file = kugel_home() / "init.yaml"
+    init_file.write_text("foo: bar")
+    init_file.chmod(0o777)
+    with pytest.raises(KugelError, match="is world writeable"):
+        main(["select 1"])
