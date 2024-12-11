@@ -86,4 +86,3 @@ def _main(argv: List[str], return_config: bool = False) -> Optional[Config]:
 
     engine = Engine(config, current_context)
     print(engine.query_and_format(Query(args.sql, namespace, cache_flag)))
-    return config
