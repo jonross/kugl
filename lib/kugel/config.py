@@ -7,7 +7,6 @@ from pydantic.functional_validators import model_validator
 
 class Settings(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    default_namespace: str = "default"
     cache_timeout: NonNegativeInt = 120
     reckless: bool = False
 

@@ -10,21 +10,18 @@ from kugel.helpers import Resources
 
 def test_settings_defaults():
     s = Settings()
-    assert s.default_namespace == "default"
     assert s.cache_timeout == 120
     assert s.reckless == False
 
 
 def test_settings_custom():
-    s = Settings(default_namespace="foo", cache_timeout=5, reckless=True)
-    assert s.default_namespace == "foo"
+    s = Settings(cache_timeout=5, reckless=True)
     assert s.cache_timeout == 5
     assert s.reckless == True
 
 
 def test_empty_config():
     c = Config()
-    assert c.settings.default_namespace == "default"
     assert c.settings.cache_timeout == 120
     assert c.settings.reckless == False
     assert c.extend == {}
