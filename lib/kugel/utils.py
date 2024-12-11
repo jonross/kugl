@@ -25,8 +25,14 @@ def debug(features: list[str], on: bool = True):
         DEBUG_FLAGS[feature] = on
 
 
+def debugging(feature: str = None) -> bool:
+    if feature is None:
+        return len(DEBUG_FLAGS) > 0
+    return DEBUG_FLAGS.get(feature) or DEBUG_FLAGS.get("all")
+
+
 def dprint(feature, *args, **kwargs):
-    if DEBUG_FLAGS.get(feature):
+    if debugging(feature):
         print(*args, **kwargs)
 
 

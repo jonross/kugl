@@ -55,7 +55,7 @@ class Config(BaseModel):
     settings: Optional[Settings] = Settings()
     extend: dict[str, ExtendTable] = {}
     create: dict[str, CreateTable] = {}
-    canned: dict[str, str] = {}
+    alias: dict[str, list[str]] = {}
 
 
 def validate_config(root) -> Tuple[Config, list[str]]:

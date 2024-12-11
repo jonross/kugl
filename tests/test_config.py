@@ -29,7 +29,7 @@ def test_empty_config():
     assert c.settings.reckless == False
     assert c.extend == {}
     assert c.create == {}
-    assert c.canned == {}
+    assert c.alias == {}
 
 
 def test_config_with_table_extension():
