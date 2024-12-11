@@ -12,12 +12,6 @@ class Settings(BaseModel):
     cache_timeout: Age = Age(120)
     reckless: bool = False
 
-    @model_validator(mode="after")
-    @classmethod
-    def fixit(cls, config: 'Settings') -> 'Settings':
-        if isinstance(config.cache_timeout, str):
-            config.cache_timeout = Age(config.cache_timeout)
-
 
 class ColumnDef(BaseModel):
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
