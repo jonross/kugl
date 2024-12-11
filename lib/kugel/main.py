@@ -71,7 +71,7 @@ def _main(argv: List[str], return_config: bool = False) -> Optional[Config]:
     if args.reckless:
         config.settings.reckless = True
     if args.timeout:
-        config.settings.cache_timeout = Age(args.timeout).value
+        config.settings.cache_timeout = Age(args.timeout)
 
     if return_config:
         return config

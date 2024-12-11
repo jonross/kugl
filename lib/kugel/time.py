@@ -27,8 +27,11 @@ class Age(dt.timedelta):
         if args:
             if kwargs:
                 raise ValueError("Cannot specify both positional and keyword arguments")
+            if len(args) == 3:
+                # This is a call from deepcopy, bump it upstairs
+                return super().__new__(cls, *args)
             if len(args) > 1:
-                raise ValueError("Too many positional arguments")
+                raise ValueError(f"Too many positional arguments: {args}")
             arg = args[0]
             if isinstance(arg, str):
                 return super().__new__(cls, **Age.parse(arg))

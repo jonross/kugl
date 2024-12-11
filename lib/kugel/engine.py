@@ -154,7 +154,7 @@ class DataCache:
             return kinds, None
         # Find what's expired or missing
         cache_ages = {kind: self.age(self.cache_path(namespace, kind)) for kind in kinds}
-        expired = {kind for kind, age in cache_ages.items() if age is not None and age >= self.config.cache_timeout}
+        expired = {kind for kind, age in cache_ages.items() if age is not None and age >= self.config.cache_timeout.value}
         missing = {kind for kind, age in cache_ages.items() if age is None}
         # Always refresh what's missing, and possibly also what's expired
         # Stale data warning for everything else
