@@ -1,7 +1,7 @@
 import os
 from argparse import ArgumentParser
 import sys
-from typing import List
+from typing import List, Optional
 
 import yaml
 
@@ -12,7 +12,7 @@ from .time import Age
 from .utils import fail, debug, kugel_home, kube_home, debugging
 
 
-def main(argv: List[str]):
+def main(argv: List[str], return_config: bool = False) -> Optional[Config]:
 
     if "KUGEL_UNIT_TESTING" in os.environ and "KUGEL_MOCKDIR" not in os.environ:
         # Never enter main in tests unless test_home fixture is in use, else we could read
@@ -20,7 +20,7 @@ def main(argv: List[str]):
         sys.exit("Unit test state error")
 
     try:
-        _main(argv)
+        return _main(argv, return_config=return_config)
     except Exception as e:
         if debugging() or "KUGEL_UNIT_TESTING" in os.environ:
             raise
@@ -28,7 +28,7 @@ def main(argv: List[str]):
         sys.exit(1)
 
 
-def _main(argv: List[str]):
+def _main(argv: List[str], return_config: bool = False) -> Optional[Config]:
 
     kugel_home().mkdir(exist_ok=True)
     init_file = kugel_home() / "init.yaml"
@@ -73,6 +73,9 @@ def _main(argv: List[str]):
     if args.timeout:
         config.settings.cache_timeout = Age(args.timeout).value
 
+    if return_config:
+        return config
+
     kube_config = kube_home() / "config"
     if not kube_config.exists():
         fail(f"Missing {kube_config}, can't determine current context")
@@ -83,3 +86,4 @@ def _main(argv: List[str]):
 
     engine = Engine(config, current_context)
     print(engine.query_and_format(Query(args.sql, namespace, cache_flag)))
+    return config

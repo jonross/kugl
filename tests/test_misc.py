@@ -51,3 +51,12 @@ def test_reject_world_writeable_config(test_home):
     init_file.chmod(0o777)
     with pytest.raises(KugelError, match="is world writeable"):
         main(["select 1"])
+
+
+def test_cli_args_override_settings(test_home):
+    settings = main(["select 1"], return_config=True).settings
+    assert settings.cache_timeout == 120
+    assert settings.reckless == False
+    settings = main(["-t 5", "-r", "select 1"], return_config=True).settings
+    assert settings.cache_timeout == 5
+    assert settings.reckless == True
