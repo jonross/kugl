@@ -6,26 +6,24 @@ from kugel.config import Settings, Config, validate_config
 import yaml
 
 from kugel.helpers import Resources
+from kugel.time import Age
 
 
 def test_settings_defaults():
     s = Settings()
-    assert s.default_namespace == "default"
-    assert s.cache_timeout == 120
+    assert s.cache_timeout == Age(120)
     assert s.reckless == False
 
 
 def test_settings_custom():
-    s = Settings(default_namespace="foo", cache_timeout=5, reckless=True)
-    assert s.default_namespace == "foo"
-    assert s.cache_timeout == 5
+    s = Settings(cache_timeout=Age(5), reckless=True)
+    assert s.cache_timeout == Age(5)
     assert s.reckless == True
 
 
 def test_empty_config():
     c = Config()
-    assert c.settings.default_namespace == "default"
-    assert c.settings.cache_timeout == 120
+    assert c.settings.cache_timeout == Age(120)
     assert c.settings.reckless == False
     assert c.extend == {}
     assert c.create == {}

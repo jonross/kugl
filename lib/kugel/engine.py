@@ -1,4 +1,3 @@
-from datetime import datetime
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
 import json
@@ -13,7 +12,7 @@ from tabulate import tabulate
 import yaml
 
 from .config import Config
-from .constants import CACHE_EXPIRATION, CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
+from .constants import CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
 from .jross import run, SqliteDb
 from .utils import fail, add_custom_functions, kugel_home
 import kugel.time as ktime
@@ -21,7 +20,7 @@ import kugel.time as ktime
 # Needed to locate the built-in table builders by class name.
 import kugel.tables
 
-Query = namedtuple("Query", ["sql", "namespace", "cache_flag", "reckless"])
+Query = namedtuple("Query", ["sql", "namespace", "cache_flag"])
 
 
 class Engine:
@@ -29,7 +28,7 @@ class Engine:
     def __init__(self, config: Config, context_name: str):
         self.config = config
         self.context_name = context_name
-        self.cache = DataCache(kugel_home() / "cache" / self.context_name)
+        self.cache = DataCache(self.config, kugel_home() / "cache" / self.context_name)
         self.data = {}
         self.db = SqliteDb()
         self.db_lock = Lock()
@@ -60,7 +59,7 @@ class Engine:
 
         # Identify what to fetch vs what's stale or expired.
         refreshable, max_staleness = self.cache.advise_refresh(query.namespace, resources_used, query.cache_flag)
-        if not query.reckless and max_staleness is not None:
+        if not self.config.settings.reckless and max_staleness is not None:
             print(f"(Data may be up to {max_staleness} seconds old.)", file=sys.stderr)
             ktime.CLOCK.sleep(0.5)
 
@@ -144,7 +143,8 @@ class DataCache:
     This is a separate class for ease of unit testing.
     """
 
-    def __init__(self, dir: Path):
+    def __init__(self, config: Config, dir: Path):
+        self.config = config
         self.dir = dir
         dir.mkdir(parents=True, exist_ok=True)
 
@@ -154,7 +154,7 @@ class DataCache:
             return kinds, None
         # Find what's expired or missing
         cache_ages = {kind: self.age(self.cache_path(namespace, kind)) for kind in kinds}
-        expired = {kind for kind, age in cache_ages.items() if age is not None and age >= CACHE_EXPIRATION}
+        expired = {kind for kind, age in cache_ages.items() if age is not None and age >= self.config.cache_timeout.value}
         missing = {kind for kind, age in cache_ages.items() if age is None}
         # Always refresh what's missing, and possibly also what's expired
         # Stale data warning for everything else

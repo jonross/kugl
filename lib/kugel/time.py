@@ -5,6 +5,7 @@ from abc import abstractmethod
 from typing import Dict, Optional
 
 import arrow
+import funcy as fn
 
 
 class Age(dt.timedelta):
@@ -26,8 +27,11 @@ class Age(dt.timedelta):
         if args:
             if kwargs:
                 raise ValueError("Cannot specify both positional and keyword arguments")
+            if len(args) == 3:
+                # This is a call from deepcopy, bump it upstairs
+                return super().__new__(cls, *args)
             if len(args) > 1:
-                raise ValueError("Too many positional arguments")
+                raise ValueError(f"Too many positional arguments: {args}")
             arg = args[0]
             if isinstance(arg, str):
                 return super().__new__(cls, **Age.parse(arg))
@@ -49,6 +53,8 @@ class Age(dt.timedelta):
         x = x.strip()
         if not x:
             raise ValueError("Empty argument")
+        if fn.silent(int)(x) is not None:
+            return {"seconds": int(x)}
         if not cls.AGE_RE.match(x):
             raise ValueError(f"Invalid age syntax: {x}")
         suffixes = {"s": "seconds", "m": "minutes", "h": "hours", "d": "days"}
@@ -82,6 +88,10 @@ class Age(dt.timedelta):
         if minutes > 0:
             return f"{minutes}m{seconds}s" if seconds else f"{minutes}m"
         return f"{seconds}s"
+
+    @property
+    def value(self) -> int:
+        return int(self.total_seconds())
 
 
 class Clock:

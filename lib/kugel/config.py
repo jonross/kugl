@@ -4,11 +4,12 @@ import jmespath
 from pydantic import BaseModel, Field, NonNegativeInt, ConfigDict, ValidationError, root_validator
 from pydantic.functional_validators import model_validator
 
+from kugel.time import Age
+
 
 class Settings(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    default_namespace: str = "default"
-    cache_timeout: NonNegativeInt = 120
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+    cache_timeout: Age = Age(120)
     reckless: bool = False
 
 

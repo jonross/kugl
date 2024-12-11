@@ -1,17 +1,18 @@
 import os
 from argparse import ArgumentParser
 import sys
-from typing import List
+from typing import List, Optional
 
 import yaml
 
 from .config import validate_config, Config
 from .constants import CHECK, ALL_NAMESPACE, NEVER_UPDATE, ALWAYS_UPDATE
 from .engine import Engine, Query
+from .time import Age
 from .utils import fail, debug, kugel_home, kube_home, debugging
 
 
-def main(argv: List[str]):
+def main(argv: List[str], return_config: bool = False) -> Optional[Config]:
 
     if "KUGEL_UNIT_TESTING" in os.environ and "KUGEL_MOCKDIR" not in os.environ:
         # Never enter main in tests unless test_home fixture is in use, else we could read
@@ -19,7 +20,7 @@ def main(argv: List[str]):
         sys.exit("Unit test state error")
 
     try:
-        _main(argv)
+        return _main(argv, return_config=return_config)
     except Exception as e:
         if debugging() or "KUGEL_UNIT_TESTING" in os.environ:
             raise
@@ -27,7 +28,7 @@ def main(argv: List[str]):
         sys.exit(1)
 
 
-def _main(argv: List[str]):
+def _main(argv: List[str], return_config: bool = False) -> Optional[Config]:
 
     kugel_home().mkdir(exist_ok=True)
     init_file = kugel_home() / "init.yaml"
@@ -51,6 +52,7 @@ def _main(argv: List[str]):
     ap.add_argument("-c", "--cache", default=False, action="store_true")
     ap.add_argument("-n", "--namespace", type=str)
     ap.add_argument("-r", "--reckless", default=False, action="store_true")
+    ap.add_argument("-t", "--timeout", type=str)
     ap.add_argument("-u", "--update", default=False, action="store_true")
     ap.add_argument("sql")
     args = ap.parse_args(argv)
@@ -66,6 +68,14 @@ def _main(argv: List[str]):
         fail("Cannot use both -a/--all-namespaces and -n/--namespace")
     namespace = ALL_NAMESPACE if args.all_namespaces else args.namespace or "default"
 
+    if args.reckless:
+        config.settings.reckless = True
+    if args.timeout:
+        config.settings.cache_timeout = Age(args.timeout)
+
+    if return_config:
+        return config
+
     kube_config = kube_home() / "config"
     if not kube_config.exists():
         fail(f"Missing {kube_config}, can't determine current context")
@@ -75,4 +85,4 @@ def _main(argv: List[str]):
         fail("No current context, please run kubectl config use-context ...")
 
     engine = Engine(config, current_context)
-    print(engine.query_and_format(Query(args.sql, namespace, cache_flag, args.reckless)))
+    print(engine.query_and_format(Query(args.sql, namespace, cache_flag)))
