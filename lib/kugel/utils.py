@@ -8,16 +8,22 @@ import kugel.time as ktime
 DEBUG_FLAGS = {}
 
 
-def kugel_home() -> Path:
-    if "KUGEL_HOME" in os.environ:
-        return Path(os.environ["KUGEL_HOME"])
-    return Path.home() / ".kugel"
+class KPath(type(Path())):
+
+    def is_world_writeable(self) -> bool:
+        return self.stat().st_mode & 0o2 == 0o2
 
 
-def kube_home() -> Path:
+def kugel_home() -> KPath:
     if "KUGEL_HOME" in os.environ:
-        return Path(os.environ["KUGEL_HOME"]) / ".kube"
-    return Path.home() / ".kube"
+        return KPath(os.environ["KUGEL_HOME"])
+    return KPath.home() / ".kugel"
+
+
+def kube_home() -> KPath:
+    if "KUGEL_HOME" in os.environ:
+        return KPath(os.environ["KUGEL_HOME"]) / ".kube"
+    return KPath.home() / ".kube"
 
 
 def debug(features: list[str], on: bool = True):
