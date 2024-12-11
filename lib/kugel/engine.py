@@ -47,15 +47,11 @@ class Engine:
                     for name, create in fn.concat(builtins.create.items(), self.config.create.items())]
 
         # Determine which tables are needed for the query by looking for symmbols that follow
-        # FROM, JOIN, and WITH
+        # FROM and JOIN.  Some of these may be CTEs, so don't assume they're all availabie in
+        # Kubernetes, just pick out the ones we know about and let SQLite take care of
+        # "unknown table" errors.
         kql = query.sql.replace("\n", " ")
-        tables_named = (set(re.findall(r"(?<=from|join)\s+(\w+)", kql, re.IGNORECASE)) -
-                        set(re.findall(r"(?<=with)\s+(\w+)\s+(?=as)", kql, re.IGNORECASE)))
-        bad_names = tables_named - {table.name for table in builders}
-        if bad_names:
-            fail(f"Not available for query: {', '.join(bad_names)}")
-
-        # Based on the tables used, what resources are needed from Kubernetes
+        tables_named = set(re.findall(r"(?<=from|join)\s+(\w+)", kql, re.IGNORECASE))
         tables_used= {table for table in builders if table.name in tables_named}
         resources_used = {table.creator.resource for table in tables_used}
         if "pods" in resources_used:
