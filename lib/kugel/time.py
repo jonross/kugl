@@ -83,6 +83,9 @@ class Age(dt.timedelta):
             return f"{minutes}m{seconds}s" if seconds else f"{minutes}m"
         return f"{seconds}s"
 
+    def value(self) -> int:
+        return int(self.total_seconds())
+
 
 class Clock:
 

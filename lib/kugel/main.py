@@ -8,6 +8,7 @@ import yaml
 from .config import validate_config, Config
 from .constants import CHECK, ALL_NAMESPACE, NEVER_UPDATE, ALWAYS_UPDATE
 from .engine import Engine, Query
+from .time import Age
 from .utils import fail, debug, kugel_home, kube_home, debugging
 
 
@@ -51,6 +52,7 @@ def _main(argv: List[str]):
     ap.add_argument("-c", "--cache", default=False, action="store_true")
     ap.add_argument("-n", "--namespace", type=str)
     ap.add_argument("-r", "--reckless", default=False, action="store_true")
+    ap.add_argument("-t", "--timeout", type=str)
     ap.add_argument("-u", "--update", default=False, action="store_true")
     ap.add_argument("sql")
     args = ap.parse_args(argv)
@@ -65,6 +67,11 @@ def _main(argv: List[str]):
     if args.all_namespaces and args.namespace:
         fail("Cannot use both -a/--all-namespaces and -n/--namespace")
     namespace = ALL_NAMESPACE if args.all_namespaces else args.namespace or "default"
+
+    if args.reckless:
+        config.settings.reckless = True
+    if args.timeout:
+        config.settings.cache_timeout = Age(args.timeout).value
 
     kube_config = kube_home() / "config"
     if not kube_config.exists():
