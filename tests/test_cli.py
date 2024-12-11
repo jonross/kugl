@@ -1,3 +1,5 @@
+import sqlite3
+
 import pytest
 
 from kugel.main import main
@@ -15,5 +17,5 @@ def test_enforce_one_namespace_option(test_home):
 
 
 def test_no_such_resource(test_home):
-    with pytest.raises(KugelError, match="Not available for query"):
+    with pytest.raises(sqlite3.OperationalError, match="no such table: foo"):
         main(["select * from foo"])
