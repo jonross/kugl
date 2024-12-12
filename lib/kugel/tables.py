@@ -130,7 +130,13 @@ class JobsTable(TableBuilder):
         super().__init__(**kwargs, schema="""
             name TEXT,
             namespace TEXT,
-            status TEXT
+            status TEXT,
+            cpu_req REAL,
+            gpu_req REAL,
+            mem_req INTEGER,
+            cpu_lim REAL,
+            gpu_lim REAL,
+            mem_lim INTEGER
         """)
 
     def make_rows(self, kube_data: list[dict]) -> list[tuple]:
@@ -138,4 +144,6 @@ class JobsTable(TableBuilder):
             job.name,
             job.namespace,
             job.status,
+            *job.resources("requests").as_tuple(),
+            *job.resources("limits").as_tuple(),
         ) for job in map(JobHelper, kube_data)]
