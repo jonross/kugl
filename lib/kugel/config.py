@@ -16,19 +16,19 @@ class Settings(BaseModel):
 class ColumnDef(BaseModel):
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     type: Literal["str", "int", "float"]
-    source: str
+    path: str
     _finder: jmespath.parser.Parser
     _sqltype: str
     _pytype: type
 
     @model_validator(mode="after")
     @classmethod
-    def parse_source(cls, config: 'ColumnDef') -> 'ColumnDef':
+    def parse_path(cls, config: 'ColumnDef') -> 'ColumnDef':
         try:
-            jmesexpr = jmespath.compile(config.source)
+            jmesexpr = jmespath.compile(config.path)
             config._finder = lambda obj: jmesexpr.search(obj)
         except jmespath.exceptions.ParseError as e:
-            raise ValueError(f"invalid JMESPath expression {config.source}") from e
+            raise ValueError(f"invalid JMESPath expression {config.path}") from e
         config._sqltype, config._pytype = {
             "str": ("TEXT", str),
             "int": ("INTEGER", int),

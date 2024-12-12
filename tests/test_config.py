@@ -1,11 +1,7 @@
-import pytest
-from pydantic import ValidationError
-
 from kugel.config import Settings, Config, validate_config
 
 import yaml
 
-from kugel.helpers import Resources
 from kugel.time import Age
 
 
@@ -37,16 +33,16 @@ def test_config_with_table_extension():
             columns:
               foo:
                 type: str
-                source: metadata.name
+                path: metadata.name
               bar:
                 type: int
-                source: metadata.creationTimestamp
+                path: metadata.creationTimestamp
     """))
     columns = c.extend["pods"].columns
     assert columns["foo"].type == "str"
-    assert columns["foo"].source == "metadata.name"
+    assert columns["foo"].path == "metadata.name"
     assert columns["bar"].type == "int"
-    assert columns["bar"].source == "metadata.creationTimestamp"
+    assert columns["bar"].path == "metadata.creationTimestamp"
 
 
 def test_config_with_table_creation():
@@ -58,19 +54,19 @@ def test_config_with_table_creation():
             columns:
               foo:
                 type: str
-                source: metadata.name
+                path: metadata.name
               bar:
                 type: int
-                source: metadata.creationTimestamp
+                path: metadata.creationTimestamp
     """))
     pods = c.create["pods"]
     assert pods.resource == "pods"
     assert pods.namespaced == True
     columns = pods.columns
     assert columns["foo"].type == "str"
-    assert columns["foo"].source == "metadata.name"
+    assert columns["foo"].path == "metadata.name"
     assert columns["bar"].type == "int"
-    assert columns["bar"].source == "metadata.creationTimestamp"
+    assert columns["bar"].path == "metadata.creationTimestamp"
 
 
 def test_unknown_type():
@@ -80,7 +76,7 @@ def test_unknown_type():
             columns:
               foo:
                 type: unknown_type
-                source: metadata.name
+                path: metadata.name
     """))
     assert errors == ["extend.pods.columns.foo.type: Input should be 'str', 'int' or 'float'"]
 
@@ -91,7 +87,7 @@ def test_missing_fields_for_create():
           pods:
             columns:
               foo:
-                source: metadata.name
+                path: metadata.name
     """))
     assert set(errors) == set([
         "create.pods.columns.foo.type: Field required",
@@ -107,7 +103,7 @@ def test_unexpected_keys():
             columns:
               foo:
                 type: str
-                source: metadata.name
+                path: metadata.name
                 unexpected: 42
     """))
     assert errors == ["extend.pods.columns.foo.unexpected: Extra inputs are not permitted"]
@@ -120,6 +116,6 @@ def test_invalid_jmespath():
             columns:
               foo:
                 type: str
-                source: ...name
+                path: ...name
     """))
     assert errors == ["extend.pods.columns.foo: Value error, invalid JMESPath expression ...name"]
