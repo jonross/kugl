@@ -2,7 +2,7 @@ from kugel.config import Settings, Config, parse_model, ColumnDef, ExtendTable, 
 
 import yaml
 
-from kugel.time import Age
+from kugel.model import Age
 
 
 def test_settings_defaults():

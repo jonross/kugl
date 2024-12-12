@@ -7,10 +7,10 @@ from typing import Optional, Tuple, Union, List
 import yaml
 from pydantic import Field, BaseModel, ConfigDict
 
+from kugel.api import to_utc
 from kugel.config import Config
 from kugel.constants import ALWAYS_UPDATE, UNIT_TEST_TIMEBASE
 from kugel.engine import Engine, Query
-from kugel.time import epoch_to_utc
 
 
 class Taint(BaseModel):
@@ -104,7 +104,7 @@ def make_pod(name: str,
     if node_name:
         obj["spec"]["nodeName"] = node_name
     if creation_ts and not no_metadata:
-        obj["metadata"]["creationTimestamp"] = epoch_to_utc(creation_ts)
+        obj["metadata"]["creationTimestamp"] = to_utc(creation_ts)
     obj["spec"]["containers"] = [c.dict(by_alias=True, exclude_none=True) for c in containers]
     return obj
 

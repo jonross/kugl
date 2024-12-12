@@ -8,7 +8,7 @@ import yaml
 from .config import parse_model, Config
 from .constants import CHECK, ALL_NAMESPACE, NEVER_UPDATE, ALWAYS_UPDATE
 from .engine import Engine, Query
-from .time import Age
+from .model import Age
 from .utils import fail, debug, kugel_home, kube_home, debugging
 
 

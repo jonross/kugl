@@ -8,7 +8,7 @@ import pytest
 
 from kugel.helpers import Resources
 from kugel.main import main
-from kugel.time import Age
+from kugel.model import Age
 from kugel.utils import KugelError, kube_home, kugel_home
 
 

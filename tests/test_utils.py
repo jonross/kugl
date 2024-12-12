@@ -1,7 +1,7 @@
 import jmespath
 import pytest
 
-from kugel.time import Age
+from kugel.model import Age
 from kugel.utils import dprint, debug
 
 
