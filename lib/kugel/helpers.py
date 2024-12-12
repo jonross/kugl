@@ -1,7 +1,7 @@
 """
 Wrappers to make JSON returned by kubectl easier to work with.
 """
-
+from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Optional
 
@@ -71,7 +71,17 @@ class ItemHelper:
         return self.labels.get(name)
 
 
-class PodHelper(ItemHelper):
+class Containerized:
+
+    @abstractmethod
+    def containers(self):
+        raise NotImplementedError()
+
+    def resources(self, tag):
+        return sum(Resources.extract(c.get("resources", {}).get(tag)) for c in self.containers)
+
+
+class PodHelper(ItemHelper, Containerized):
 
     @property
     def command(self):
@@ -97,11 +107,8 @@ class PodHelper(ItemHelper):
         main = fn.first(fn.filter(lambda c: c["name"] in MAIN_CONTAINERS, self.containers))
         return main or self.containers[0]
 
-    def resources(self, tag):
-        return sum(Resources.extract(c.get("resources", {}).get(tag)) for c in self.containers)
 
-
-class JobHelper(ItemHelper):
+class JobHelper(ItemHelper, Containerized):
 
     @property
     def status(self):
@@ -127,3 +134,9 @@ class JobHelper(ItemHelper):
         if status.get("active", 0) > 0:
             return "Running"
         return "Unknown"
+
+    @property
+    def containers(self):
+        """Return the containers in the job, if any, else an empty list."""
+        return self["spec"]["template"]["spec"].get("containers", [])
+

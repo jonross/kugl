@@ -3,7 +3,7 @@ import pytest
 from kugel.constants import UNIT_TEST_TIMEBASE
 from kugel.helpers import PodHelper
 
-from .testing import make_pod, kubectl_response, Container, CGM, assert_query
+from .testing import make_pod, kubectl_response, Container, CGM, assert_query, make_job
 
 
 def test_missing_metadata():
@@ -104,4 +104,7 @@ def test_resource_summing(test_home, containers, expected):
     kubectl_response("pods", {"items": [pod]})
     kubectl_response("pod_statuses", "NAME    STATUS\npod-1  Running")
     assert_query("SELECT cpu_req, cpu_lim, mem_req, mem_lim, gpu_req, gpu_lim FROM pods", expected)
+    job = make_job("job-1", pod=pod)
+    kubectl_response("jobs", {"items": [job]})
+    assert_query("SELECT cpu_req, cpu_lim, mem_req, mem_lim, gpu_req, gpu_lim FROM jobs", expected)
 
