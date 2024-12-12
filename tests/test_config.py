@@ -1,4 +1,4 @@
-from kugel.config import Settings, Config, validate_config
+from kugel.config import Settings, Config, parse_model, ColumnDef, ExtendTable, CreateTable
 
 import yaml
 
@@ -27,7 +27,7 @@ def test_empty_config():
 
 
 def test_config_with_table_extension():
-    c, _ = validate_config(yaml.safe_load("""
+    c, _ = parse_model(Config, yaml.safe_load("""
         extend:
           pods:
             columns:
@@ -46,7 +46,7 @@ def test_config_with_table_extension():
 
 
 def test_config_with_table_creation():
-    c, _ = validate_config(yaml.safe_load("""
+    c, _ = parse_model(Config, yaml.safe_load("""
         create:
           pods:
             resource: pods
@@ -70,52 +70,64 @@ def test_config_with_table_creation():
 
 
 def test_unknown_type():
-    _, errors = validate_config(yaml.safe_load("""
-        extend:
-          pods:
-            columns:
-              foo:
-                type: unknown_type
-                path: metadata.name
+    _, errors = parse_model(ExtendTable, yaml.safe_load("""
+        columns:
+          foo:
+            type: unknown_type
+            path: metadata.name
     """))
-    assert errors == ["extend.pods.columns.foo.type: Input should be 'str', 'int' or 'float'"]
+    assert errors == ["columns.foo.type: Input should be 'str', 'int' or 'float'"]
 
 
 def test_missing_fields_for_create():
-    _, errors = validate_config(yaml.safe_load("""
-        create:
-          pods:
-            columns:
-              foo:
-                path: metadata.name
+    _, errors = parse_model(CreateTable, yaml.safe_load("""
+        columns:
+          foo:
+            path: metadata.name
     """))
     assert set(errors) == set([
-        "create.pods.columns.foo.type: Field required",
-        "create.pods.resource: Field required",
-        "create.pods.namespaced: Field required",
+        "columns.foo.type: Field required",
+        "resource: Field required",
+        "namespaced: Field required",
     ])
 
 
 def test_unexpected_keys():
-    _, errors = validate_config(yaml.safe_load("""
-        extend:
-          pods:
-            columns:
-              foo:
-                type: str
-                path: metadata.name
-                unexpected: 42
+    _, errors = parse_model(ExtendTable, yaml.safe_load("""
+        columns:
+          foo:
+            type: str
+            path: metadata.name
+            unexpected: 42
     """))
-    assert errors == ["extend.pods.columns.foo.unexpected: Extra inputs are not permitted"]
+    assert errors == ["columns.foo.unexpected: Extra inputs are not permitted"]
 
 
 def test_invalid_jmespath():
-    _, errors = validate_config(yaml.safe_load("""
-        extend:
-          pods:
-            columns:
-              foo:
-                type: str
-                path: ...name
+    _, errors = parse_model(ExtendTable, yaml.safe_load("""
+        columns:
+          foo:
+            type: str
+            path: ...name
     """))
-    assert errors == ["extend.pods.columns.foo: Value error, invalid JMESPath expression ...name"]
+    assert errors == ["columns.foo: Value error, invalid JMESPath expression ...name"]
+
+
+def test_cannot_have_both_path_and_label():
+    _, errors = parse_model(ExtendTable, yaml.safe_load("""
+        columns:
+          foo:
+            type: str
+            path: xyz
+            label: xyz
+    """))
+    assert errors == ["columns.foo: Value error, cannot specify both path and label"]
+
+
+def test_must_specify_path_or_label():
+    _, errors = parse_model(ExtendTable, yaml.safe_load("""
+        columns:
+          foo:
+            type: str
+    """))
+    assert errors == ["columns.foo: Value error, must specify either path or label"]
