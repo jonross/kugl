@@ -29,10 +29,10 @@ extend:
     columns:
       node_pool:
         type: text
-        source: metadata.labels."karpenter.sh/nodepool"
+        path: metadata.labels."karpenter.sh/nodepool"
       provider_id:
         type: text
-        source: spec.providerID
+        path: spec.providerID
 ```
 
 ## Adding a new table
@@ -55,13 +55,13 @@ create:
     columns:
       name:
         type: text
-        source: metadata.name
+        path: metadata.name
       namespace:
         type: text
-        source: metadata.namespace
+        path: metadata.namespace
       status:
         type: text
-        source: metadata.labels."workflows.argoproj.io/phase"
+        path: metadata.labels."workflows.argoproj.io/phase"
 ```
 
 ## Column extractors and defaults

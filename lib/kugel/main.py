@@ -5,7 +5,7 @@ from typing import List, Optional
 
 import yaml
 
-from .config import validate_config, Config
+from .config import parse_model, Config
 from .constants import CHECK, ALL_NAMESPACE, NEVER_UPDATE, ALWAYS_UPDATE
 from .engine import Engine, Query
 from .time import Age
@@ -37,7 +37,7 @@ def _main(argv: List[str], return_config: bool = False) -> Optional[Config]:
     elif init_file.is_world_writeable():
         fail(f"{init_file} is world writeable, refusing to run")
     else:
-        config, errors = validate_config(yaml.safe_load(init_file.read_text()) or {})
+        config, errors = parse_model(Config, yaml.safe_load(init_file.read_text()) or {})
         if errors:
             fail("\n".join(errors))
 
