@@ -1,6 +1,6 @@
 # Kugel
 
-Explore Kubernetes resources using SQLite.
+Stop noodling with `jq`.  Explore Kubernetes resources using SQLite.
 
 Need custom columns and tables?  Ready in minutes.
 
@@ -16,7 +16,7 @@ With Kugel that could be
 
 ```shell
 kugel -a "select owner, sum(gpu_req), sum(cpu_req)
-          from pods join nodes on pods.node_name = node.name
+          from pods join nodes on pods.node_name = nodes.name
           where instance_type = 'a40' and pods.status in ('Running', 'Terminating')
           group by 1 order by 2 desc limit 10"
 ```
@@ -29,7 +29,7 @@ nodes=$(kubectl get nodes -o json | jq -r '.items[]
 kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
   .items[]
   | select(.spec.nodeName as $node | $nodes | index($node))
-  | select(.status.phase == "Running")
+  | select(.metadata.deletionTimestamp || .status.phase == "Running")
   | . as $pod | $pod.spec.containers[]
   | select(.resources.requests["nvidia.com/gpu"] != null)
   | {owner: $pod.metadata.labels["com.mycompany/job-owner"], 
@@ -39,7 +39,7 @@ kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
   | map({owner: .[0].owner, 
          gpu: map(.gpu | tonumber) | add, 
          cpu: map(.cpu | if test("m$") then (sub("m$"; "") | tonumber / 1000) else tonumber end) | add})
-  | .[] | "\(.owner) \(.gpu) \(.cpu)"' | sort -nrk2 | head -10
+  | .[] | sort_by(-.gpu) | .[:10]'
 ```
 
 ## Installing
@@ -68,14 +68,14 @@ kugel() {
 
 ### Test it
 
-Count your nodes by instance type and scheduling taint.
+Report available and unavailable node counts, by instance type and taints.
 
 ```shell
-kugel -a "with t as (select name, group_concat(key) as noschedule from taints
-            where effect = 'NoSchedule' group by 1)
-        select instance_type, count(1), noschedule
-        from nodes left outer join t on t.node_name = nodes.name
-        group by 1, 3 order by 1, 2 desc"
+kugel "with t as (select name, group_concat(key) as taints from taints
+                  where effect in ('NoSchedule', 'NoExecute') group by 1)
+       select instance_type, count(1), taints
+       from nodes left outer join t on t.node_name = nodes.name
+       group by 1, 3 order by 1, 2 desc"
 ```
 
 If this query is helpful, [save it](./docs/aliases.md), then you can just run `kugel nodes`.
