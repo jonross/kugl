@@ -9,6 +9,7 @@ class Age(dt.timedelta):
     """
     A specialization of timedelta that handles age strings like "10s", "5m30s", "1h", "2d12h".
     Also, an Age is always non-negative.
+    FIXME: Don't subclass timedelta, it's breaking the constructor contract.
     """
 
     AGE_RE = re.compile(r"(\d+[a-z])+")

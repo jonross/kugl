@@ -48,22 +48,13 @@ Kugel requires Python 3.9 or later, and kubectl.
 
 **This is an alpha release.**  Please expect bugs and backward-incompatible changes.
 
-If you don't mind Kugel cluttering your Python with its [dependencies](./requirements.txt), run
-
-```
-pip install ...
-```
-
-If you do, here's a shell alias to use the Docker image
+A `pip` install isn't ready yet, and neither is Docker.  To install from source, do
 
 ```shell
-kugel() {
-    docker run \
-        -v $HOME/.kube:/root/.kube 
-        -v $HOME/.kugel:/root/.kugel \
-        insert-docker-image-here \
-        "$@"
-}
+git clone https://github.com/jonross/kugel
+cd kugel
+make reqs
+PATH=${PATH}:$(pwd)/bin
 ```
 
 ### Test it
@@ -121,3 +112,4 @@ Prior art
 Kugel aims to be minimalist and immediately familiar.
 SQLite and `kubectl` are ubiquitous, let's build on those.
 
+Kugel is theoretically applicable to any JSON data source, but let's not get ahead of ourselves.  :)
