@@ -43,6 +43,10 @@ class ColumnDef(BaseModel):
         }[config.type]
         return config
 
+    def extract(self, obj: object) -> object:
+        value = self._finder(obj)
+        return None if value is None else self._pytype(value)
+
 
 class ExtendTable(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -52,18 +56,30 @@ class ExtendTable(BaseModel):
 EMPTY_EXTENSION = ExtendTable(columns={})
 
 
+class ResourceDef(BaseModel):
+    namespaced: bool  # TODO use this in engine query
+
+
 class CreateTable(ExtendTable):
     resource: str
-    namespaced: bool  # TODO use this in engine query
-    builder: str = "kugel.tables.TableBuilder"
+    builder: str = "kugel.tables.TableBuilder"  # TODO get this via the registry
 
 
 class Config(BaseModel):
     model_config = ConfigDict(extra="forbid")
     settings: Optional[Settings] = Settings()
+    resources: dict[str, ResourceDef] = {}
     extend: dict[str, ExtendTable] = {}
     create: dict[str, CreateTable] = {}
     alias: dict[str, list[str]] = {}
+
+    # Private fields offering dict indices for the above fields
+    _resources: dict[str, ResourceDef]
+
+    @model_validator(mode="after")
+    def _build_indices(cls, config: 'Config') -> 'Config':
+        config._resources = {name: resource for name, resource in config.resources.items()}
+        return config
 
 
 # FIXME use typevars

@@ -51,11 +51,3 @@ def add_custom_functions(db):
     db.create_function("now", 0, lambda: ktime.CLOCK.now())
     db.create_function("to_age", 1, lambda x: Age(x - ktime.CLOCK.now()).render())
     db.create_function("to_utc", 1, lambda x: to_utc(x))
-
-
-def fail(message: str):
-    raise KugelError(message)
-
-
-class KugelError(Exception):
-    pass

@@ -1,22 +1,26 @@
 
+resources:
+    - name: pods
+      namespaced: true
+    - name: jobs
+      namespaced: true
+    - name: nodes
+      namespaced: false
+
 create:
 
     pods:
         resource: pods
-        namespaced: true
         builder: kugel.tables.PodsTable
 
     jobs:
         resource: jobs
-        namespaced: true
         builder: kugel.tables.JobsTable
 
     nodes:
         resource: nodes
-        namespaced: false
         builder: kugel.tables.NodesTable
 
     taints:
         resource: nodes
-        namespaced: false
         builder: kugel.tables.TaintsTable

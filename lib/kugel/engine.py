@@ -11,10 +11,12 @@ import funcy as fn
 from tabulate import tabulate
 import yaml
 
-from .config import Config
+from .config import Config, ColumnDef, ExtendTable, CreateTable
 from .constants import CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
+from .impl.registry import get_domain, TableDef
 from .jross import run, SqliteDb
-from .utils import fail, add_custom_functions, kugel_home
+from .utils import add_custom_functions, kugel_home
+from .impl.utils import fail
 import kugel.time as ktime
 
 # Needed to locate the built-in table builders by class name.
@@ -50,9 +52,28 @@ class Engine:
         # Kubernetes, just pick out the ones we know about and let SQLite take care of
         # "unknown table" errors.
         kql = query.sql.replace("\n", " ")
-        tables_named = set(re.findall(r"(?<=from|join)\s+(\w+)", kql, re.IGNORECASE))
-        tables_used= {table for table in builders if table.name in tables_named}
-        resources_used = {table.creator.resource for table in tables_used}
+        tables_named = set(re.findall(r"o(?<=from|join)\s+(\w+)", kql, re.IGNORECASE))
+
+        # Reconcile tables created / extended in the config file with tables defined in code, and
+        # generate the table builders.
+        domain = get_domain("kubernetes")
+        tables = {}
+        for name in tables_named:
+            code_creator = domain.tables.get(name)
+            config_creator = self.config.create.get(name)
+            extender = self.config.extend.get(name)
+            if code_creator and config_creator:
+                fail(f"Pre-defined table {name} can't be created from init.yaml")
+            if code_creator:
+                tables[name] = TableFromCode(code_creator, extender)
+            elif config_creator:
+                tables[name] = TableFromConfig(name, config_creator, extender)
+            else:
+                # Some of the named tables may be CTEs, so it's not an error if we can't create
+                # them.  If actually missing when we reach the query, let SQLite issue the error.
+                pass
+
+        resources_used = {t.resource for t in tables.values()}
         if "pods" in resources_used:
             # This is fake, _get_objects knows to get it via "kubectl get pods" not as JSON
             resources_used.add("pod_statuses")
@@ -179,3 +200,57 @@ class DataCache:
         if not path.exists():
             return None
         return int(ktime.CLOCK.now() - path.stat().st_mtime)
+
+
+class Table:
+
+    def __init__(self, name: str, resource: str, schema: str, extras: list[ColumnDef]):
+        self.name = name
+        self.resource = resource
+        self.schema = schema
+        self.extras = extras
+
+    def build(self, db, kube_data: dict):
+        db.execute(f"CREATE TABLE {self.name} ({self.schema})")
+        rows = self.make_rows(kube_data["items"])
+        if rows:
+            if self.extras:
+                rows = [row + tuple(column.extract(item) for column in self.extras)
+                        for item, row in zip(kube_data["items"], rows)]
+            placeholders = ", ".join("?" * len(rows[0]))
+            db.execute(f"INSERT INTO {self.name} VALUES({placeholders})", rows)
+
+    @staticmethod
+    def column_schema(self, columns: Dict[str, ColumnDef]) -> str:
+        return ", ".join(f"{name} {column._sqltype}" for name, column in columns.items())
+
+
+class TableFromCode(Table):
+
+    def __init__(self, table_def: TableDef, extender: Optional[ExtendTable]):
+        impl = TableDef.cls()
+        schema = impl.schema
+        if extender:
+            schema += ", " + Table.column_schema(extender.columns)
+            extras = list(extender.columns.values())
+        else:
+            extras = []
+        super().__init__(table_def.name, table_def.resource, schema, extras)
+        self.impl = impl
+
+    def make_rows(self, items: list[dict]) -> list[tuple]:
+        return self.impl.make_row(items)
+
+
+class TableFromConfig(Table):
+
+    def __init__(self, name: str, creator: CreateTable, extender: Optional[ExtendTable]):
+        schema = Table.column_schema(creator.columns)
+        extras = list(creator.columns.values)
+        if extender:
+            schema += ", " + Table.column_schema(extender.columns)
+            extras += list(extender.columns.values())
+        super().__init__(name, creator.resource, schema, extras)
+
+    def make_rows(self, items: list[dict]) -> list[tuple]:
+        return [tuple() for _ in items]

@@ -1,4 +1,5 @@
-from .tables import (
+from .data import (
+    domain,
     table
 )
 
@@ -7,4 +8,8 @@ from .utils import (
     parse_utc,
     to_age,
     to_utc,
+)
+
+from ..impl.utils import (
+    fail
 )

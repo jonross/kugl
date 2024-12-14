@@ -28,7 +28,7 @@ class TableBuilder:
         """
         return [tuple()] * len(kube_data)
 
-    def build(self, db, config: Config, kube_data: dict):
+    def build(self, db, kube_data: dict):
         schema = self.schema or ""
         columns = {**self.creator.columns}
         if self.extender:
@@ -40,14 +40,10 @@ class TableBuilder:
         rows = self.make_rows(kube_data["items"])
         if rows:
             if columns:
-                rows = [row + tuple(self._convert(item, column) for column in columns.values())
+                rows = [row + tuple(column.extract(item) for column in columns.values())
                         for item, row in zip(kube_data["items"], rows)]
             placeholders = ", ".join("?" * len(rows[0]))
             db.execute(f"INSERT INTO {self.name} VALUES({placeholders})", rows)
-
-    def _convert(self, obj: object, column: ColumnDef) -> object:
-        value = column._finder(obj)
-        return None if value is None else column._pytype(value)
 
 
 @table(domain="kubernetes", name="nodes", resource="nodes")
