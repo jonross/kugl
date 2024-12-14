@@ -2,7 +2,7 @@ from typing import Optional
 
 from .config import Config, EMPTY_EXTENSION, ColumnDef, ExtendTable, CreateTable
 from .helpers import Resources, ItemHelper, PodHelper, JobHelper
-from .api import parse_utc
+from .api import parse_utc, table
 
 
 class TableBuilder:
@@ -50,6 +50,7 @@ class TableBuilder:
         return None if value is None else column._pytype(value)
 
 
+@table(domain="kubernetes", name="nodes", resource="nodes")
 class NodesTable(TableBuilder):
 
     def __init__(self, **kwargs):
@@ -73,6 +74,7 @@ class NodesTable(TableBuilder):
         ) for node in map(ItemHelper, kube_data)]
 
 
+@table(domain="kubernetes", name="taints", resource="nodes")
 class TaintsTable(TableBuilder):
 
     def __init__(self, **kwargs):
@@ -91,6 +93,7 @@ class TaintsTable(TableBuilder):
         ) for node in nodes for taint in node.obj.get("spec", {}).get("taints", [])]
 
 
+@table(domain="kubernetes", name="pods", resource="pods")
 class PodsTable(TableBuilder):
 
     def __init__(self, **kwargs):
@@ -124,6 +127,7 @@ class PodsTable(TableBuilder):
         ) for pod in map(PodHelper, kube_data)]
 
 
+@table(domain="kubernetes", name="jobs", resource="jobs")
 class JobsTable(TableBuilder):
 
     def __init__(self, **kwargs):
