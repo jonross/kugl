@@ -3,7 +3,7 @@ import sqlite3
 import pytest
 
 from kugel.main import main
-from kugel.utils import KugelError
+from kugel.impl.utils import KugelError
 
 
 def test_enforce_one_cache_option(test_home):

@@ -7,7 +7,6 @@ import sys
 from threading import Lock
 from typing import Tuple, Set, Optional, Dict
 
-import funcy as fn
 from tabulate import tabulate
 import yaml
 
@@ -42,17 +41,15 @@ class Engine:
 
     def query(self, query: Query) -> Tuple[list[Tuple], list[str]]:
 
-        # Make the builders for built-in tables
+        # TODO: fix this
         builtins = Config(**yaml.safe_load((Path(__file__).parent / "builtins.yaml").read_text()))
-        builders = [eval(create.builder)(name=name, creator=create, extender=self.config.extend.get(name))
-                    for name, create in fn.concat(builtins.create.items(), self.config.create.items())]
 
         # Determine which tables are needed for the query by looking for symmbols that follow
         # FROM and JOIN.  Some of these may be CTEs, so don't assume they're all availabie in
         # Kubernetes, just pick out the ones we know about and let SQLite take care of
         # "unknown table" errors.
         kql = query.sql.replace("\n", " ")
-        tables_named = set(re.findall(r"o(?<=from|join)\s+(\w+)", kql, re.IGNORECASE))
+        tables_named = set(re.findall(r"(?<=from|join)\s+(\w+)", kql, re.IGNORECASE))
 
         # Reconcile tables created / extended in the config file with tables defined in code, and
         # generate the table builders.
@@ -112,8 +109,8 @@ class Engine:
             del self.data["pod_statuses"]
 
         # Create tables in SQLite
-        for table in tables_used:
-            table.build(self.db, self.config, self.data[table.creator.resource])
+        for table in tables.values():
+            table.build(self.db, self.data[table.resource])
 
         column_names = []
         rows = self.db.query(kql, names=column_names)
@@ -228,7 +225,7 @@ class Table:
 class TableFromCode(Table):
 
     def __init__(self, table_def: TableDef, extender: Optional[ExtendTable]):
-        impl = TableDef.cls()
+        impl = table_def.cls()
         schema = impl.schema
         if extender:
             schema += ", " + Table.column_schema(extender.columns)
@@ -239,7 +236,7 @@ class TableFromCode(Table):
         self.impl = impl
 
     def make_rows(self, items: list[dict]) -> list[tuple]:
-        return self.impl.make_row(items)
+        return self.impl.make_rows(items)
 
 
 class TableFromConfig(Table):

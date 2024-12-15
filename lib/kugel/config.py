@@ -68,18 +68,10 @@ class CreateTable(ExtendTable):
 class Config(BaseModel):
     model_config = ConfigDict(extra="forbid")
     settings: Optional[Settings] = Settings()
-    resources: dict[str, ResourceDef] = {}
+    resources: list[ResourceDef] = []
     extend: dict[str, ExtendTable] = {}
     create: dict[str, CreateTable] = {}
     alias: dict[str, list[str]] = {}
-
-    # Private fields offering dict indices for the above fields
-    _resources: dict[str, ResourceDef]
-
-    @model_validator(mode="after")
-    def _build_indices(cls, config: 'Config') -> 'Config':
-        config._resources = {name: resource for name, resource in config.resources.items()}
-        return config
 
 
 # FIXME use typevars

@@ -10,7 +10,7 @@ _DOMAINS = {}
 
 class TableDef(BaseModel):
     """
-    Capture a table definition from the @table decorator, e.g.
+    Capture a table definition from the @table decorator, example:
         @table(domain="kubernetes", name="pods", resource="pods")
     """
     cls: Type
@@ -19,13 +19,18 @@ class TableDef(BaseModel):
     resource: str
 
 
-class Domain:
+class Domain(BaseModel):
+    """
+    Capture a domain definition from the @domain decorator, example:
+        @domain("kubernetes")
+    """
+    cls: Type
     tables: dict[str, TableDef] = {}
 
 
-def add_domain(self, name: str, cls: Type):
+def add_domain(name: str, cls: Type):
     """Register a class to implement a data domain; this is called by the @domain decorator."""
-    _DOMAINS[name] = cls
+    _DOMAINS[name] = Domain(cls=cls)
 
 
 def get_domain(name: str) -> Domain:
@@ -33,8 +38,8 @@ def get_domain(name: str) -> Domain:
 
 
 def add_table(cls, **kwargs):
-    """Register a table definition; this is called by the @table decorator."""
+    """Register a class to define a table; this is called by the @table decorator."""
     t = TableDef(cls=cls, **kwargs)
     if t.domain not in _DOMAINS:
         fail(f"Must create domain {t.domain} before table {t.domain}.{t.name}")
-    _DOMAINS[t.domain][t.name] = t
+    _DOMAINS[t.domain].tables[t.name] = t

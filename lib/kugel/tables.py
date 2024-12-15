@@ -1,56 +1,18 @@
-from typing import Optional
-
-from .config import Config, EMPTY_EXTENSION, ColumnDef, ExtendTable, CreateTable
 from .helpers import Resources, ItemHelper, PodHelper, JobHelper
-from .api import parse_utc, table
+from .api import parse_utc, table, domain
 
 
-class TableBuilder:
-
-    def __init__(self, name, creator: CreateTable, extender: Optional[ExtendTable], schema: Optional[str] = None):
-        """
-        :param name: The name of the table
-        :param creator: The configuration for creating the table
-        :param extender: The configuration for extending the table, if any
-        :param schema: If present, the schema defining built-in columns, and the subclass must
-            also define a make_rows method.
-        """
-        self.name = name
-        self.creator = creator
-        self.extender = extender
-        self.schema = schema
-
-    def make_rows(self, kube_data: list[dict]) -> list[tuple]:
-        """
-        Convert the JSON output of "kubectl get {resource} -o json" into a list of rows
-        matching the columns provided in the built-in schema.  For tables without a built-in
-        schema, this returns an empty row per item.
-        """
-        return [tuple()] * len(kube_data)
-
-    def build(self, db, kube_data: dict):
-        schema = self.schema or ""
-        columns = {**self.creator.columns}
-        if self.extender:
-            columns.update(self.extender.columns)
-        if columns:
-            schema += ", " if schema else ""
-            schema += ", ".join(f"{name} {column._sqltype}" for name, column in columns.items())
-        db.execute(f"CREATE TABLE {self.name} ({schema})")
-        rows = self.make_rows(kube_data["items"])
-        if rows:
-            if columns:
-                rows = [row + tuple(column.extract(item) for column in columns.values())
-                        for item, row in zip(kube_data["items"], rows)]
-            placeholders = ", ".join("?" * len(rows[0]))
-            db.execute(f"INSERT INTO {self.name} VALUES({placeholders})", rows)
+@domain("kubernetes")
+class KubernetesData:
+    pass
 
 
 @table(domain="kubernetes", name="nodes", resource="nodes")
-class NodesTable(TableBuilder):
+class NodesTable:
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs, schema="""
+    @property
+    def schema(self):
+        return """
             name TEXT,
             instance_type TEXT,
             cpu_alloc REAL,
@@ -59,7 +21,7 @@ class NodesTable(TableBuilder):
             cpu_cap REAL,
             gpu_cap REAL,
             mem_cap INTEGER
-        """)
+        """
 
     def make_rows(self, kube_data: list[dict]) -> list[tuple]:
         return [(
@@ -71,14 +33,15 @@ class NodesTable(TableBuilder):
 
 
 @table(domain="kubernetes", name="taints", resource="nodes")
-class TaintsTable(TableBuilder):
+class TaintsTable:
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs, schema="""
+    @property
+    def schema(self):
+        return """
             node_name TEXT,
             key TEXT,
             effect TEXT
-        """)
+        """
 
     def make_rows(self, kube_data: list[dict]) -> list[tuple]:
         nodes = map(ItemHelper, kube_data)
@@ -90,10 +53,11 @@ class TaintsTable(TableBuilder):
 
 
 @table(domain="kubernetes", name="pods", resource="pods")
-class PodsTable(TableBuilder):
+class PodsTable:
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs, schema="""
+    @property
+    def schema(self):
+        return """
             name TEXT,
             is_daemon INTEGER,
             namespace TEXT,
@@ -107,7 +71,7 @@ class PodsTable(TableBuilder):
             cpu_lim REAL,
             gpu_lim REAL,
             mem_lim INTEGER
-        """)
+        """
 
     def make_rows(self, kube_data: list[dict]) -> list[tuple]:
         return [(
@@ -124,10 +88,11 @@ class PodsTable(TableBuilder):
 
 
 @table(domain="kubernetes", name="jobs", resource="jobs")
-class JobsTable(TableBuilder):
+class JobsTable:
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs, schema="""
+    @property
+    def schema(self):
+        return """
             name TEXT,
             namespace TEXT,
             status TEXT,
@@ -137,7 +102,7 @@ class JobsTable(TableBuilder):
             cpu_lim REAL,
             gpu_lim REAL,
             mem_lim INTEGER
-        """)
+        """
 
     def make_rows(self, kube_data: list[dict]) -> list[tuple]:
         return [(
