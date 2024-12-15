@@ -27,7 +27,7 @@ def test_empty_config():
 
 
 def test_config_with_table_extension():
-    c, _ = parse_model(Config, yaml.safe_load("""
+    c, e = parse_model(Config, yaml.safe_load("""
         extend:
           pods:
             columns:
@@ -38,6 +38,7 @@ def test_config_with_table_extension():
                 type: int
                 path: metadata.creationTimestamp
     """))
+    assert e is None
     columns = c.extend["pods"].columns
     assert columns["foo"].type == "str"
     assert columns["foo"].path == "metadata.name"
@@ -46,11 +47,10 @@ def test_config_with_table_extension():
 
 
 def test_config_with_table_creation():
-    c, _ = parse_model(Config, yaml.safe_load("""
+    c, e = parse_model(Config, yaml.safe_load("""
         create:
           pods:
             resource: pods
-            namespaced: true
             columns:
               foo:
                 type: str
@@ -59,9 +59,9 @@ def test_config_with_table_creation():
                 type: int
                 path: metadata.creationTimestamp
     """))
+    assert e is None
     pods = c.create["pods"]
     assert pods.resource == "pods"
-    assert pods.namespaced == True
     columns = pods.columns
     assert columns["foo"].type == "str"
     assert columns["foo"].path == "metadata.name"
@@ -88,7 +88,6 @@ def test_missing_fields_for_create():
     assert set(errors) == set([
         "columns.foo.type: Field required",
         "resource: Field required",
-        "namespaced: Field required",
     ])
 
 
