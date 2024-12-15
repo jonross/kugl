@@ -15,7 +15,7 @@ class Settings(BaseModel):
 
 class ColumnDef(BaseModel):
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
-    type: Literal["str", "int", "float"]
+    type: Literal["str", "int", "float"] = "str"
     path: Optional[str] = None
     label: Optional[str] = None
     _finder: jmespath.parser.Parser
