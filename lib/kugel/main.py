@@ -43,7 +43,7 @@ def _main(argv: List[str], return_config: bool = False) -> Optional[UserConfig]:
     elif init_file.is_world_writeable():
         fail(f"{init_file} is world writeable, refusing to run")
     else:
-        config, errors = parse_model(Config, yaml.safe_load(init_file.read_text()) or {})
+        config, errors = parse_model(UserConfig, yaml.safe_load(init_file.read_text()) or {})
         if errors:
             fail("\n".join(errors))
 

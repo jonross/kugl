@@ -250,8 +250,8 @@ class Table:
             db.execute(f"INSERT INTO {self.name} VALUES({placeholders})", rows)
 
     @staticmethod
-    def column_schema(columns: Dict[str, ColumnDef]) -> str:
-        return ", ".join(f"{name} {column._sqltype}" for name, column in columns.items())
+    def column_schema(columns: list[ColumnDef]) -> str:
+        return ", ".join(f"{c.name} {c._sqltype}" for c in columns)
 
 
 class TableFromCode(Table):
@@ -266,7 +266,7 @@ class TableFromCode(Table):
         schema = impl.schema
         if extender:
             schema += ", " + Table.column_schema(extender.columns)
-            extras = list(extender.columns.values())
+            extras = extender.columns
         else:
             extras = []
         super().__init__(table_def.name, table_def.resource, schema, extras)
@@ -287,10 +287,10 @@ class TableFromConfig(Table):
         :param extender: an ExtendTable object from the extend: section of a user config file
         """
         schema = Table.column_schema(creator.columns)
-        extras = list(creator.columns.values)
+        extras = creator.columns
         if extender:
             schema += ", " + Table.column_schema(extender.columns)
-            extras += list(extender.columns.values())
+            extras += extender.columns
         super().__init__(name, creator.resource, schema, extras)
 
     def make_rows(self, items: list[dict]) -> list[tuple]:
