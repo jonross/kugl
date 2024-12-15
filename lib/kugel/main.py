@@ -10,14 +10,14 @@ from typing import List, Optional
 import yaml
 
 from .api import fail
-from .config import parse_model, Config
+from .config import parse_model, Config, UserConfig
 from .constants import CHECK, ALL_NAMESPACE, NEVER_UPDATE, ALWAYS_UPDATE
 from .engine import Engine, Query
 from .model import Age
 from .utils import debug, kugel_home, kube_home, debugging
 
 
-def main(argv: List[str], return_config: bool = False) -> Optional[Config]:
+def main(argv: List[str], return_config: bool = False) -> Optional[UserConfig]:
 
     if "KUGEL_UNIT_TESTING" in os.environ and "KUGEL_MOCKDIR" not in os.environ:
         # Never enter main in tests unless test_home fixture is in use, else we could read
@@ -33,17 +33,17 @@ def main(argv: List[str], return_config: bool = False) -> Optional[Config]:
         sys.exit(1)
 
 
-def _main(argv: List[str], return_config: bool = False) -> Optional[Config]:
+def _main(argv: List[str], return_config: bool = False) -> Optional[UserConfig]:
 
     # Load user config.
     kugel_home().mkdir(exist_ok=True)
     init_file = kugel_home() / "init.yaml"
     if not init_file.exists():
-        config = Config()
+        config = UserConfig()
     elif init_file.is_world_writeable():
         fail(f"{init_file} is world writeable, refusing to run")
     else:
-        config, errors = parse_model(Config, yaml.safe_load(init_file.read_text()) or {})
+        config, errors = parse_model(UserConfig, yaml.safe_load(init_file.read_text()) or {})
         if errors:
             fail("\n".join(errors))
 
@@ -84,6 +84,7 @@ def _main(argv: List[str], return_config: bool = False) -> Optional[Config]:
     # FIXME: this is silly, factor out a function to assist config edge case testing.
     if return_config:
         return config
+    config = Config.collate(config)
 
     kube_config = kube_home() / "config"
     if not kube_config.exists():

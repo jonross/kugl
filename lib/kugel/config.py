@@ -21,6 +21,7 @@ class Settings(BaseModel):
 class ColumnDef(BaseModel):
     """Holds one entry from a columns: list in a user config file."""
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+    name: str
     type: Literal["str", "int", "float"] = "str"
     path: Optional[str] = None
     label: Optional[str] = None
@@ -57,28 +58,49 @@ class ColumnDef(BaseModel):
 class ExtendTable(BaseModel):
     """Holds the extend: section from a user config file."""
     model_config = ConfigDict(extra="forbid")
-    columns: dict[str, ColumnDef] = {}
+    table: str
+    columns: list[ColumnDef] = []
 
 
 class ResourceDef(BaseModel):
     """Holds one entry from the resources: list in a user config file."""
-    namespaced: bool  # TODO use this in engine query
+    name: str
+    namespaced: bool = True  # TODO use this in engine query
 
 
 class CreateTable(ExtendTable):
     """Holds the create: section from a user config file."""
     resource: str
-    builder: str = "kugel.tables.TableBuilder"  # TODO get this via the registry
 
 
-class Config(BaseModel):
+class UserConfig(BaseModel):
     """The root model for a user config file; holds the complete file content."""
     model_config = ConfigDict(extra="forbid")
     settings: Optional[Settings] = Settings()
     resources: list[ResourceDef] = []
-    extend: dict[str, ExtendTable] = {}
-    create: dict[str, CreateTable] = {}
+    extend: list[ExtendTable] = []
+    create: list[CreateTable] = []
     alias: dict[str, list[str]] = {}
+
+
+class Config(BaseModel):
+    """The actual configuration model used by the rest of Kugel."""
+    settings: Settings
+    resources: dict[str, ResourceDef]
+    extend: dict[str, ExtendTable]
+    create: dict[str, CreateTable]
+    alias: dict[str, list[str]]
+
+    @classmethod
+    def collate(cls, user_config: UserConfig) -> 'Config':
+        """Turn a UserConfig into a more convenient form."""
+        return Config(
+            settings=user_config.settings,
+            resources={r.name: r for r in user_config.resources},
+            extend={e.table: e for e in user_config.extend},
+            create={c.table: c for c in user_config.create},
+            alias=user_config.alias,
+        )
 
 
 # FIXME use typevars
@@ -90,4 +112,5 @@ def parse_model(cls, root) -> Tuple[object, list[str]]:
     try:
         return cls.parse_obj(root), None
     except ValidationError as e:
-        return None, [f"{'.'.join(x['loc'])}: {x['msg']}" for x in e.errors()]
+        error_location = lambda err: '.'.join(str(x) for x in err['loc'])
+        return None, [f"{error_location(err)}: {err['msg']}" for err in e.errors()]
