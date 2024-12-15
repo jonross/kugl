@@ -218,7 +218,7 @@ class Table:
             db.execute(f"INSERT INTO {self.name} VALUES({placeholders})", rows)
 
     @staticmethod
-    def column_schema(self, columns: Dict[str, ColumnDef]) -> str:
+    def column_schema(columns: Dict[str, ColumnDef]) -> str:
         return ", ".join(f"{name} {column._sqltype}" for name, column in columns.items())
 
 
