@@ -1,7 +1,11 @@
+"""
+More assorted tests, should these be combined with test_misc.py?
+"""
+
 import jmespath
 import pytest
 
-from kugel.time import Age
+from kugel.model import Age
 from kugel.utils import dprint, debug
 
 

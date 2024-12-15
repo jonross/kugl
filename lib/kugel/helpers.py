@@ -1,6 +1,7 @@
 """
 Wrappers to make JSON returned by kubectl easier to work with.
 """
+
 from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Optional
@@ -98,8 +99,7 @@ class PodHelper(ItemHelper, Containerized):
 
     @property
     def main(self):
-        """
-        Return the main container in the pod, if any, defined as the first container with a name
+        """Return the main container in the pod, if any, defined as the first container with a name
         in MAIN_CONTAINERS.  If there are none of those, return the first one.
         """
         if not self.containers:

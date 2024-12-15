@@ -3,19 +3,19 @@
 
 The `alias` section in `~/.kugel/init.yaml` is a map from query names to lists of command-line arguments.
 
-Example, to save the node query in Kugel's README, add this to `~/.kugel/init.yaml` and run `kugel nodes`.
+Example, to save the node query shown in the [README](../README.md), 
+add this to `~/.kugel/init.yaml` and run `kugel nodes`.
 
 ```yaml
 alias:
   
-  # Count nodes by instance type and scheduling taint
+  # Count nodes by instance type and distinct taint set
   nodes:
-    - -a
     - |
-      WITH t AS (SELECT name, group_concat(key) AS noschedule FROM taints
-                 WHERE effect = 'NoSchedule' GROUP BY 1)
-      SELECT instance_type, count(1), noschedule
-      FROM nodes LEFT OUTER JOIN t ON t.node_name = nodes.name
+      WITH ts AS (SELECT name, group_concat(key) AS taints FROM taints
+                  WHERE effect IN ('NoSchedule', 'NoExecute') GROUP BY 1)
+      SELECT instance_type, count(1), taints
+      FROM nodes LEFT OUTER JOIN ts ON ts.node_name = nodes.name
       GROUP BY 1, 3 ORDER BY 1, 2 DESC
 ```
 

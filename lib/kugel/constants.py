@@ -13,8 +13,10 @@ CacheFlag = Literal[ALWAYS_UPDATE, CHECK, NEVER_UPDATE]
 MAIN_CONTAINERS = ["main", "notebook", "app"]
 
 # Fake namespace if "--all-namespaces" option is used
+# TODO: move into Kubernetes resource domain
 ALL_NAMESPACE = "__all"
 
 WHITESPACE = re.compile(r"\s+")
 
+# For use with simulated clock
 UNIT_TEST_TIMEBASE = 1733798942

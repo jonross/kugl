@@ -1,3 +1,7 @@
+"""
+Common utilities for unit testing.
+"""
+
 import json
 import os
 import textwrap
@@ -7,10 +11,26 @@ from typing import Optional, Tuple, Union, List
 import yaml
 from pydantic import Field, BaseModel, ConfigDict
 
+from kugel.api import to_utc
 from kugel.config import Config
 from kugel.constants import ALWAYS_UPDATE, UNIT_TEST_TIMEBASE
 from kugel.engine import Engine, Query
-from kugel.time import epoch_to_utc
+
+
+def kubectl_response(kind: str, output: Union[str, dict]):
+    """
+    Put a mock response for 'kubectl get {kind} ...' into the mock responses folder,
+    to be found by an invocation of ./kubectl in a test.
+    :param kind: e.g. "pods", "nodes, "jobs" etc
+    :param output: A dict (will be JSON-serialized) or a string (will be trimmed)
+    """
+    if isinstance(output, dict):
+        output = json.dumps(output)
+    else:
+        output = str(output).strip()
+    folder = Path(os.getenv("KUGEL_MOCKDIR"))
+    folder.mkdir(exist_ok=True)
+    folder.joinpath(kind).write_text(output)
 
 
 class Taint(BaseModel):
@@ -41,22 +61,6 @@ class Container(BaseModel):
         # Move requests and limits to resources so they match the Pod layout.
         self.resources = dict(requests=self.requests, limits=self.limits)
         self.requests = self.limits = None
-
-
-def kubectl_response(kind: str, output: Union[str, dict]):
-    """
-    Put a mock response for 'kubectl get {kind} ...' into the mock responses folder,
-    to be found by an invocation of ./kubectl in a test.
-    :param kind: e.g. "pods", "nodes, "jobs" etc
-    :param output: A dict (will be JSON-serialized) or a string (will be trimmed)
-    """
-    if isinstance(output, dict):
-        output = json.dumps(output)
-    else:
-        output = str(output).strip()
-    folder = Path(os.getenv("KUGEL_MOCKDIR"))
-    folder.mkdir(exist_ok=True)
-    folder.joinpath(kind).write_text(output)
 
 
 def make_node(name: str, taints: Optional[List[Taint]] = None):
@@ -104,7 +108,7 @@ def make_pod(name: str,
     if node_name:
         obj["spec"]["nodeName"] = node_name
     if creation_ts and not no_metadata:
-        obj["metadata"]["creationTimestamp"] = epoch_to_utc(creation_ts)
+        obj["metadata"]["creationTimestamp"] = to_utc(creation_ts)
     obj["spec"]["containers"] = [c.dict(by_alias=True, exclude_none=True) for c in containers]
     return obj
 

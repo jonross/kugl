@@ -1,8 +1,12 @@
+"""
+Tests for user configuration file content.
+"""
+
 from kugel.config import Settings, Config, parse_model, ColumnDef, ExtendTable, CreateTable
 
 import yaml
 
-from kugel.time import Age
+from kugel.model import Age
 
 
 def test_settings_defaults():
@@ -27,7 +31,7 @@ def test_empty_config():
 
 
 def test_config_with_table_extension():
-    c, _ = parse_model(Config, yaml.safe_load("""
+    c, e = parse_model(Config, yaml.safe_load("""
         extend:
           pods:
             columns:
@@ -38,6 +42,7 @@ def test_config_with_table_extension():
                 type: int
                 path: metadata.creationTimestamp
     """))
+    assert e is None
     columns = c.extend["pods"].columns
     assert columns["foo"].type == "str"
     assert columns["foo"].path == "metadata.name"
@@ -46,11 +51,10 @@ def test_config_with_table_extension():
 
 
 def test_config_with_table_creation():
-    c, _ = parse_model(Config, yaml.safe_load("""
+    c, e = parse_model(Config, yaml.safe_load("""
         create:
           pods:
             resource: pods
-            namespaced: true
             columns:
               foo:
                 type: str
@@ -59,9 +63,9 @@ def test_config_with_table_creation():
                 type: int
                 path: metadata.creationTimestamp
     """))
+    assert e is None
     pods = c.create["pods"]
     assert pods.resource == "pods"
-    assert pods.namespaced == True
     columns = pods.columns
     assert columns["foo"].type == "str"
     assert columns["foo"].path == "metadata.name"
@@ -86,9 +90,7 @@ def test_missing_fields_for_create():
             path: metadata.name
     """))
     assert set(errors) == set([
-        "columns.foo.type: Field required",
         "resource: Field required",
-        "namespaced: Field required",
     ])
 
 
@@ -96,7 +98,6 @@ def test_unexpected_keys():
     _, errors = parse_model(ExtendTable, yaml.safe_load("""
         columns:
           foo:
-            type: str
             path: metadata.name
             unexpected: 42
     """))
@@ -107,7 +108,6 @@ def test_invalid_jmespath():
     _, errors = parse_model(ExtendTable, yaml.safe_load("""
         columns:
           foo:
-            type: str
             path: ...name
     """))
     assert errors == ["columns.foo: Value error, invalid JMESPath expression ...name"]

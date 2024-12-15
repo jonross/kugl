@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 # In unit tests, calls to run 'kubectl' come here.
-# A test case puts the Kubernetes responses it wants in a temporary folder, and we just print them.
+# A test case puts the Kubernetes responses it wants in a temporary folder, and this just prints them.
 
 import os
 from pathlib import Path

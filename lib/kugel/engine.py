@@ -1,20 +1,25 @@
+"""
+Process Kugel queries.
+If you're looking for Kugel's "brain", you've found it.
+"""
+
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
 import json
 from pathlib import Path
 import re
 import sys
-from threading import Lock
 from typing import Tuple, Set, Optional, Dict
 
-import funcy as fn
 from tabulate import tabulate
 import yaml
 
-from .config import Config
+from .config import Config, ColumnDef, ExtendTable, CreateTable
 from .constants import CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
+from .impl.registry import get_domain, TableDef
 from .jross import run, SqliteDb
-from .utils import fail, add_custom_functions, kugel_home
+from .utils import add_custom_functions, kugel_home
+from .impl.utils import fail
 import kugel.time as ktime
 
 # Needed to locate the built-in table builders by class name.
@@ -26,24 +31,30 @@ Query = namedtuple("Query", ["sql", "namespace", "cache_flag"])
 class Engine:
 
     def __init__(self, config: Config, context_name: str):
+        """
+        :param config: the parsed user configuration file
+        :param context_name: the Kubernetes context to use, e.g. "minikube", "research-cluster"
+        """
         self.config = config
         self.context_name = context_name
         self.cache = DataCache(self.config, kugel_home() / "cache" / self.context_name)
+        # Maps resource name e.g. "pods" to the response from "kubectl get pods -o json"
         self.data = {}
         self.db = SqliteDb()
-        self.db_lock = Lock()
         add_custom_functions(self.db.conn)
 
-    def query_and_format(self, query: Query):
+    def query_and_format(self, query: Query) -> str:
+        """Execute a Kugel query and format the rsults for stdout."""
         rows, headers = self.query(query)
         return tabulate(rows, tablefmt="plain", floatfmt=".1f", headers=headers)
 
     def query(self, query: Query) -> Tuple[list[Tuple], list[str]]:
+        """Execute a Kugel query but don't format the results.
+        :return: a tuple of (rows, column names)
+        """
 
-        # Make the builders for built-in tables
+        # TODO: fix this
         builtins = Config(**yaml.safe_load((Path(__file__).parent / "builtins.yaml").read_text()))
-        builders = [eval(create.builder)(name=name, creator=create, extender=self.config.extend.get(name))
-                    for name, create in fn.concat(builtins.create.items(), self.config.create.items())]
 
         # Determine which tables are needed for the query by looking for symmbols that follow
         # FROM and JOIN.  Some of these may be CTEs, so don't assume they're all availabie in
@@ -51,8 +62,27 @@ class Engine:
         # "unknown table" errors.
         kql = query.sql.replace("\n", " ")
         tables_named = set(re.findall(r"(?<=from|join)\s+(\w+)", kql, re.IGNORECASE))
-        tables_used= {table for table in builders if table.name in tables_named}
-        resources_used = {table.creator.resource for table in tables_used}
+
+        # Reconcile tables created / extended in the config file with tables defined in code, and
+        # generate the table builders.
+        domain = get_domain("kubernetes")
+        tables = {}
+        for name in tables_named:
+            code_creator = domain.tables.get(name)
+            config_creator = self.config.create.get(name)
+            extender = self.config.extend.get(name)
+            if code_creator and config_creator:
+                fail(f"Pre-defined table {name} can't be created from init.yaml")
+            if code_creator:
+                tables[name] = TableFromCode(code_creator, extender)
+            elif config_creator:
+                tables[name] = TableFromConfig(name, config_creator, extender)
+            else:
+                # Some of the named tables may be CTEs, so it's not an error if we can't create
+                # them.  If actually missing when we reach the query, let SQLite issue the error.
+                pass
+
+        resources_used = {t.resource for t in tables.values()}
         if "pods" in resources_used:
             # This is fake, _get_objects knows to get it via "kubectl get pods" not as JSON
             resources_used.add("pod_statuses")
@@ -91,8 +121,8 @@ class Engine:
             del self.data["pod_statuses"]
 
         # Create tables in SQLite
-        for table in tables_used:
-            table.build(self.db, self.config, self.data[table.creator.resource])
+        for table in tables.values():
+            table.build(self.db, self.data[table.resource])
 
         column_names = []
         rows = self.db.query(kql, names=column_names)
@@ -104,15 +134,11 @@ class Engine:
         return rows, column_names
 
     def _get_objects(self, kind: str, query: Query)-> dict:
-        """
-        TODO: update comment
+        """Fetch resources from Kubernetes using kubectl.
 
-        Fetch Kubernetes objects either via the API or from our cache.
-        Special handling if kind is "pod_statuses" -- return a dict mapping pod name to
-        status as shown by "kubectl get pods".
-
-        :param kind: known K8S resource kind e.g. "pods", "nodes", "jobs" etc..
-        :return: raw JSON objects as output by "kubectl get {kind}"
+        :param kind: Kubernetes resource type e.g. "pods"
+        :param query: Query object, from which we need the namespace.
+        :return: JSON as output by "kubectl get {kind} -o json"
         """
         namespace_flag = ["--all-namespaces"] if query.namespace == ALL_NAMESPACE else ["-n", query.namespace]
         if kind == "nodes":
@@ -126,6 +152,7 @@ class Engine:
             return json.loads(output)
 
     def _pod_status_from_pod_list(self, output):
+        """Convert the tabular output of 'kubectl get pods' to JSON."""
         rows = [WHITESPACE.split(line.strip()) for line in output.strip().split("\n")]
         if len(rows) < 2:
             return {}
@@ -138,17 +165,29 @@ class Engine:
 
 
 class DataCache:
-    """
-    Manage the cached JSON data we get from Kubectl.
+    """Manage the cached JSON data from Kubectl.
     This is a separate class for ease of unit testing.
     """
 
     def __init__(self, config: Config, dir: Path):
+        """
+        :param config: the parsed user configuration file
+        :param dir: root of the cache folder tree; paths are of the form
+            <kubernetes context>/<namespace>.<resource kind>.json
+        """
         self.config = config
         self.dir = dir
         dir.mkdir(parents=True, exist_ok=True)
 
     def advise_refresh(self, namespace: str, kinds: Set[str], flag: CacheFlag) -> Tuple[Set[str], int]:
+        """Determine which resources to use from cache or to refresh.
+
+        :param namespace: the Kubernetes namespace to query, or ALL_NAMESPACE
+        :param kinds: the resource types to consider
+        :param flag: the user-specified cache behavior
+        :return: a tuple of (refreshable, max_age) where refreshable is the set of resources types
+            to update, and max_age is the maximum age of the resources that won't be updated.
+        """
         if flag == ALWAYS_UPDATE:
             # Refresh everything and don't issue a "stale data" warning
             return kinds, None
@@ -172,10 +211,89 @@ class DataCache:
         return json.loads(self.cache_path(namespace, kind).read_text())
 
     def age(self, path: Path) -> Optional[int]:
-        """
-        Return the age of a file in seconds, relative to the current time.
-        If the file doesn't exist, return None.
-        """
+        """The age of a file in seconds, relative to the current time, or None if it doesn't exist."""
         if not path.exists():
             return None
         return int(ktime.CLOCK.now() - path.stat().st_mtime)
+
+
+# TODO: make abstract
+# TODO: completely sever from user configs
+class Table:
+    """The engine-level representation of a table, independent of the config file format"""
+
+    def __init__(self, name: str, resource: str, schema: str, extras: list[ColumnDef]):
+        """
+        :param name: the table name, e.g. "pods"
+        :param resource: the Kubernetes resource type, e.g. "pods"
+        :param schema: the SQL schema, e.g. "name TEXT, age INTEGER"
+        :param extras: extra column definitions from user configs (not from Python-defined tables)
+        """
+        self.name = name
+        self.resource = resource
+        self.schema = schema
+        self.extras = extras
+
+    def build(self, db, kube_data: dict):
+        """Create the table in SQLite and insert the data.
+
+        :param db: the SqliteDb instance
+        :param kube_data: the JSON data from 'kubectl get'
+        """
+        db.execute(f"CREATE TABLE {self.name} ({self.schema})")
+        rows = self.make_rows(kube_data["items"])
+        if rows:
+            if self.extras:
+                rows = [row + tuple(column.extract(item) for column in self.extras)
+                        for item, row in zip(kube_data["items"], rows)]
+            placeholders = ", ".join("?" * len(rows[0]))
+            db.execute(f"INSERT INTO {self.name} VALUES({placeholders})", rows)
+
+    @staticmethod
+    def column_schema(columns: Dict[str, ColumnDef]) -> str:
+        return ", ".join(f"{name} {column._sqltype}" for name, column in columns.items())
+
+
+class TableFromCode(Table):
+    """A table created from Python code, not from a user config file."""
+
+    def __init__(self, table_def: TableDef, extender: Optional[ExtendTable]):
+        """
+        :param table_def: a TableDef from the @table decorator
+        :param extender: an ExtendTable object from the extend: section of a user config file
+        """
+        impl = table_def.cls()
+        schema = impl.schema
+        if extender:
+            schema += ", " + Table.column_schema(extender.columns)
+            extras = list(extender.columns.values())
+        else:
+            extras = []
+        super().__init__(table_def.name, table_def.resource, schema, extras)
+        self.impl = impl
+
+    def make_rows(self, items: list[dict]) -> list[tuple]:
+        """Delegate to the user-defined table implementation."""
+        return self.impl.make_rows(items)
+
+
+class TableFromConfig(Table):
+    """A table created from a create: section in a user config file, rather than in Python"""
+
+    def __init__(self, name: str, creator: CreateTable, extender: Optional[ExtendTable]):
+        """
+        :param name: the table name, e.g. "pods"
+        :param creator: a CreateTable object from the create: section of a user config file
+        :param extender: an ExtendTable object from the extend: section of a user config file
+        """
+        schema = Table.column_schema(creator.columns)
+        extras = list(creator.columns.values)
+        if extender:
+            schema += ", " + Table.column_schema(extender.columns)
+            extras += list(extender.columns.values())
+        super().__init__(name, creator.resource, schema, extras)
+
+    def make_rows(self, items: list[dict]) -> list[tuple]:
+        """Return an empty tuple per item; all of the rows from a config-based table are
+        generated by Table.build()"""
+        return [tuple() for _ in items]

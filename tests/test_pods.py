@@ -1,3 +1,7 @@
+"""
+Tests for the pods table.
+"""
+
 import pytest
 
 from kugel.constants import UNIT_TEST_TIMEBASE
