@@ -1,3 +1,7 @@
+"""
+Tests for user configuration file content.
+"""
+
 from kugel.config import Settings, Config, parse_model, ColumnDef, ExtendTable, CreateTable
 
 import yaml
@@ -86,7 +90,6 @@ def test_missing_fields_for_create():
             path: metadata.name
     """))
     assert set(errors) == set([
-        "columns.foo.type: Field required",
         "resource: Field required",
     ])
 
@@ -95,7 +98,6 @@ def test_unexpected_keys():
     _, errors = parse_model(ExtendTable, yaml.safe_load("""
         columns:
           foo:
-            type: str
             path: metadata.name
             unexpected: 42
     """))
@@ -106,7 +108,6 @@ def test_invalid_jmespath():
     _, errors = parse_model(ExtendTable, yaml.safe_load("""
         columns:
           foo:
-            type: str
             path: ...name
     """))
     assert errors == ["columns.foo: Value error, invalid JMESPath expression ...name"]

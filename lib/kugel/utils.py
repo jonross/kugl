@@ -10,6 +10,7 @@ DEBUG_FLAGS = {}
 
 
 class KPath(type(Path())):
+    """It would be nice if Path were smarter, so do that."""
 
     def is_world_writeable(self) -> bool:
         return self.stat().st_mode & 0o2 == 0o2
@@ -28,25 +29,32 @@ def kube_home() -> KPath:
 
 
 def debug(features: list[str], on: bool = True):
+    """Turn debugging on or off for a set of features.
+
+    :param features: list of feature names, parsed from the --debug command line option;
+        "all" means everything.
+    """
     for feature in features:
-        DEBUG_FLAGS[feature] = on
+        if feature == "all" and not on:
+            DEBUG_FLAGS.clear()
+        else:
+            DEBUG_FLAGS[feature] = on
 
 
 def debugging(feature: str = None) -> bool:
+    """Check if a feature is being debugged."""
     if feature is None:
         return len(DEBUG_FLAGS) > 0
     return DEBUG_FLAGS.get(feature) or DEBUG_FLAGS.get("all")
 
 
 def dprint(feature, *args, **kwargs):
+    """Print a debug message if the given feature is being debugged."""
     if debugging(feature):
         print(*args, **kwargs)
 
 
 def add_custom_functions(db):
-    """
-    Given a SQLite database instance, add pretty_size as a custom function.
-    """
     db.create_function("to_size", 1, to_footprint)
     db.create_function("now", 0, lambda: ktime.CLOCK.now())
     db.create_function("to_age", 1, lambda x: Age(x - ktime.CLOCK.now()).render())

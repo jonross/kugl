@@ -1,3 +1,7 @@
+"""
+Common utilities for unit testing.
+"""
+
 import json
 import os
 import textwrap
@@ -11,6 +15,22 @@ from kugel.api import to_utc
 from kugel.config import Config
 from kugel.constants import ALWAYS_UPDATE, UNIT_TEST_TIMEBASE
 from kugel.engine import Engine, Query
+
+
+def kubectl_response(kind: str, output: Union[str, dict]):
+    """
+    Put a mock response for 'kubectl get {kind} ...' into the mock responses folder,
+    to be found by an invocation of ./kubectl in a test.
+    :param kind: e.g. "pods", "nodes, "jobs" etc
+    :param output: A dict (will be JSON-serialized) or a string (will be trimmed)
+    """
+    if isinstance(output, dict):
+        output = json.dumps(output)
+    else:
+        output = str(output).strip()
+    folder = Path(os.getenv("KUGEL_MOCKDIR"))
+    folder.mkdir(exist_ok=True)
+    folder.joinpath(kind).write_text(output)
 
 
 class Taint(BaseModel):
@@ -41,22 +61,6 @@ class Container(BaseModel):
         # Move requests and limits to resources so they match the Pod layout.
         self.resources = dict(requests=self.requests, limits=self.limits)
         self.requests = self.limits = None
-
-
-def kubectl_response(kind: str, output: Union[str, dict]):
-    """
-    Put a mock response for 'kubectl get {kind} ...' into the mock responses folder,
-    to be found by an invocation of ./kubectl in a test.
-    :param kind: e.g. "pods", "nodes, "jobs" etc
-    :param output: A dict (will be JSON-serialized) or a string (will be trimmed)
-    """
-    if isinstance(output, dict):
-        output = json.dumps(output)
-    else:
-        output = str(output).strip()
-    folder = Path(os.getenv("KUGEL_MOCKDIR"))
-    folder.mkdir(exist_ok=True)
-    folder.joinpath(kind).write_text(output)
 
 
 def make_node(name: str, taints: Optional[List[Taint]] = None):

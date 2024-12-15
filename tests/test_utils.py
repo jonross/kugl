@@ -1,3 +1,7 @@
+"""
+More assorted tests, should these be combined with test_misc.py?
+"""
+
 import jmespath
 import pytest
 

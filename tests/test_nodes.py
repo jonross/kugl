@@ -1,3 +1,7 @@
+"""
+Tests for the nodes and taints tables.
+"""
+
 from .testing import make_node, kubectl_response, assert_query, Taint
 
 

@@ -1,3 +1,7 @@
+"""
+Command-line entry point.
+"""
+
 import os
 from argparse import ArgumentParser
 import sys
@@ -31,6 +35,7 @@ def main(argv: List[str], return_config: bool = False) -> Optional[Config]:
 
 def _main(argv: List[str], return_config: bool = False) -> Optional[Config]:
 
+    # Load user config.
     kugel_home().mkdir(exist_ok=True)
     init_file = kugel_home() / "init.yaml"
     if not init_file.exists():
@@ -42,6 +47,8 @@ def _main(argv: List[str], return_config: bool = False) -> Optional[Config]:
         if errors:
             fail("\n".join(errors))
 
+    # Detect if the SQL query is an alias.
+    # FIXME: reparse command line.
     if len(argv) == 1 and " " not in argv[0]:
         if not (new_argv := config.alias.get(argv[0])):
             fail(f"No alias named '{argv[0]}'")
@@ -74,6 +81,7 @@ def _main(argv: List[str], return_config: bool = False) -> Optional[Config]:
     if args.timeout:
         config.settings.cache_timeout = Age(args.timeout)
 
+    # FIXME: this is silly, factor out a function to assist config edge case testing.
     if return_config:
         return config
 

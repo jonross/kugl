@@ -1,10 +1,10 @@
-import datetime as dt
-import re
+"""
+A wrapper on the system clock that can be replaced for unit testing.
+"""
+
 import time
 from abc import abstractmethod
-from typing import Dict, Optional
-
-import funcy as fn
+from typing import Optional
 
 
 

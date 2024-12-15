@@ -1,4 +1,6 @@
-import pytest
+"""
+Tests for the jobs table.
+"""
 
 from .testing import make_pod, make_job, kubectl_response, assert_query, Container, CGM
 

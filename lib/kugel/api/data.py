@@ -1,3 +1,6 @@
+"""
+Decorators and implementation support for user-defined tables and resources.
+"""
 
 from kugel.impl.registry import add_domain, add_table
 

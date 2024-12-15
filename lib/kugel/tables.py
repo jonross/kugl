@@ -1,3 +1,7 @@
+"""
+Built-in table definitions for Kubernetes.
+"""
+
 from .helpers import Resources, ItemHelper, PodHelper, JobHelper
 from .api import parse_utc, table, domain
 

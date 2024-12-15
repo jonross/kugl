@@ -1,5 +1,7 @@
-# Assorted tests for various edge cases and error conditions.
-# Some of these are just to achieve 100% coverage.
+"""
+Assorted tests for various edge cases and error conditions.
+Some of these are just to achieve 100% coverage.
+"""
 
 import os
 from pathlib import Path

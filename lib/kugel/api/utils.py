@@ -1,3 +1,6 @@
+"""
+Utility functions available to user-defined tables and resources.
+"""
 
 import arrow
 

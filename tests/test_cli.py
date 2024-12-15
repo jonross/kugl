@@ -1,3 +1,7 @@
+"""
+Tests for command-line options.
+"""
+
 import sqlite3
 
 import pytest
