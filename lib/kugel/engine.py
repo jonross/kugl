@@ -14,7 +14,7 @@ from typing import Tuple, Set, Optional, Dict
 from tabulate import tabulate
 import yaml
 
-from .config import Config, ColumnDef, ExtendTable, CreateTable
+from .config import Config, UserConfig, ColumnDef, ExtendTable, CreateTable
 from .constants import CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
 from .impl.registry import get_domain, TableDef
 from .jross import run, SqliteDb
@@ -54,7 +54,7 @@ class Engine:
         """
 
         # TODO: fix this
-        builtins = Config(**yaml.safe_load((Path(__file__).parent / "builtins.yaml").read_text()))
+        # builtins = UserConfig(**yaml.safe_load((Path(__file__).parent / "builtins.yaml").read_text()))
 
         # Determine which tables are needed for the query by looking for symmbols that follow
         # FROM and JOIN.  Some of these may be CTEs, so don't assume they're all availabie in

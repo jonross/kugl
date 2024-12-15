@@ -2,7 +2,7 @@
 Tests for user configuration file content.
 """
 
-from kugel.config import Settings, Config, parse_model, ColumnDef, ExtendTable, CreateTable
+from kugel.config import Settings, UserConfig, parse_model, ExtendTable, CreateTable, Config
 
 import yaml
 
@@ -22,72 +22,78 @@ def test_settings_custom():
 
 
 def test_empty_config():
-    c = Config()
+    c = UserConfig()
     assert c.settings.cache_timeout == Age(120)
     assert c.settings.reckless == False
-    assert c.extend == {}
-    assert c.create == {}
+    assert c.extend == []
+    assert c.create == []
     assert c.alias == {}
 
 
 def test_config_with_table_extension():
-    c, e = parse_model(Config, yaml.safe_load("""
+    c, e = parse_model(UserConfig, yaml.safe_load("""
         extend:
-          pods:
-            columns:
-              foo:
-                type: str
-                path: metadata.name
-              bar:
-                type: int
-                path: metadata.creationTimestamp
+        - table: pods
+          columns:
+          - name: foo
+            path: metadata.name
+          - name: bar
+            type: int
+            path: metadata.creationTimestamp
     """))
     assert e is None
+    c = Config.collate(c)
     columns = c.extend["pods"].columns
-    assert columns["foo"].type == "str"
-    assert columns["foo"].path == "metadata.name"
-    assert columns["bar"].type == "int"
-    assert columns["bar"].path == "metadata.creationTimestamp"
+    assert columns[0].name == "foo"
+    assert columns[0].type == "str"
+    assert columns[0].path == "metadata.name"
+    assert columns[1].name == "bar"
+    assert columns[1].type == "int"
+    assert columns[1].path == "metadata.creationTimestamp"
 
 
 def test_config_with_table_creation():
-    c, e = parse_model(Config, yaml.safe_load("""
+    c, e = parse_model(UserConfig, yaml.safe_load("""
         create:
-          pods:
-            resource: pods
-            columns:
-              foo:
-                type: str
-                path: metadata.name
-              bar:
-                type: int
-                path: metadata.creationTimestamp
+        - table: pods
+          resource: pods
+          columns:
+          - name: foo
+            path: metadata.name
+          - name: bar
+            type: int
+            path: metadata.creationTimestamp
     """))
     assert e is None
+    c = Config.collate(c)
     pods = c.create["pods"]
     assert pods.resource == "pods"
     columns = pods.columns
-    assert columns["foo"].type == "str"
-    assert columns["foo"].path == "metadata.name"
-    assert columns["bar"].type == "int"
-    assert columns["bar"].path == "metadata.creationTimestamp"
+    assert columns[0].name == "foo"
+    assert columns[0].type == "str"
+    assert columns[0].path == "metadata.name"
+    assert columns[1].name == "bar"
+    assert columns[1].type == "int"
+    assert columns[1].path == "metadata.creationTimestamp"
 
 
 def test_unknown_type():
     _, errors = parse_model(ExtendTable, yaml.safe_load("""
+        table: xyz
         columns:
-          foo:
-            type: unknown_type
-            path: metadata.name
+        - name: foo
+          type: unknown_type
+          path: metadata.name
     """))
-    assert errors == ["columns.foo.type: Input should be 'str', 'int' or 'float'"]
+    assert errors == ["columns.0.type: Input should be 'str', 'int' or 'float'"]
 
 
 def test_missing_fields_for_create():
     _, errors = parse_model(CreateTable, yaml.safe_load("""
+        table: xyz
         columns:
-          foo:
-            path: metadata.name
+        - name: foo
+          path: metadata.name
     """))
     assert set(errors) == set([
         "resource: Field required",
@@ -96,38 +102,41 @@ def test_missing_fields_for_create():
 
 def test_unexpected_keys():
     _, errors = parse_model(ExtendTable, yaml.safe_load("""
+        table: xyz
         columns:
-          foo:
-            path: metadata.name
-            unexpected: 42
+        - name: foo
+          path: metadata.name
+          unexpected: 42
     """))
-    assert errors == ["columns.foo.unexpected: Extra inputs are not permitted"]
+    assert errors == ["columns.0.unexpected: Extra inputs are not permitted"]
 
 
 def test_invalid_jmespath():
     _, errors = parse_model(ExtendTable, yaml.safe_load("""
+        table: xyz
         columns:
-          foo:
-            path: ...name
+        - name: foo
+          path: ...name
     """))
-    assert errors == ["columns.foo: Value error, invalid JMESPath expression ...name"]
+    assert errors == ["columns.0: Value error, invalid JMESPath expression ...name"]
 
 
 def test_cannot_have_both_path_and_label():
     _, errors = parse_model(ExtendTable, yaml.safe_load("""
+        table: xyz
         columns:
-          foo:
-            type: str
-            path: xyz
-            label: xyz
+        - name: foo
+          type: str
+          path: xyz
+          label: xyz
     """))
-    assert errors == ["columns.foo: Value error, cannot specify both path and label"]
+    assert errors == ["columns.0: Value error, cannot specify both path and label"]
 
 
 def test_must_specify_path_or_label():
     _, errors = parse_model(ExtendTable, yaml.safe_load("""
+        table: xyz
         columns:
-          foo:
-            type: str
+        - name: foo
     """))
-    assert errors == ["columns.foo: Value error, must specify either path or label"]
+    assert errors == ["columns.0: Value error, must specify either path or label"]
