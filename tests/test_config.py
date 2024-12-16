@@ -38,17 +38,17 @@ def test_config_with_table_extension():
           - name: foo
             path: metadata.name
           - name: bar
-            type: int
+            type: integer
             path: metadata.creationTimestamp
     """))
     assert e is None
     c = Config.collate(c)
     columns = c.extend["pods"].columns
     assert columns[0].name == "foo"
-    assert columns[0].type == "str"
+    assert columns[0].type == "text"
     assert columns[0].path == "metadata.name"
     assert columns[1].name == "bar"
-    assert columns[1].type == "int"
+    assert columns[1].type == "integer"
     assert columns[1].path == "metadata.creationTimestamp"
 
 
@@ -61,7 +61,7 @@ def test_config_with_table_creation():
           - name: foo
             path: metadata.name
           - name: bar
-            type: int
+            type: integer
             path: metadata.creationTimestamp
     """))
     assert e is None
@@ -70,10 +70,10 @@ def test_config_with_table_creation():
     assert pods.resource == "pods"
     columns = pods.columns
     assert columns[0].name == "foo"
-    assert columns[0].type == "str"
+    assert columns[0].type == "text"
     assert columns[0].path == "metadata.name"
     assert columns[1].name == "bar"
-    assert columns[1].type == "int"
+    assert columns[1].type == "integer"
     assert columns[1].path == "metadata.creationTimestamp"
 
 
@@ -85,7 +85,7 @@ def test_unknown_type():
           type: unknown_type
           path: metadata.name
     """))
-    assert errors == ["columns.0.type: Input should be 'str', 'int' or 'float'"]
+    assert errors == ["columns.0.type: Input should be 'text', 'integer' or 'real'"]
 
 
 def test_missing_fields_for_create():
@@ -126,7 +126,7 @@ def test_cannot_have_both_path_and_label():
         table: xyz
         columns:
         - name: foo
-          type: str
+          type: text
           path: xyz
           label: xyz
     """))

@@ -22,7 +22,7 @@ class ColumnDef(BaseModel):
     """Holds one entry from a columns: list in a user config file."""
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     name: str
-    type: Literal["str", "int", "float"] = "str"
+    type: Literal["text", "integer", "real"] = "text"
     path: Optional[str] = None
     label: Optional[str] = None
     _finder: jmespath.parser.Parser
@@ -43,11 +43,7 @@ class ColumnDef(BaseModel):
             config._finder = lambda obj: jmesexpr.search(obj)
         except jmespath.exceptions.ParseError as e:
             raise ValueError(f"invalid JMESPath expression {config.path}") from e
-        config._sqltype, config._pytype = {
-            "str": ("TEXT", str),
-            "int": ("INTEGER", int),
-            "float": ("REAL", float),
-        }[config.type]
+        config._sqltype, config._pytype = config.type, dict(text=str, integer=int, real=float)[config.type]
         return config
 
     def extract(self, obj: object) -> object:
