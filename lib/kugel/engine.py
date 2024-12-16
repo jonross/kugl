@@ -53,8 +53,8 @@ class Engine:
         :return: a tuple of (rows, column names)
         """
 
-        # TODO: fix this
-        # builtins = UserConfig(**yaml.safe_load((Path(__file__).parent / "builtins.yaml").read_text()))
+        builtins = UserConfig(**yaml.safe_load((Path(__file__).parent / "builtins.yaml").read_text()))
+        self.config.resources.update({r.name: r for r in builtins.resources})
 
         # Determine which tables are needed for the query by looking for symmbols that follow
         # FROM and JOIN.  Some of these may be CTEs, so don't assume they're all availabie in
@@ -141,7 +141,8 @@ class Engine:
         :return: JSON as output by "kubectl get {kind} -o json"
         """
         namespace_flag = ["--all-namespaces"] if query.namespace == ALL_NAMESPACE else ["-n", query.namespace]
-        if kind == "nodes":
+        is_namespaced = self.config.resources[kind].namespaced
+        if not is_namespaced:
             _, output, _ = run(["kubectl", "get", kind, "-o", "json"])
             return json.loads(output)
         elif kind == "pod_statuses":

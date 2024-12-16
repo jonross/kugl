@@ -2,6 +2,8 @@
 resources:
   - name: pods
     namespaced: true
+  - name: pod_statuses
+    namespaced: true
   - name: jobs
     namespaced: true
   - name: nodes

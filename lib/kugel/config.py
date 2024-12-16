@@ -61,7 +61,7 @@ class ExtendTable(BaseModel):
 class ResourceDef(BaseModel):
     """Holds one entry from the resources: list in a user config file."""
     name: str
-    namespaced: bool = True  # TODO use this in engine query
+    namespaced: bool = True
 
 
 class CreateTable(ExtendTable):
