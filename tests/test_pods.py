@@ -101,7 +101,7 @@ def test_other_pod_fields(test_home):
     ([Container(requests=CGM(cpu=1, mem="1Mi"), limits=CGM(cpu=1, mem="1Mi")),
       Container(requests=CGM(cpu=1, mem="1Mi"), limits=CGM(cpu=1, mem="1Mi")),
       Container(requests=CGM(cpu=1, mem="1Mi"), limits=CGM())],
-     [ [3, None, 3<<20, None, None, None] ]),
+     [ [3, 2, 3<<20, 2<<20, None, None] ]),
 ])
 def test_resource_summing(test_home, containers, expected):
     pod = make_pod("pod-1", containers=containers)

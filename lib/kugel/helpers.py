@@ -13,16 +13,29 @@ from .jross import from_footprint
 
 
 @dataclass
-class Resources:  # TODO: Rename this, it can be confused with resource type e.g. pods
+class Limits:
+    """
+    A class to hold CPU, GPU and memory resources. This is called "Limits" although it's used for both requests
+    and limits, so as not to confuse "resources" with Kubernetes resources in general.
+    """
     cpu: Optional[float]
     gpu: Optional[float]
     mem: Optional[int]
 
     def __add__(self, other):
-        cpu = self.cpu + other.cpu if self.cpu is not None and other.cpu is not None else None
-        gpu = self.gpu + other.gpu if self.gpu is not None and other.gpu is not None else None
-        mem = self.mem + other.mem if self.mem is not None and other.mem is not None else None
-        return Resources(cpu, gpu, mem)
+        if self.cpu is None and other.cpu is None:
+            cpu = None
+        else:
+            cpu = (self.cpu or 0) + (other.cpu or 0)
+        if self.gpu is None and other.gpu is None:
+            gpu = None
+        else:
+            gpu = (self.gpu or 0) + (other.gpu or 0)
+        if self.mem is None and other.mem is None:
+            mem = None
+        else:
+            mem = (self.mem or 0) + (other.mem or 0)
+        return Limits(cpu, gpu, mem)
 
     def __radd__(self, other):
         """Needed to support sum() -- handles 0 as a starting value"""
@@ -34,11 +47,11 @@ class Resources:  # TODO: Rename this, it can be confused with resource type e.g
     @classmethod
     def extract(cls, obj):
         if obj is None:
-            return Resources(None, None, None)
+            return Limits(None, None, None)
         cpu = from_footprint(obj.get("cpu"))
         gpu = from_footprint(obj.get("nvidia.com/gpu"))
         mem = from_footprint(obj.get("memory"))
-        return Resources(cpu, gpu, mem)
+        return Limits(cpu, gpu, mem)
 
 
 class ItemHelper:
@@ -79,7 +92,7 @@ class Containerized:
         raise NotImplementedError()
 
     def resources(self, tag):
-        return sum(Resources.extract(c.get("resources", {}).get(tag)) for c in self.containers)
+        return sum(Limits.extract(c.get("resources", {}).get(tag)) for c in self.containers)
 
 
 class PodHelper(ItemHelper, Containerized):
