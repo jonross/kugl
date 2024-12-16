@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from kugel.helpers import Resources
+from kugel.helpers import Limits
 from kugel.impl.utils import KugelError
 from kugel.main import main
 from kugel.model import Age
@@ -16,7 +16,7 @@ from kugel.utils import kube_home, kugel_home
 
 
 def test_no_resources():
-    assert Resources.extract(None) == Resources(None, None, None)
+    assert Limits.extract(None) == Limits(None, None, None)
 
 
 def test_kube_home_missing(test_home, tmp_path):

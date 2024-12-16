@@ -2,7 +2,7 @@
 Built-in table definitions for Kubernetes.
 """
 
-from .helpers import Resources, ItemHelper, PodHelper, JobHelper
+from .helpers import Limits, ItemHelper, PodHelper, JobHelper
 from .api import parse_utc, table, domain
 
 
@@ -31,8 +31,8 @@ class NodesTable:
         return [(
             node.name,
             node.label("node.kubernetes.io/instance-type") or node.label("beta.kubernetes.io/instance-type"),
-            *Resources.extract(node["status"]["allocatable"]).as_tuple(),
-            *Resources.extract(node["status"]["capacity"]).as_tuple(),
+            *Limits.extract(node["status"]["allocatable"]).as_tuple(),
+            *Limits.extract(node["status"]["capacity"]).as_tuple(),
         ) for node in map(ItemHelper, kube_data)]
 
 
