@@ -23,9 +23,18 @@ class Limits:
     mem: Optional[int]
 
     def __add__(self, other):
-        cpu = self.cpu + other.cpu if self.cpu is not None and other.cpu is not None else None
-        gpu = self.gpu + other.gpu if self.gpu is not None and other.gpu is not None else None
-        mem = self.mem + other.mem if self.mem is not None and other.mem is not None else None
+        if self.cpu is None and other.cpu is None:
+            cpu = None
+        else:
+            cpu = (self.cpu or 0) + (other.cpu or 0)
+        if self.gpu is None and other.gpu is None:
+            gpu = None
+        else:
+            gpu = (self.gpu or 0) + (other.gpu or 0)
+        if self.mem is None and other.mem is None:
+            mem = None
+        else:
+            mem = (self.mem or 0) + (other.mem or 0)
         return Limits(cpu, gpu, mem)
 
     def __radd__(self, other):
