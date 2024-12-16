@@ -48,10 +48,21 @@ Kugel requires Python 3.9 or later, and kubectl.
 
 **This is an alpha release.**  Please expect bugs and backward-incompatible changes.
 
-A `pip` install isn't ready yet, and neither is Docker.  To install from source, do
+To use via docker, use this Bash alias:
 
 ```shell
-git clone https://github.com/jonross/kugel
+kugel() {
+    docker run \
+        -v ~/.kube:/root/.kube \
+        -v ~/.kugel:/root/.kugel \
+        jonross/kugel:0.1.1 python3 -m kugel.main "$@"
+}
+```
+
+To install from source, do
+
+```shell
+git clone https://github.com/jonross/kugel.git
 cd kugel
 make reqs
 PATH=${PATH}:$(pwd)/bin
@@ -92,13 +103,13 @@ In any case, please be mindful of stale data and server load.
 
 ## Learn more
 
-(coming soon)
-
 * Command-line syntax
 * Settings
 * [Built-in tables and functions](./docs/builtins.md)
-* [Adding columns and tables](./docs/extending.md)
-* Adding views
+* [Configuring new columns and tables](./docs/extending.md)
+* Adding columns and tables from Python (coming soon)
+* Adding views (coming soon)
+* [License](./LICENSE)
 
 ## Rationale
 

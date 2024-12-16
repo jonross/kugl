@@ -96,3 +96,7 @@ def _main(argv: List[str], return_config: bool = False) -> Optional[UserConfig]:
 
     engine = Engine(config, current_context)
     print(engine.query_and_format(Query(args.sql, namespace, cache_flag)))
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
