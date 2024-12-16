@@ -92,13 +92,13 @@ In any case, please be mindful of stale data and server load.
 
 ## Learn more
 
-(coming soon)
-
 * Command-line syntax
 * Settings
 * [Built-in tables and functions](./docs/builtins.md)
-* [Adding columns and tables](./docs/extending.md)
-* Adding views
+* [Configuring new columns and tables](./docs/extending.md)
+* Adding columns and tables from Python (coming soon)
+* Adding views (coming soon)
+* [License](./LICENSE)
 
 ## Rationale
 
