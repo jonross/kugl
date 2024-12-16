@@ -1,4 +1,7 @@
 
+VERSION = 0.1.1
+IMAGE = jonross/kugel:$(VERSION)
+
 venv:
 	python3 -m venv venv
 
@@ -10,3 +13,12 @@ test:
 
 clean:
 	rm -rf venv
+
+docker:
+	docker build -t $(IMAGE) .
+
+push: docker
+	echo docker push $(IMAGE)
+
+shell: docker
+	docker run -it $(IMAGE) /bin/sh

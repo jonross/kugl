@@ -48,10 +48,21 @@ Kugel requires Python 3.9 or later, and kubectl.
 
 **This is an alpha release.**  Please expect bugs and backward-incompatible changes.
 
-A `pip` install isn't ready yet, and neither is Docker.  To install from source, do
+To use via docker, use this Bash alias:
 
 ```shell
-git clone https://github.com/jonross/kugel
+kugel() {
+    docker run \
+        -v ~/.kube:/root/.kube \
+        -v ~/.kugel:/root/.kugel \
+        jonross/kugel:0.1.1 python3 -m kugel.main "$@"
+}
+```
+
+To install from source, do
+
+```shell
+git clone https://github.com/jonross/kugel.git
 cd kugel
 make reqs
 PATH=${PATH}:$(pwd)/bin
