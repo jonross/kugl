@@ -18,6 +18,13 @@ class Settings(BaseModel):
     reckless: bool = False
 
 
+class UserInit(BaseModel):
+    """The root model for init.yaml; holds the entire file content."""
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+    settings: Optional[Settings] = Settings()
+    alias: dict[str, list[str]] = {}
+
+
 class ColumnDef(BaseModel):
     """Holds one entry from a columns: list in a user config file."""
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
@@ -72,11 +79,9 @@ class CreateTable(ExtendTable):
 class UserConfig(BaseModel):
     """The root model for a user config file; holds the complete file content."""
     model_config = ConfigDict(extra="forbid")
-    settings: Optional[Settings] = Settings()
     resources: list[ResourceDef] = []
     extend: list[ExtendTable] = []
     create: list[CreateTable] = []
-    alias: dict[str, list[str]] = {}
 
 
 class Config(BaseModel):
@@ -88,14 +93,14 @@ class Config(BaseModel):
     alias: dict[str, list[str]]
 
     @classmethod
-    def collate(cls, user_config: UserConfig) -> 'Config':
+    def collate(cls, user_init: UserInit, user_config: UserConfig) -> 'Config':
         """Turn a UserConfig into a more convenient form."""
         return Config(
-            settings=user_config.settings,
+            settings=user_init.settings,
             resources={r.name: r for r in user_config.resources},
             extend={e.table: e for e in user_config.extend},
             create={c.table: c for c in user_config.create},
-            alias=user_config.alias,
+            alias=user_init.alias,
         )
 
 

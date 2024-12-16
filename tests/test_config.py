@@ -2,7 +2,7 @@
 Tests for user configuration file content.
 """
 
-from kugel.config import Settings, UserConfig, parse_model, ExtendTable, CreateTable, Config
+from kugel.config import Settings, UserConfig, parse_model, ExtendTable, CreateTable, Config, UserInit
 
 import yaml
 
@@ -23,10 +23,14 @@ def test_settings_custom():
 
 def test_empty_config():
     c = UserConfig()
-    assert c.settings.cache_timeout == Age(120)
-    assert c.settings.reckless == False
     assert c.extend == []
     assert c.create == []
+
+
+def test_empty_init():
+    c = UserInit()
+    assert c.settings.cache_timeout == Age(120)
+    assert c.settings.reckless == False
     assert c.alias == {}
 
 
@@ -42,7 +46,7 @@ def test_config_with_table_extension():
             path: metadata.creationTimestamp
     """))
     assert e is None
-    c = Config.collate(c)
+    c = Config.collate(UserInit(), c)
     columns = c.extend["pods"].columns
     assert columns[0].name == "foo"
     assert columns[0].type == "text"
@@ -65,7 +69,7 @@ def test_config_with_table_creation():
             path: metadata.creationTimestamp
     """))
     assert e is None
-    c = Config.collate(c)
+    c = Config.collate(UserInit(), c)
     pods = c.create["pods"]
     assert pods.resource == "pods"
     columns = pods.columns
