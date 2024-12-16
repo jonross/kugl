@@ -48,7 +48,7 @@ Kugel requires Python 3.9 or later, and kubectl.
 
 **This is an alpha release.**  Please expect bugs and backward-incompatible changes.
 
-To use via docker, use this Bash alias:
+To use via docker, `mkdir ~/.kugel` then use this Bash alias:
 
 ```shell
 kugel() {
@@ -103,8 +103,8 @@ In any case, please be mindful of stale data and server load.
 
 ## Learn more
 
-* Command-line syntax
-* Settings
+* [Command-line syntax](./docs/syntax.md)
+* [Settings](./docs/settings.md)
 * [Built-in tables and functions](./docs/builtins.md)
 * [Configuring new columns and tables](./docs/extending.md)
 * Adding columns and tables from Python (coming soon)
