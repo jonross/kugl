@@ -12,7 +12,7 @@ import yaml
 from pydantic import Field, BaseModel, ConfigDict
 
 from kugel.api import to_utc
-from kugel.config import Config, UserConfig
+from kugel.config import Config, UserConfig, UserInit
 from kugel.constants import ALWAYS_UPDATE, UNIT_TEST_TIMEBASE
 from kugel.engine import Engine, Query
 
@@ -149,7 +149,7 @@ def assert_query(sql: str, expected: Union[str, list]):
     :param expected: Output as it would be shown at the CLI.  This will be dedented so the
         caller can indent for neatness.  Or, if a list, each item will be checked in order.
     """
-    engine = Engine(Config.collate(UserConfig()), "nocontext")
+    engine = Engine(Config.collate(UserInit(), UserConfig()), "nocontext")
     if isinstance(expected, str):
         actual = engine.query_and_format(Query(sql, "default", ALWAYS_UPDATE))
         assert actual.strip() == textwrap.dedent(expected).strip()

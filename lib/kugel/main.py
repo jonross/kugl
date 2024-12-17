@@ -5,19 +5,19 @@ Command-line entry point.
 import os
 from argparse import ArgumentParser
 import sys
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import yaml
 
 from .api import fail
-from .config import parse_model, Config, UserConfig
+from .config import parse_model, Config, UserConfig, UserInit
 from .constants import CHECK, ALL_NAMESPACE, NEVER_UPDATE, ALWAYS_UPDATE
 from .engine import Engine, Query
 from .model import Age
 from .utils import debug, kugel_home, kube_home, debugging
 
 
-def main(argv: List[str], return_config: bool = False) -> Optional[UserConfig]:
+def main(argv: List[str], return_config: bool = False) -> Optional[Union[UserInit, UserConfig]]:
 
     if "KUGEL_UNIT_TESTING" in os.environ and "KUGEL_MOCKDIR" not in os.environ:
         # Never enter main in tests unless test_home fixture is in use, else we could read
@@ -33,17 +33,28 @@ def main(argv: List[str], return_config: bool = False) -> Optional[UserConfig]:
         sys.exit(1)
 
 
-def _main(argv: List[str], return_config: bool = False) -> Optional[UserConfig]:
+def _main(argv: List[str], return_config: bool = False) -> Optional[Union[UserInit, UserConfig]]:
 
-    # Load user config.
+    # Load user init & config.
     kugel_home().mkdir(exist_ok=True)
+
     init_file = kugel_home() / "init.yaml"
     if not init_file.exists():
-        config = UserConfig()
+        init = UserInit()
     elif init_file.is_world_writeable():
         fail(f"{init_file} is world writeable, refusing to run")
     else:
-        config, errors = parse_model(UserConfig, yaml.safe_load(init_file.read_text()) or {})
+        init, errors = parse_model(UserInit, yaml.safe_load(init_file.read_text()) or {})
+        if errors:
+            fail("\n".join(errors))
+
+    config_file = kugel_home() / "kubernetes.yaml"
+    if not config_file.exists():
+        config = UserConfig()
+    elif config_file.is_world_writeable():
+        fail(f"{config_file} is world writeable, refusing to run")
+    else:
+        config, errors = parse_model(UserConfig, yaml.safe_load(config_file.read_text()) or {})
         if errors:
             fail("\n".join(errors))
 
@@ -77,14 +88,14 @@ def _main(argv: List[str], return_config: bool = False) -> Optional[UserConfig]:
     namespace = ALL_NAMESPACE if args.all_namespaces else args.namespace or "default"
 
     if args.reckless:
-        config.settings.reckless = True
+        init.settings.reckless = True
     if args.timeout:
-        config.settings.cache_timeout = Age(args.timeout)
+        init.settings.cache_timeout = Age(args.timeout)
 
     # FIXME: this is silly, factor out a function to assist config edge case testing.
     if return_config:
-        return config
-    config = Config.collate(config)
+        return init, config
+    config = Config.collate(init, config)
 
     kube_config = kube_home() / "config"
     if not kube_config.exists():
