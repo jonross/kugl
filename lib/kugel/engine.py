@@ -14,7 +14,7 @@ from typing import Tuple, Set, Optional, Dict
 from tabulate import tabulate
 import yaml
 
-from .config import Config, UserConfig, ColumnDef, ExtendTable, CreateTable
+from kugel.model.config import Config, UserConfig, ColumnDef, ExtendTable, CreateTable
 from .constants import CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
 from .impl.registry import get_domain, TableDef
 from .jross import run, SqliteDb

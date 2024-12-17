@@ -2,7 +2,7 @@
 Tests for user configuration file content.
 """
 
-from kugel.config import Settings, UserConfig, parse_model, ExtendTable, CreateTable, Config, UserInit
+from kugel.model.config import Settings, UserConfig, parse_model, ExtendTable, CreateTable, Config, UserInit
 
 import yaml
 

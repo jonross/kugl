@@ -10,7 +10,7 @@ from typing import List, Optional, Union
 import yaml
 
 from .api import fail
-from .config import parse_model, Config, UserConfig, UserInit
+from kugel.model.config import parse_model, Config, UserConfig, UserInit
 from .constants import CHECK, ALL_NAMESPACE, NEVER_UPDATE, ALWAYS_UPDATE
 from .engine import Engine, Query
 from .model import Age
