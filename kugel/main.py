@@ -18,7 +18,7 @@ from kugel.impl.utils import debug, kugel_home, kube_home, debugging
 
 
 def main() -> None:
-    main(sys.argv[1:])
+    main1(sys.argv[1:])
 
 
 def main1(argv: List[str], return_config: bool = False) -> Optional[Union[UserInit, UserConfig]]:

@@ -8,6 +8,7 @@ setup(
     author_email="jonross@alum.mit.edu",
     url="https://github.com/jonross/kugel",
     packages=find_packages(),  # Automatically finds `your_package_name/`
+    include_package_data=True,
     install_requires=[
         "arrow==1.2.0",
         "funcy==1.17",
@@ -18,6 +19,11 @@ setup(
         "pyyaml==6.0.1",
         "tabulate==0.9.0",
     ],
+    entry_points={
+        "console_scripts": [
+            "kugel = kugel.main:main",
+        ],
+    },
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

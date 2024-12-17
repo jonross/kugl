@@ -11,6 +11,9 @@ reqs: venv
 test:
 	(. venv/bin/activate && PYTHONPATH=. pytest --cov --cov-report=html:coverage -vv -s --tb=native tests)
 
+sdist:
+	python3 setup.py sdist bdist_wheel
+
 clean:
 	rm -rf venv
 
