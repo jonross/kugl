@@ -6,11 +6,11 @@ RUN apk update \
     && chmod +x kubectl \
     && mv kubectl /usr/local/bin
 
-RUN mkdir -p /app/lib
+RUN mkdir -p /app
 
-COPY requirements.txt /app
-RUN cd /app && pip install -r requirements.txt
+COPY requirements.txt /tmp
+RUN pip install -r /tmp/requirements.txt
 
-COPY lib /app/lib
+COPY kugel /app/kugel
 
-ENV PYTHONPATH /app/lib
+ENV PYTHONPATH /app

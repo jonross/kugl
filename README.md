@@ -55,7 +55,7 @@ kugel() {
     docker run \
         -v ~/.kube:/root/.kube \
         -v ~/.kugel:/root/.kugel \
-        jonross/kugel:0.1.1 python3 -m kugel.main "$@"
+        jonross/kugel:0.1.2 python3 -m kugel.main "$@"
 }
 ```
 
