@@ -12,7 +12,7 @@ from kugel.helpers import Limits
 from kugel.impl.utils import KugelError
 from kugel.main import main
 from kugel.model import Age
-from kugel.utils import kube_home, kugel_home
+from kugel.impl.utils import kube_home, kugel_home
 
 
 def test_no_resources():

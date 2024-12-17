@@ -6,7 +6,7 @@ import jmespath
 import pytest
 
 from kugel.model import Age
-from kugel.utils import dprint, debug
+from kugel.impl.utils import dprint, debug
 
 
 @pytest.mark.parametrize("input_args,input_kwargs,expected", [
