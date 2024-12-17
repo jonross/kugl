@@ -1,15 +1,28 @@
 """
 Built-in table definitions for Kubernetes.
 """
+from argparse import ArgumentParser
 
 from .helpers import Limits, ItemHelper, PodHelper, JobHelper
 from .time import parse_utc
 from .registry import domain, table
+from .utils import fail
+from ..model.constants import ALL_NAMESPACE
 
 
 @domain("kubernetes")
 class KubernetesData:
-    pass
+
+    def add_cli_options(self, ap: ArgumentParser):
+        ap.add_argument("-a", "--all-namespaces", default=False, action="store_true")
+        ap.add_argument("-n", "--namespace", type=str)
+
+    def handle_cli_options(self, args):
+        if args.cache and args.update:
+            fail("Cannot use both -c/--cache and -u/--update")
+        if args.all_namespaces and args.namespace:
+            fail("Cannot use both -a/--all-namespaces and -n/--namespace")
+        self.namespace = ALL_NAMESPACE if args.all_namespaces else args.namespace or "default"
 
 
 @table(domain="kubernetes", name="nodes", resource="nodes")
