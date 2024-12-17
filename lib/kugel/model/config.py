@@ -2,13 +2,13 @@
 Pydantic models for configuration files.
 """
 
-from typing import Literal, Optional, Union, Tuple, Annotated
+from typing import Literal, Optional, Tuple
 
 import jmespath
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
-from kugel.model import Age
+from .age import Age
 
 
 class Settings(BaseModel):

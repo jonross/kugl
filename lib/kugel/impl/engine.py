@@ -15,11 +15,11 @@ from tabulate import tabulate
 import yaml
 
 from kugel.model.config import Config, UserConfig, ColumnDef, ExtendTable, CreateTable
-from .constants import CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
-from .impl.registry import get_domain, TableDef
-from .jross import run, SqliteDb
-from .utils import add_custom_functions, kugel_home
-from .impl.utils import fail
+from ..constants import CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
+from .registry import get_domain, TableDef
+from ..jross import run, SqliteDb
+from ..utils import add_custom_functions, kugel_home
+from .utils import fail
 import kugel.time as ktime
 
 # Needed to locate the built-in table builders by class name.
