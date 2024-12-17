@@ -1,4 +1,4 @@
-from .data import (
+from kugel.impl.registry import (
     domain,
     table
 )

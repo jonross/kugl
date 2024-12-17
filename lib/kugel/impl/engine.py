@@ -22,7 +22,7 @@ from .utils import add_custom_functions, kugel_home, fail
 import kugel.impl.time as ktime
 
 # Needed to locate the built-in table builders by class name.
-import kugel.tables
+import kugel.impl.tables
 
 Query = namedtuple("Query", ["sql", "namespace", "cache_flag"])
 

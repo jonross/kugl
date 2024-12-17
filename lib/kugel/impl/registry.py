@@ -12,6 +12,20 @@ from .utils import fail
 _DOMAINS = {}
 
 
+def domain(name: str):
+    def wrap(cls):
+        add_domain(name, cls)
+        return cls
+    return wrap
+
+
+def table(**kwargs):
+    def wrap(cls):
+        add_table(cls, **kwargs)
+        return cls
+    return wrap
+
+
 class TableDef(BaseModel):
     """
     Capture a table definition from the @table decorator, example:
