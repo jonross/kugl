@@ -11,7 +11,7 @@ import yaml
 
 from .api import fail
 from kugel.impl.engine import Engine, Query
-from kugel.model.config import parse_model, Config, UserConfig, UserInit
+from kugel.model.config import parse_model, Config, UserConfig, UserInit, parse_file
 from kugel.model.constants import CHECK, ALL_NAMESPACE, NEVER_UPDATE, ALWAYS_UPDATE
 from kugel.model import Age
 from kugel.impl.utils import debug, kugel_home, kube_home, debugging
@@ -39,24 +39,14 @@ def _main(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
     kugel_home().mkdir(exist_ok=True)
 
     init_file = kugel_home() / "init.yaml"
-    if not init_file.exists():
-        init = UserInit()
-    elif init_file.is_world_writeable():
-        fail(f"{init_file} is world writeable, refusing to run")
-    else:
-        init, errors = parse_model(UserInit, yaml.safe_load(init_file.read_text()) or {})
-        if errors:
-            fail("\n".join(errors))
+    init, errors = parse_file(UserInit, init_file)
+    if errors:
+        fail("\n".join(errors))
 
     config_file = kugel_home() / "kubernetes.yaml"
-    if not config_file.exists():
-        config = UserConfig()
-    elif config_file.is_world_writeable():
-        fail(f"{config_file} is world writeable, refusing to run")
-    else:
-        config, errors = parse_model(UserConfig, yaml.safe_load(config_file.read_text()) or {})
-        if errors:
-            fail("\n".join(errors))
+    config, errors = parse_file(UserConfig, config_file)
+    if errors:
+        fail("\n".join(errors))
 
     # Detect if the SQL query is an alias.
     # FIXME: reparse command line.
