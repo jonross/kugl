@@ -3,3 +3,6 @@ __pycache__/
 venv/
 *.swp
 .coverage
+build/
+dist/
+kugel.egg-info/
