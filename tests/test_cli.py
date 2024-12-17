@@ -12,12 +12,12 @@ from kugel.impl.utils import KugelError
 
 def test_enforce_one_cache_option(test_home):
     with pytest.raises(KugelError, match="Cannot use both -c/--cache and -u/--update"):
-        main("-c -u foo".split(" "))
+        main(["-c", "-u", "select 1"])
 
 
 def test_enforce_one_namespace_option(test_home):
     with pytest.raises(KugelError, match="Cannot use both -a/--all-namespaces and -n/--namespace"):
-        main("-a -n x foo".split(" "))
+        main(["-a", "-n", "x", "select 1"])
 
 
 def test_no_such_resource(test_home):
