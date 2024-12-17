@@ -17,7 +17,11 @@ from kugel.model import Age
 from kugel.impl.utils import debug, kugel_home, kube_home, debugging
 
 
-def main(argv: List[str], return_config: bool = False) -> Optional[Union[UserInit, UserConfig]]:
+def main() -> None:
+    main(sys.argv[1:])
+
+
+def main1(argv: List[str], return_config: bool = False) -> Optional[Union[UserInit, UserConfig]]:
 
     if "KUGEL_UNIT_TESTING" in os.environ and "KUGEL_MOCKDIR" not in os.environ:
         # Never enter main in tests unless test_home fixture is in use, else we could read
@@ -25,7 +29,7 @@ def main(argv: List[str], return_config: bool = False) -> Optional[Union[UserIni
         sys.exit("Unit test state error")
 
     try:
-        return _main(argv, return_config=return_config)
+        return main2(argv, return_config=return_config)
     except Exception as e:
         if debugging() or "KUGEL_UNIT_TESTING" in os.environ:
             raise
@@ -33,7 +37,7 @@ def main(argv: List[str], return_config: bool = False) -> Optional[Union[UserIni
         sys.exit(1)
 
 
-def _main(argv: List[str], return_config: bool = False) -> Optional[Union[UserInit, UserConfig]]:
+def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserInit, UserConfig]]:
 
     # Load user init & config.
     kugel_home().mkdir(exist_ok=True)
@@ -110,4 +114,4 @@ def _main(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()
