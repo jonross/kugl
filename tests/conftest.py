@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 import kugel.time as ktime
-from kugel.constants import UNIT_TEST_TIMEBASE
+from kugel.model.constants import UNIT_TEST_TIMEBASE
 from kugel.utils import kube_home
 
 # Add tests/ folder to $PATH so running 'kubectl ...' invokes our mock, not the real kubectl.

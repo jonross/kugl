@@ -12,7 +12,7 @@ import yaml
 from pydantic import Field, BaseModel, ConfigDict
 
 from kugel.api import to_utc
-from kugel.constants import ALWAYS_UPDATE, UNIT_TEST_TIMEBASE
+from kugel.model.constants import ALWAYS_UPDATE, UNIT_TEST_TIMEBASE
 from kugel.impl.engine import Engine, Query
 from kugel.model.config import Config, UserConfig, UserInit
 

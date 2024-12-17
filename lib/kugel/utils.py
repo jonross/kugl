@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 from .api import to_utc
-from .jross import to_footprint
+from .impl.jross import to_footprint
 from .model import Age
 import kugel.time as ktime
 

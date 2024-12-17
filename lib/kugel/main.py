@@ -12,7 +12,7 @@ import yaml
 from .api import fail
 from kugel.impl.engine import Engine, Query
 from kugel.model.config import parse_model, Config, UserConfig, UserInit
-from .constants import CHECK, ALL_NAMESPACE, NEVER_UPDATE, ALWAYS_UPDATE
+from kugel.model.constants import CHECK, ALL_NAMESPACE, NEVER_UPDATE, ALWAYS_UPDATE
 from .model import Age
 from .utils import debug, kugel_home, kube_home, debugging
 

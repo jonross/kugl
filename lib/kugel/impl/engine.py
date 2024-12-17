@@ -15,9 +15,9 @@ from tabulate import tabulate
 import yaml
 
 from kugel.model.config import Config, UserConfig, ColumnDef, ExtendTable, CreateTable
-from ..constants import CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
+from kugel.model.constants import CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
 from .registry import get_domain, TableDef
-from ..jross import run, SqliteDb
+from .jross import run, SqliteDb
 from ..utils import add_custom_functions, kugel_home
 from .utils import fail
 import kugel.time as ktime
