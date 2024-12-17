@@ -8,8 +8,8 @@ from typing import Optional
 
 import funcy as fn
 
-from .constants import MAIN_CONTAINERS
-from .jross import from_footprint
+from kugel.model.constants import MAIN_CONTAINERS
+from kugel.impl.jross import from_footprint
 
 
 @dataclass

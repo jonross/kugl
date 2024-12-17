@@ -14,16 +14,15 @@ from typing import Tuple, Set, Optional, Dict
 from tabulate import tabulate
 import yaml
 
-from .config import Config, UserConfig, ColumnDef, ExtendTable, CreateTable
-from .constants import CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
-from .impl.registry import get_domain, TableDef
+from kugel.model.config import Config, UserConfig, ColumnDef, ExtendTable, CreateTable
+from kugel.model.constants import CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
+from .registry import get_domain, TableDef
 from .jross import run, SqliteDb
-from .utils import add_custom_functions, kugel_home
-from .impl.utils import fail
-import kugel.time as ktime
+from .utils import add_custom_functions, kugel_home, fail
+import kugel.impl.time as ktime
 
 # Needed to locate the built-in table builders by class name.
-import kugel.tables
+import kugel.impl.tables
 
 Query = namedtuple("Query", ["sql", "namespace", "cache_flag"])
 

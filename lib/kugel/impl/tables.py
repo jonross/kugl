@@ -3,7 +3,8 @@ Built-in table definitions for Kubernetes.
 """
 
 from .helpers import Limits, ItemHelper, PodHelper, JobHelper
-from .api import parse_utc, table, domain
+from .time import parse_utc
+from .registry import domain, table
 
 
 @domain("kubernetes")
