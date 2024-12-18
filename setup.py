@@ -4,8 +4,8 @@ setup(
     name="kugel",  # Replace with your package name
     version="0.1.2",
     description="Explore Kubernetes resources using SQLite",
-    author="Jonathan Ross",
-    author_email="jonross@alum.mit.edu",
+    author="Jon",
+    author_email="kugel.devel@gmail.com",
     url="https://github.com/jonross/kugel",
     packages=find_packages(),  # Automatically finds `your_package_name/`
     include_package_data=True,
