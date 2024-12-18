@@ -1,0 +1,21 @@
+#!/bin/bash
+
+set -euo pipefail
+
+case ${1:-none} in
+    --lo) reqs=reqs_lo.txt ;;
+    --hi) reqs=reqs_hi.txt ;;
+    --pin) reqs=requirements.txt ;;
+    none) reqs=none
+esac
+
+if [[ $reqs != none ]]; then
+    cd venv
+    . bin/activate 
+    pip install -r ../$reqs
+    cd ..
+fi
+
+. venv/bin/activate 
+PYTHONPATH=. pytest --cov --cov-report=html:coverage -vv -s --tb=native tests
+
