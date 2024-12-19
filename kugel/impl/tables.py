@@ -28,13 +28,13 @@ class NodesTable:
             mem_cap INTEGER
         """
 
-    def make_rows(self, kube_data: dict) -> list[tuple]:
+    def make_rows(self, kube_data: list[dict]) -> list[tuple]:
         return [(
             node.name,
             node.label("node.kubernetes.io/instance-type") or node.label("beta.kubernetes.io/instance-type"),
             *Limits.extract(node["status"]["allocatable"]).as_tuple(),
             *Limits.extract(node["status"]["capacity"]).as_tuple(),
-        ) for node in map(ItemHelper, kube_data["items"])]
+        ) for node in map(ItemHelper, kube_data)]
 
 
 @table(domain="kubernetes", name="taints", resource="nodes")
@@ -48,8 +48,8 @@ class TaintsTable:
             effect TEXT
         """
 
-    def make_rows(self, kube_data: dict) -> list[tuple]:
-        nodes = map(ItemHelper, kube_data["items"])
+    def make_rows(self, kube_data: list[dict]) -> list[tuple]:
+        nodes = map(ItemHelper, kube_data)
         return [(
             node.name,
             taint["key"],
@@ -78,7 +78,7 @@ class PodsTable:
             mem_lim INTEGER
         """
 
-    def make_rows(self, kube_data: dict) -> list[tuple]:
+    def make_rows(self, kube_data: list[dict]) -> list[tuple]:
         return [(
             pod.name,
             1 if pod.is_daemon else 0,
@@ -89,7 +89,7 @@ class PodsTable:
             pod["kubectl_status"],
             *pod.resources("requests").as_tuple(),
             *pod.resources("limits").as_tuple(),
-        ) for pod in map(PodHelper, kube_data["items"])]
+        ) for pod in map(PodHelper, kube_data)]
 
 
 @table(domain="kubernetes", name="jobs", resource="jobs")
@@ -109,11 +109,11 @@ class JobsTable:
             mem_lim INTEGER
         """
 
-    def make_rows(self, kube_data: dict) -> list[tuple]:
+    def make_rows(self, kube_data: list[dict]) -> list[tuple]:
         return [(
             job.name,
             job.namespace,
             job.status,
             *job.resources("requests").as_tuple(),
             *job.resources("limits").as_tuple(),
-        ) for job in map(JobHelper, kube_data["items"])]
+        ) for job in map(JobHelper, kube_data)]
