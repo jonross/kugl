@@ -4,11 +4,11 @@
 
 kugel_home=$(dirname "$0")/..
 . $kugel_home/venv//bin/activate
-PYTHONPATH=$kugel_home/lib
+PYTHONPATH=$kugel_home
 
 exec python3 -c 'if True:
     import sys
     from kugel.main import main
-    main(sys.argv[1:])
+    main()
 ' "$@"
 

@@ -1,5 +1,5 @@
 
-VERSION = 0.1.1
+VERSION = 0.1.2
 IMAGE = jonross/kugel:$(VERSION)
 
 venv:
@@ -9,7 +9,19 @@ reqs: venv
 	(cd venv && . bin/activate && pip install -r ../requirements.txt)
 
 test:
-	(. venv/bin/activate && PYTHONPATH=lib pytest --cov --cov-report=html:coverage -vv -s --tb=native tests)
+	@bin/tester
+
+lotest:
+	@bin/tester --lo
+
+hitest:
+	@bin/tester --hi
+
+pintest:
+	@bin/tester --pin
+
+sdist:
+	python3 setup.py sdist bdist_wheel
 
 clean:
 	rm -rf venv
