@@ -39,9 +39,11 @@ def main1(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
 
 def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserInit, UserConfig]]:
 
-    # Load user init & config.
     kugel_home().mkdir(exist_ok=True)
+    if not argv:
+        fail("missing sql query")
 
+    # Load init file.
     init_file = kugel_home() / "init.yaml"
     if not init_file.exists():
         init = UserInit()
@@ -52,6 +54,15 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
         if errors:
             fail("\n".join(errors))
 
+    # Check for aliases now, because they can include command line options.  But the
+    # command line as given also applies.  So we have to treat the last arg as SQL or
+    # alias name, even before we see the options.
+    if " " not in argv[-1]:
+        if not (new_argv := init.alias.get(argv[-1])):
+            fail(f"No alias named '{argv[-1]}'")
+        return main1(argv[:-1] + new_argv)
+
+    # Load config file
     config_file = kugel_home() / "kubernetes.yaml"
     if not config_file.exists():
         config = UserConfig()
@@ -61,13 +72,6 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
         config, errors = parse_model(UserConfig, yaml.safe_load(config_file.read_text()) or {})
         if errors:
             fail("\n".join(errors))
-
-    # Detect if the SQL query is an alias.
-    # FIXME: reparse command line.
-    if len(argv) == 1 and " " not in argv[0]:
-        if not (new_argv := config.alias.get(argv[0])):
-            fail(f"No alias named '{argv[0]}'")
-        argv = new_argv
 
     ap = ArgumentParser()
     ap.add_argument("-a", "--all-namespaces", default=False, action="store_true")
