@@ -2,17 +2,11 @@
 
 Stop noodling with `jq`.  Explore Kubernetes resources using SQLite.
 
-Need custom columns and tables?  Ready in minutes.
+## Example
 
-![](./docs/under-construction.jpg)
+Find the top users of a GPU pool, based on instance type and a team-specific pod label.
 
-## In brief
-
-Filtering and summarizing Kubernetes resources at the command line is a pain.
-Kugel can help.
-
-Example: find the top users of a GPU pool, based on instance type and a team-specific pod label.
-With Kugel that could be
+With Kugel
 
 ```shell
 kugel -a "select owner, sum(gpu_req), sum(cpu_req)
@@ -29,7 +23,8 @@ nodes=$(kubectl get nodes -o json | jq -r '.items[]
 kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
   .items[]
   | select(.spec.nodeName as $node | $nodes | index($node))
-  | select(.metadata.deletionTimestamp || .status.phase == "Running")
+  | select(.status.phase == "Running" ||
+           (.metadata.deletionTimestamp != null && .status.phase != "Succeeded" && .status.phase != "Failed"))
   | . as $pod | $pod.spec.containers[]
   | select(.resources.requests["nvidia.com/gpu"] != null)
   | {owner: $pod.metadata.labels["com.mycompany/job-owner"], 
@@ -80,11 +75,11 @@ kugel "with t as (select name, group_concat(key) as taints from taints
        group by 1, 3 order by 1, 2 desc"
 ```
 
-If this query is helpful, [save it](./docs/aliases.md), then you can just run `kugel nodes`.
+If this query is helpful, [save it](./docs/aliases.md), then you can run `kugel nodes`.
 
 ## How it works (important)
 
-Kugel is just a thin wrapper on Kubectl and SQLite.  It turns `SELECT ... FROM pods`into 
+Kugel is just a thin wrapper on Kubectl and SQLite.  It turns `SELECT ... FROM pods` into 
 `kubectl get pods -o json`, then maps fields from the response to columns
 in SQLite.  If you `JOIN` to other resource tables like `nodes` it calls `kubectl get`
 for those too.  If you need more columns or tables than are built in, there's a config file for that.
@@ -113,14 +108,18 @@ In any case, please be mindful of stale data and server load.
 
 ## Rationale
 
-Prior art
+`jq` is great, but remembering `jq` syntax and the layout of Kubernetes resources is a pain.
 
+Prior art (as of November 2024)
+
+* [ksql](https://github.com/brendandburns/ksql) is built on Node.js and AlaSQL.  It appears unmaintained (last commit November 2016.)
 * [kubeql](https://github.com/saracen/kubeql) is a SQL-like query language for Kubernetes. It appears unmaintained (last commit October 2017.)
 * [kube-query](https://github.com/aquasecurity/kube-query) is an [osquery](https://osquery.io/) extension. It appears unmaintained (last commit July 2020) and requires recompilation to add columns or tables.
-* [ksql](https://github.com/brendandburns/ksql) is built on Node.js and AlaSQL.  It appears unmaintained (last commit November 2016.)
 * [cyphernetes](https://github.com/AvitalTamir/cyphernetes) is in active development.  It uses Cypher, a graph query language.
 
-Kugel aims to be minimalist and immediately familiar.
+Kugel hopes to be minimalist and immediately familiar.
 SQLite and `kubectl` are ubiquitous, let's build on those.
 
-Kugel is theoretically applicable to any JSON data source, but let's not get ahead of ourselves.  :)
+This might be applicable to any small JSON data set, but let's not get ahead of ourselves.
+At least, not on `main`.  ;-)
+
