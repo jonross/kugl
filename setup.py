@@ -4,7 +4,7 @@ setup(
     name="kugel",  # Replace with your package name
     version="0.1.2",
     description="Explore Kubernetes resources using SQLite",
-    author="Jon",
+    author="Jon Ross",
     author_email="kugel.devel@gmail.com",
     url="https://github.com/jonross/kugel",
     packages=find_packages(),  # Automatically finds `your_package_name/`
@@ -14,8 +14,6 @@ setup(
         "funcy==1.17",
         "jmespath==1.0.1",
         "pydantic==2.6.1",
-        "pytest-cov==4.1.0",
-        "pytest==7.1.3",
         "pyyaml==6.0.1",
         "tabulate==0.9.0",
     ],
