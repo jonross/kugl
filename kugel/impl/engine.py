@@ -233,6 +233,7 @@ class Table:
         self.resource = resource
         self.schema = schema
         self.extras = extras
+        self.itemizer = lambda kube_data: kube_data["items"]
 
     def build(self, db, kube_data: dict):
         """Create the table in SQLite and insert the data.
@@ -241,11 +242,12 @@ class Table:
         :param kube_data: the JSON data from 'kubectl get'
         """
         db.execute(f"CREATE TABLE {self.name} ({self.schema})")
-        rows = self.make_rows(kube_data["items"])
+        items = self.itemizer(kube_data)
+        rows = self.make_rows(items)
         if rows:
             if self.extras:
                 rows = [row + tuple(column.extract(item) for column in self.extras)
-                        for item, row in zip(kube_data["items"], rows)]
+                        for item, row in zip(items, rows)]
             placeholders = ", ".join("?" * len(rows[0]))
             db.execute(f"INSERT INTO {self.name} VALUES({placeholders})", rows)
 
