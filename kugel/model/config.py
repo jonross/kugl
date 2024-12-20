@@ -74,6 +74,7 @@ class ResourceDef(BaseModel):
 class CreateTable(ExtendTable):
     """Holds the create: section from a user config file."""
     resource: str
+    row_source: Optional[list[str]] = None
 
 
 class UserConfig(BaseModel):
