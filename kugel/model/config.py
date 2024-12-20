@@ -36,7 +36,7 @@ class ColumnDef(BaseModel):
     label: Optional[str] = None
     _finder: jmespath.parser.Parser
     _sqltype: str
-    _pytype: type
+    _convert: type
 
     @model_validator(mode="after")
     @classmethod
@@ -52,12 +52,13 @@ class ColumnDef(BaseModel):
             config._finder = lambda obj: jmesexpr.search(obj)
         except jmespath.exceptions.ParseError as e:
             raise ValueError(f"invalid JMESPath expression {config.path}") from e
-        config._sqltype, config._pytype = config.type, dict(text=str, integer=int, real=float)[config.type]
+        config._sqltype = KUGEL_TYPE_TO_SQL_TYPE[config.type]
+        config._convert = KUGEL_TYPE_CONVERTERS[config.type]
         return config
 
     def extract(self, obj: object) -> object:
         value = self._finder(obj)
-        return None if value is None else self._pytype(value)
+        return None if value is None else self._convert(value)
 
 
 KUGEL_TYPE_CONVERTERS = {
