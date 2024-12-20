@@ -145,5 +145,5 @@ def parse_file(model_class, path: KPath) -> Tuple[object, list[str]]:
         return model_class(), None
     if path.is_world_writeable():
         return None, [f"{path} is world writeable, refusing to run"]
-    return parse_model(UserConfig, yaml.safe_load(path.read_text()) or {})
+    return parse_model(model_class, yaml.safe_load(path.read_text()) or {})
 
