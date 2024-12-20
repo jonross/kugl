@@ -20,6 +20,7 @@ from kugel.model.constants import CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_U
 from .registry import get_domain, TableDef
 from kugel.util.jross import run, SqliteDb
 from .utils import add_custom_functions, kugel_home, fail, set_parent
+import kugel.util.time as ktime
 
 # Needed to locate the built-in table builders by class name.
 import kugel.impl.tables
