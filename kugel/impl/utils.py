@@ -1,6 +1,8 @@
 
 import os
+import sys
 from pathlib import Path
+from typing import Optional
 
 from kugel.model.config import KPath
 
@@ -57,9 +59,26 @@ def add_custom_functions(db):
     db.create_function("to_utc", 1, lambda x: to_utc(x))
 
 
-def fail(message: str):
+def warn(message: str):
+    print(message, file=sys.stderr)
+
+
+def fail(message: str, e: Optional[Exception] = None):
+    if e is not None:
+        raise KugelError(message) from e
     raise KugelError(message)
 
 
 class KugelError(Exception):
     pass
+
+
+def set_parent(item: dict, parent: dict):
+    item["__parent"] = parent
+
+
+def parent(item: dict):
+    parent = item.get("__parent")
+    if parent is None:
+        warn("Item parent is missing")
+    return parent

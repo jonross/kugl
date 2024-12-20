@@ -123,7 +123,7 @@ def test_invalid_jmespath():
         - name: foo
           path: ...name
     """))
-    assert errors == ["columns.0: Value error, invalid JMESPath expression ...name"]
+    assert errors == ["columns.0: Value error, invalid JMESPath expression ...name in column foo"]
 
 
 def test_cannot_have_both_path_and_label():

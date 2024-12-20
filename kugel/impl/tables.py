@@ -28,33 +28,15 @@ class NodesTable:
             mem_cap INTEGER
         """
 
-    def make_rows(self, kube_data: list[dict]) -> list[tuple]:
-        return [(
-            node.name,
-            node.label("node.kubernetes.io/instance-type") or node.label("beta.kubernetes.io/instance-type"),
-            *Limits.extract(node["status"]["allocatable"]).as_tuple(),
-            *Limits.extract(node["status"]["capacity"]).as_tuple(),
-        ) for node in map(ItemHelper, kube_data)]
-
-
-@table(domain="kubernetes", name="taints", resource="nodes")
-class TaintsTable:
-
-    @property
-    def schema(self):
-        return """
-            node_name TEXT,
-            key TEXT,
-            effect TEXT
-        """
-
-    def make_rows(self, kube_data: list[dict]) -> list[tuple]:
-        nodes = map(ItemHelper, kube_data)
-        return [(
-            node.name,
-            taint["key"],
-            taint["effect"],
-        ) for node in nodes for taint in node.obj.get("spec", {}).get("taints", [])]
+    def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
+        for item in kube_data["items"]:
+            node = ItemHelper(item)
+            yield item, (
+                node.name,
+                node.label("node.kubernetes.io/instance-type") or node.label("beta.kubernetes.io/instance-type"),
+                *Limits.extract(node["status"]["allocatable"]).as_tuple(),
+                *Limits.extract(node["status"]["capacity"]).as_tuple(),
+            )
 
 
 @table(domain="kubernetes", name="pods", resource="pods")
@@ -78,18 +60,20 @@ class PodsTable:
             mem_lim INTEGER
         """
 
-    def make_rows(self, kube_data: list[dict]) -> list[tuple]:
-        return [(
-            pod.name,
-            1 if pod.is_daemon else 0,
-            pod.namespace,
-            pod["spec"].get("nodeName"),
-            parse_utc(pod.metadata["creationTimestamp"]),
-            pod.command,
-            pod["kubectl_status"],
-            *pod.resources("requests").as_tuple(),
-            *pod.resources("limits").as_tuple(),
-        ) for pod in map(PodHelper, kube_data)]
+    def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
+        for item in kube_data["items"]:
+            pod = PodHelper(item)
+            yield item, (
+                pod.name,
+                1 if pod.is_daemon else 0,
+                pod.namespace,
+                pod["spec"].get("nodeName"),
+                parse_utc(pod.metadata["creationTimestamp"]),
+                pod.command,
+                pod["kubectl_status"],
+                *pod.resources("requests").as_tuple(),
+                *pod.resources("limits").as_tuple(),
+            )
 
 
 @table(domain="kubernetes", name="jobs", resource="jobs")
@@ -109,11 +93,13 @@ class JobsTable:
             mem_lim INTEGER
         """
 
-    def make_rows(self, kube_data: list[dict]) -> list[tuple]:
-        return [(
-            job.name,
-            job.namespace,
-            job.status,
-            *job.resources("requests").as_tuple(),
-            *job.resources("limits").as_tuple(),
-        ) for job in map(JobHelper, kube_data)]
+    def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
+        for item in kube_data["items"]:
+            job = JobHelper(item)
+            yield item, (
+                job.name,
+                job.namespace,
+                job.status,
+                *job.resources("requests").as_tuple(),
+                *job.resources("limits").as_tuple(),
+            )
