@@ -9,6 +9,8 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
 from .age import Age
+from ..util.jross import from_footprint
+from ..util.time import parse_utc
 
 
 class Settings(BaseModel):
@@ -29,7 +31,7 @@ class ColumnDef(BaseModel):
     """Holds one entry from a columns: list in a user config file."""
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     name: str
-    type: Literal["text", "integer", "real"] = "text"
+    type: Literal["text", "integer", "real", "date", "cpu", "size"] = "text"
     path: Optional[str] = None
     label: Optional[str] = None
     _finder: jmespath.parser.Parser
@@ -56,6 +58,25 @@ class ColumnDef(BaseModel):
     def extract(self, obj: object) -> object:
         value = self._finder(obj)
         return None if value is None else self._pytype(value)
+
+
+KUGEL_TYPE_CONVERTERS = {
+    "integer": int,
+    "real" : float,
+    "text": str,
+    "date": parse_utc,
+    "cpu": from_footprint,
+    "size": from_footprint,
+}
+
+KUGEL_TYPE_TO_SQL_TYPE = {
+    "integer": "integer",
+    "real": "real",
+    "text": "text",
+    "date": "integer",
+    "cpu": "integer",
+    "size": "integer"
+}
 
 
 class ExtendTable(BaseModel):
