@@ -1,6 +1,7 @@
 """
 Pydantic models for configuration files.
 """
+import re
 from pathlib import Path
 from typing import Literal, Optional, Tuple
 
@@ -9,6 +10,8 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
 from .age import Age
+
+PARENTED_PATH = re.compile("^(\^*)(.*)")
 
 
 class Settings(BaseModel):
@@ -33,6 +36,7 @@ class ColumnDef(BaseModel):
     path: Optional[str] = None
     label: Optional[str] = None
     _finder: jmespath.parser.Parser
+    _parents: int
     _sqltype: str
     _pytype: type
 
@@ -45,16 +49,21 @@ class ColumnDef(BaseModel):
             raise ValueError("must specify either path or label")
         if config.label:
             config.path = f"metadata.labels.\"{config.label}\""
+        m = PARENTED_PATH.match(config.path)
+        config._parents = len(m.group(1))
         try:
-            jmesexpr = jmespath.compile(config.path)
-            config._finder = lambda obj: jmesexpr.search(obj)
+            config._finder = jmespath.compile(m.group(2))
         except jmespath.exceptions.ParseError as e:
-            raise ValueError(f"invalid JMESPath expression {config.path}") from e
+            raise ValueError(f"invalid JMESPath expression {m.group(2)} in column {config.name}") from e
         config._sqltype, config._pytype = config.type, dict(text=str, integer=int, real=float)[config.type]
         return config
 
     def extract(self, obj: object) -> object:
-        value = self._finder(obj)
+        count = 0
+        while count < self._parents and obj is not None:
+            obj = obj.get("__parent")
+            count += 1
+        value = None if obj is None else self._finder.search(obj)
         return None if value is None else self._pytype(value)
 
 

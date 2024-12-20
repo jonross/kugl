@@ -39,28 +39,6 @@ class NodesTable:
             )
 
 
-@table(domain="kubernetes", name="taints", resource="nodes")
-class TaintsTable:
-
-    @property
-    def schema(self):
-        return """
-            node_name TEXT,
-            key TEXT,
-            effect TEXT
-        """
-
-    def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
-        for item in kube_data["items"]:
-            node = ItemHelper(item)
-            for taint in node.obj.get("spec", {}).get("taints", []):
-                yield item, (
-                    node.name,
-                    taint["key"],
-                    taint["effect"],
-                )
-
-
 @table(domain="kubernetes", name="pods", resource="pods")
 class PodsTable:
 

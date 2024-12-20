@@ -55,6 +55,7 @@ class Engine:
 
         builtins = UserConfig(**yaml.safe_load((Path(__file__).parent / "builtins.yaml").read_text()))
         self.config.resources.update({r.name: r for r in builtins.resources})
+        self.config.create.update({c.table: c for c in builtins.create})
 
         # Determine which tables are needed for the query by looking for symmbols that follow
         # FROM and JOIN.  Some of these may be CTEs, so don't assume they're all availabie in
@@ -248,9 +249,9 @@ class Table:
                 extend_row = lambda item, row: row + tuple(column.extract(item) for column in self.extras)
             else:
                 extend_row = lambda item, row: row
-            placeholders = ", ".join("?" * len(item_rows[0][1]))
-            db.execute(f"INSERT INTO {self.name} VALUES({placeholders})",
-                       [extend_row(item, row) for item, row in item_rows])
+            rows = [extend_row(item, row) for item, row in item_rows]
+            placeholders = ", ".join("?" * len(rows[0]))
+            db.execute(f"INSERT INTO {self.name} VALUES({placeholders})", rows)
 
     @staticmethod
     def column_schema(columns: list[ColumnDef]) -> str:
@@ -299,6 +300,7 @@ class TableFromConfig(Table):
             schema += ", " + Table.column_schema(extender.columns)
             extras += extender.columns
         super().__init__(name, creator.resource, schema, extras)
+        self.row_source = creator.row_source
 
     def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
         """
@@ -335,8 +337,6 @@ class TableFromConfig(Table):
                         new_items.append(child)
                 elif found is not None:
                     set_parent(found, item)
-                    new_items.append(item)
+                    new_items.append(found)
             items = new_items
         return items
-
-
