@@ -9,9 +9,10 @@ from typing import List, Optional, Union
 
 import yaml
 
+from kugel.impl.registry import get_domain
 from .api import fail
 from kugel.impl.engine import Engine, Query
-from kugel.model.config import parse_model, Config, UserConfig, UserInit
+from kugel.model.config import parse_model, Config, UserConfig, UserInit, parse_file
 from kugel.model.constants import CHECK, ALL_NAMESPACE, NEVER_UPDATE, ALWAYS_UPDATE
 from kugel.model import Age
 from kugel.impl.utils import debug, kugel_home, kube_home, debugging
@@ -45,14 +46,9 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
 
     # Load init file.
     init_file = kugel_home() / "init.yaml"
-    if not init_file.exists():
-        init = UserInit()
-    elif init_file.is_world_writeable():
-        fail(f"{init_file} is world writeable, refusing to run")
-    else:
-        init, errors = parse_model(UserInit, yaml.safe_load(init_file.read_text()) or {})
-        if errors:
-            fail("\n".join(errors))
+    init, errors = parse_file(UserInit, init_file)
+    if errors:
+        fail("\n".join(errors))
 
     # Check for aliases now, because they can include command line options.  But the
     # command line as given also applies.  So we have to treat the last arg as SQL or
@@ -64,37 +60,25 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
 
     # Load config file
     config_file = kugel_home() / "kubernetes.yaml"
-    if not config_file.exists():
-        config = UserConfig()
-    elif config_file.is_world_writeable():
-        fail(f"{config_file} is world writeable, refusing to run")
-    else:
-        config, errors = parse_model(UserConfig, yaml.safe_load(config_file.read_text()) or {})
-        if errors:
-            fail("\n".join(errors))
+    config, errors = parse_file(UserConfig, config_file)
+    if errors:
+        fail("\n".join(errors))
 
+    domain = get_domain("kubernetes")
     ap = ArgumentParser()
-    ap.add_argument("-a", "--all-namespaces", default=False, action="store_true")
+    domain.impl.add_cli_options(ap)
     ap.add_argument("-D", "--debug", type=str)
     ap.add_argument("-c", "--cache", default=False, action="store_true")
-    ap.add_argument("-n", "--namespace", type=str)
     ap.add_argument("-r", "--reckless", default=False, action="store_true")
     ap.add_argument("-t", "--timeout", type=str)
     ap.add_argument("-u", "--update", default=False, action="store_true")
     ap.add_argument("sql")
     args = ap.parse_args(argv)
 
+    domain.impl.handle_cli_options(args)
+    cache_flag = ALWAYS_UPDATE if args.update else NEVER_UPDATE if args.cache else CHECK
     if args.debug:
         debug(args.debug.split(","))
-
-    if args.cache and args.update:
-        fail("Cannot use both -c/--cache and -u/--update")
-    cache_flag = ALWAYS_UPDATE if args.update else NEVER_UPDATE if args.cache else CHECK
-
-    if args.all_namespaces and args.namespace:
-        fail("Cannot use both -a/--all-namespaces and -n/--namespace")
-    namespace = ALL_NAMESPACE if args.all_namespaces else args.namespace or "default"
-
     if args.reckless:
         init.settings.reckless = True
     if args.timeout:
@@ -114,7 +98,8 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
         fail("No current context, please run kubectl config use-context ...")
 
     engine = Engine(config, current_context)
-    print(engine.query_and_format(Query(args.sql, namespace, cache_flag)))
+    # FIXME bad reference to namespace
+    print(engine.query_and_format(Query(args.sql, domain.impl.namespace, cache_flag)))
 
 
 if __name__ == "__main__":

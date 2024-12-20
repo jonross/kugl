@@ -20,6 +20,7 @@ from kugel.model.constants import CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_U
 from .registry import get_domain, TableDef
 from kugel.util.jross import run, SqliteDb
 from .utils import add_custom_functions, kugel_home, fail, set_parent
+import kugel.util.time as ktime
 
 # Needed to locate the built-in table builders by class name.
 import kugel.impl.tables
@@ -98,7 +99,7 @@ class Engine:
         def fetch(kind):
             try:
                 if kind in refreshable:
-                    self.data[kind] = self._get_objects(kind, query)
+                    self.data[kind] = domain.impl.get_objects(kind, self.config)
                     self.cache.dump(query.namespace, kind, self.data[kind])
                 else:
                     self.data[kind] = self.cache.load(query.namespace, kind)
@@ -132,37 +133,6 @@ class Engine:
         truncate = lambda x: int(x) if isinstance(x, float) and x == float(int(x)) else x
         rows = [[truncate(x) for x in row] for row in rows]
         return rows, column_names
-
-    def _get_objects(self, kind: str, query: Query)-> dict:
-        """Fetch resources from Kubernetes using kubectl.
-
-        :param kind: Kubernetes resource type e.g. "pods"
-        :param query: Query object, from which we need the namespace.
-        :return: JSON as output by "kubectl get {kind} -o json"
-        """
-        namespace_flag = ["--all-namespaces"] if query.namespace == ALL_NAMESPACE else ["-n", query.namespace]
-        is_namespaced = self.config.resources[kind].namespaced
-        if not is_namespaced:
-            _, output, _ = run(["kubectl", "get", kind, "-o", "json"])
-            return json.loads(output)
-        elif kind == "pod_statuses":
-            _, output, _= run(["kubectl", "get", "pods", *namespace_flag])
-            return self._pod_status_from_pod_list(output)
-        else:
-            _, output, _= run(["kubectl", "get", kind, *namespace_flag, "-o", "json"])
-            return json.loads(output)
-
-    def _pod_status_from_pod_list(self, output):
-        """Convert the tabular output of 'kubectl get pods' to JSON."""
-        rows = [WHITESPACE.split(line.strip()) for line in output.strip().split("\n")]
-        if len(rows) < 2:
-            return {}
-        header, rows = rows[0], rows[1:]
-        name_index = header.index("NAME")
-        status_index = header.index("STATUS")
-        if name_index is None or status_index is None:
-            raise ValueError("Can't find NAME and STATUS columns in 'kubectl get pods' output")
-        return {row[name_index]: row[status_index] for row in rows}
 
 
 class DataCache:

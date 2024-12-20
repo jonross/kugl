@@ -42,13 +42,13 @@ class Domain(BaseModel):
     Capture a domain definition from the @domain decorator, example:
         @domain("kubernetes")
     """
-    cls: Type
+    impl: object # FIXME use type vars
     tables: dict[str, TableDef] = {}
 
 
 def add_domain(name: str, cls: Type):
     """Register a class to implement a data domain; this is called by the @domain decorator."""
-    _DOMAINS[name] = Domain(cls=cls)
+    _DOMAINS[name] = Domain(impl=cls())
 
 
 def get_domain(name: str) -> Domain:

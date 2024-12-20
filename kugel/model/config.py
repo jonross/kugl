@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Literal, Optional, Tuple
 
 import jmespath
+import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
@@ -144,13 +145,27 @@ class KPath(type(Path())):
 
 
 # FIXME use typevars
-def parse_model(cls, root) -> Tuple[object, list[str]]:
-    """Parse a configuration object (typically a Config) from a model.
+def parse_model(model_class, root: dict) -> Tuple[object, list[str]]:
+    """Parse a dict into a model instance (typically a UserConfig).
+
     :return: A tuple of (parsed object, list of errors).  On success, the error list is None.
         On failure, the parsed object is None.
     """
     try:
-        return cls.parse_obj(root), None
+        return model_class.parse_obj(root), None
     except ValidationError as e:
         error_location = lambda err: '.'.join(str(x) for x in err['loc'])
         return None, [f"{error_location(err)}: {err['msg']}" for err in e.errors()]
+
+
+# FIXME use typevars
+def parse_file(model_class, path: KPath) -> Tuple[object, list[str]]:
+    """Parse a configuration file into a model instance, handling edge cases.
+
+    :return: Same as parse_model."""
+    if not path.exists():
+        return model_class(), None
+    if path.is_world_writeable():
+        return None, [f"{path} is world writeable, refusing to run"]
+    return parse_model(model_class, yaml.safe_load(path.read_text()) or {})
+
