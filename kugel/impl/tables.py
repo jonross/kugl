@@ -5,8 +5,8 @@ import json
 from argparse import ArgumentParser
 
 from .helpers import Limits, ItemHelper, PodHelper, JobHelper
-from .jross import run
-from .time import parse_utc
+from kugel.util.jross import run
+from kugel.util.time import parse_utc
 from .registry import domain, table
 from .utils import fail
 from ..model.config import Config

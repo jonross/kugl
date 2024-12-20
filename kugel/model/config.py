@@ -11,6 +11,8 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
 from .age import Age
+from ..util.jross import from_footprint
+from ..util.time import parse_utc
 
 PARENTED_PATH = re.compile("^(\^*)(.*)")
 
@@ -33,13 +35,13 @@ class ColumnDef(BaseModel):
     """Holds one entry from a columns: list in a user config file."""
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     name: str
-    type: Literal["text", "integer", "real"] = "text"
+    type: Literal["text", "integer", "real", "date", "cpu", "size"] = "text"
     path: Optional[str] = None
     label: Optional[str] = None
     _finder: jmespath.parser.Parser
     _parents: int
     _sqltype: str
-    _pytype: type
+    _convert: type
 
     @model_validator(mode="after")
     @classmethod
@@ -56,7 +58,8 @@ class ColumnDef(BaseModel):
             config._finder = jmespath.compile(m.group(2))
         except jmespath.exceptions.ParseError as e:
             raise ValueError(f"invalid JMESPath expression {m.group(2)} in column {config.name}") from e
-        config._sqltype, config._pytype = config.type, dict(text=str, integer=int, real=float)[config.type]
+        config._sqltype = KUGEL_TYPE_TO_SQL_TYPE[config.type]
+        config._convert = KUGEL_TYPE_CONVERTERS[config.type]
         return config
 
     def extract(self, obj: object) -> object:
@@ -65,7 +68,26 @@ class ColumnDef(BaseModel):
             obj = obj.get("__parent")
             count += 1
         value = None if obj is None else self._finder.search(obj)
-        return None if value is None else self._pytype(value)
+        return None if value is None else self._convert(value)
+
+
+KUGEL_TYPE_CONVERTERS = {
+    "integer": int,
+    "real" : float,
+    "text": str,
+    "date": parse_utc,
+    "cpu": from_footprint,
+    "size": from_footprint,
+}
+
+KUGEL_TYPE_TO_SQL_TYPE = {
+    "integer": "integer",
+    "real": "real",
+    "text": "text",
+    "date": "integer",
+    "cpu": "integer",
+    "size": "integer"
+}
 
 
 class ExtendTable(BaseModel):

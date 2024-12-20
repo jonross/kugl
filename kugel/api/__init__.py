@@ -3,7 +3,7 @@ from kugel.impl.registry import (
     table
 )
 
-from kugel.impl.time import (
+from kugel.util.time import (
     parse_age,
     parse_utc,
     to_age,

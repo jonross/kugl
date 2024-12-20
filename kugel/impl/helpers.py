@@ -9,7 +9,7 @@ from typing import Optional
 import funcy as fn
 
 from kugel.model.constants import MAIN_CONTAINERS
-from kugel.impl.jross import from_footprint
+from kugel.util.jross import from_footprint
 
 
 @dataclass

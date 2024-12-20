@@ -89,7 +89,8 @@ def test_unknown_type():
           type: unknown_type
           path: metadata.name
     """))
-    assert errors == ["columns.0.type: Input should be 'text', 'integer' or 'real'"]
+    assert len(errors) == 1
+    assert "columns.0.type: Input should be" in errors[0]
 
 
 def test_missing_fields_for_create():
