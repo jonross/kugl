@@ -18,6 +18,7 @@ import yaml
 from .config import Config, UserConfig, ColumnDef, ExtendTable, CreateTable
 from .registry import get_domain, TableDef
 from kugel.util import fail, SqliteDb, to_size, Age, to_utc, kugel_home, set_parent, clock
+from kugel.util import fail, SqliteDb, to_size, Age, to_utc, kugel_home, set_parent
 
 # Needed to locate the built-in table builders by class name.
 import kugel.impl.tables
