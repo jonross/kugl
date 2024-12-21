@@ -3,7 +3,6 @@ Process Kugel queries.
 If you're looking for Kugel's "brain", you've found it.
 """
 
-from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
 import json
 from pathlib import Path
@@ -11,6 +10,7 @@ import re
 import sys
 from typing import Tuple, Set, Optional, Literal
 
+from pydantic import BaseModel
 from tabulate import tabulate
 import yaml
 
@@ -29,7 +29,20 @@ import kugel.builtins.stdin
 ALWAYS_UPDATE, CHECK, NEVER_UPDATE = 1, 2, 3
 CacheFlag = Literal[ALWAYS_UPDATE, CHECK, NEVER_UPDATE]
 
-Query = namedtuple("Query", ["sql", "namespace", "cache_flag"])
+
+class Query(BaseModel):
+    sql: str
+    namespace: str = "default"
+    cache_flag: CacheFlag = ALWAYS_UPDATE
+
+    @property
+    def tables_named(self):
+        # Determine which tables are needed for the query by looking for symmbols that follow
+        # FROM and JOIN.  Some of these may be CTEs, so don't assume they're all availabie in
+        # Kubernetes, just pick out the ones we know about and let SQLite take care of
+        # "unknown table" errors.
+        sql = self.sql.replace("\n", " ")
+        return set(re.findall(r"(?<=from|join)\s+(\w+)", sql, re.IGNORECASE))
 
 
 class Engine:
@@ -57,15 +70,9 @@ class Engine:
         :return: a tuple of (rows, column names)
         """
 
-        # Determine which tables are needed for the query by looking for symmbols that follow
-        # FROM and JOIN.  Some of these may be CTEs, so don't assume they're all availabie in
-        # Kubernetes, just pick out the ones we know about and let SQLite take care of
-        # "unknown table" errors.
-        kql = query.sql.replace("\n", " ")
-        tables_named = set(re.findall(r"(?<=from|join)\s+(\w+)", kql, re.IGNORECASE))
-
         # HACK ALERT
         # FIXME: do this correctly with domain defaulting
+        tables_named = query.tables_named
         if any(t.startswith("stdin.") for t in tables_named):
             tables_named = {t.replace("stdin.", "") for t in tables_named}
             domain = get_domain("stdin")
@@ -138,7 +145,7 @@ class Engine:
             table.build(self.db, self.data[table.resource])
 
         column_names = []
-        rows = self.db.query(kql, names=column_names)
+        rows = self.db.query(query.sql, names=column_names)
         # %g is susceptible to outputting scientific notation, which we don't want.
         # but %f always outputs trailing zeros, which we also don't want.
         # So turn every value x in each row into an int if x == float(int(x))

@@ -96,7 +96,7 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
 
     engine = Engine(config, current_context)
     # FIXME bad reference to namespace
-    print(engine.query_and_format(Query(args.sql, domain.impl.namespace, cache_flag)))
+    print(engine.query_and_format(Query(sql=args.sql, namespace=domain.impl.namespace, cache_flag=cache_flag)))
 
 
 if __name__ == "__main__":
