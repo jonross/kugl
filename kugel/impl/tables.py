@@ -5,8 +5,7 @@ import json
 from argparse import ArgumentParser
 
 from .helpers import Limits, ItemHelper, PodHelper, JobHelper
-from kugel.util.jross import run
-from kugel.util import fail, parse_utc
+from kugel.util import fail, parse_utc, run
 from .registry import domain, table
 from ..model.config import Config
 from ..model.constants import ALL_NAMESPACE, WHITESPACE

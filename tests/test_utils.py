@@ -5,7 +5,7 @@ More assorted tests, should these be combined with test_misc.py?
 import jmespath
 import pytest
 
-from kugel.util import Age
+from kugel.util import Age, parse_size, to_size
 from kugel.impl.utils import dprint, debug
 
 
@@ -52,6 +52,49 @@ def test_age(input_args, input_kwargs, expected):
             Age(*input_args, **input_kwargs)
     else:
         assert Age(*input_args, **input_kwargs).render() == expected
+
+
+@pytest.mark.parametrize("size_str, expected_result", [
+    ("", "Can't translate '' to a size"),
+    ("1n", "Unknown size suffix in '1n'"),
+    ("15", 15.0),
+    ("15K", 15.0 * 10 ** 3),
+    ("15Ki", 15.0 * 2 ** 10),
+    ("15M", 15.0 * 10 ** 6),
+    ("15Mi", 15.0 * 2 ** 20),
+    ("15G", 15.0 * 10 ** 9),
+    ("15Gi", 15.0 * 2 ** 30),
+])
+def test_parse_size(size_str, expected_result):
+    if isinstance(expected_result, str):
+        with pytest.raises(ValueError, match=expected_result):
+            parse_size(size_str)
+    else:
+        assert parse_size(size_str) == expected_result
+
+
+@pytest.mark.parametrize("args,result", [
+    ((0,), "0B"),
+    ((1,), "1B"),
+    ((999,), "999B"),
+    ((1023, True), "1023B"),
+    ((1000,), "1.0KB"),
+    ((1024, True), "1.0KiB"),
+    ((1000 ** 2 - 1000,), "999KB"),
+    ((1024 ** 2 - 1024, True), "1023KiB"),
+    ((1000 ** 2,), "1.0MB"),
+    ((1024 ** 2, True), "1.0MiB"),
+    ((1000 ** 3 - 1000 ** 2,), "999MB"),
+    ((1024 ** 3 - 1024 ** 2, True), "1023MiB"),
+    ((1000 ** 3,), "1.0GB"),
+    ((1024 ** 3, True), "1.0GiB"),
+    ((1000 ** 4 - 1000 ** 3,), "999GB"),
+    ((1024 ** 4 - 1024 ** 3, True), "1023GiB"),
+    ((1000 ** 4,), "1.0TB"),
+    ((1024 ** 4, True), "1.0TiB"),
+])
+def test_to_size(args: tuple, result: str):
+    assert to_size(*args) == result
 
 
 def test_jmespath_performance():

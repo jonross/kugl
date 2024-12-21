@@ -1,14 +1,9 @@
 
 import os
-import sys
-from pathlib import Path
-from typing import Optional
 
 from kugel.model.config import KPath
 
-from kugel.util import Age
-from kugel.util.time import to_utc
-from kugel.util.jross import to_footprint
+from kugel.util import Age, to_utc, to_size
 import kugel.util.time as ktime
 
 DEBUG_FLAGS = {}
@@ -53,7 +48,7 @@ def dprint(feature, *args, **kwargs):
 
 
 def add_custom_functions(db):
-    db.create_function("to_size", 1, to_footprint)
+    db.create_function("to_size", 1, to_size)
     db.create_function("now", 0, lambda: ktime.CLOCK.now())
     db.create_function("to_age", 1, lambda x: Age(x - ktime.CLOCK.now()).render())
     db.create_function("to_utc", 1, lambda x: to_utc(x))

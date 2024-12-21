@@ -1,7 +1,5 @@
 [run]
 omit =
-    # This is tested elsewhere
-    kugel/util/jross.py
     # These are part of test tooling
     tests/kubectl
     tests/testing.py

@@ -10,9 +10,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
-from kugel.util import Age
-from ..util.jross import from_footprint
-from ..util.time import parse_utc
+from kugel.util import Age, parse_utc, parse_size
 
 PARENTED_PATH = re.compile("^(\^*)(.*)")
 
@@ -76,8 +74,8 @@ KUGEL_TYPE_CONVERTERS = {
     "real" : float,
     "text": str,
     "date": parse_utc,
-    "cpu": from_footprint,
-    "size": from_footprint,
+    "cpu": parse_size,
+    "size": parse_size,
 }
 
 KUGEL_TYPE_TO_SQL_TYPE = {
