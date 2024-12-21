@@ -4,8 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from kugel.util import UNIT_TEST_TIMEBASE, kube_home
-import kugel.util.time as ktime
+from kugel.util import UNIT_TEST_TIMEBASE, kube_home, clock
 
 # Add tests/ folder to $PATH so running 'kubectl ...' invokes our mock, not the real kubectl.
 os.environ["PATH"] = f"{Path(__file__).parent}:{os.environ['PATH']}"
@@ -18,8 +17,8 @@ def pytest_sessionstart(session):
     # Tell Pytest where there are assertions in files that aren't named "test_*"
     pytest.register_assert_rewrite("tests.testing")
     # Use a clock we can control, in place of system time.
-    ktime.simulate_time()
-    ktime.CLOCK.set(UNIT_TEST_TIMEBASE)
+    clock.simulate_time()
+    clock.CLOCK.set(UNIT_TEST_TIMEBASE)
 
 
 @pytest.fixture(scope="function")
