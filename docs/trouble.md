@@ -1,8 +1,8 @@
 
 ### Can I report a bug or recommend a feature?
 
-Yes please, feel free to open an issue on Github.  For bugs, please follow these guidelines and try to isolate the issue
-as best you can.
+Yes please, feel free to open an issue or pull request on Github.  
+For bugs, please follow these guidelines and try to isolate the issue as best you can.
 
 * Include the relevant configuration sections from your `init.yaml` and `kubernetes.yaml`
 * Run the command that isn't working with `-D all` and include the entire output.  Use a low-activity namespace if possible,

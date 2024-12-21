@@ -3,6 +3,7 @@ Built-in table definitions for Kubernetes.
 
 NOTE: This is not a good example of how to write user-defined tables.
 FIXME: Remove references to non-API imports.
+FIXME: Don't use ArgumentParser in the API.
 """
 import json
 from argparse import ArgumentParser

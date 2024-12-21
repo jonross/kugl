@@ -57,11 +57,6 @@ class Engine:
         :return: a tuple of (rows, column names)
         """
 
-        builtins_yaml = Path(__file__).parent.parent / "builtins" / "kubernetes.yaml"
-        builtins = UserConfig(**yaml.safe_load(builtins_yaml.read_text()))
-        self.config.resources.update({r.name: r for r in builtins.resources})
-        self.config.create.update({c.table: c for c in builtins.create})
-
         # Determine which tables are needed for the query by looking for symmbols that follow
         # FROM and JOIN.  Some of these may be CTEs, so don't assume they're all availabie in
         # Kubernetes, just pick out the ones we know about and let SQLite take care of
@@ -69,9 +64,21 @@ class Engine:
         kql = query.sql.replace("\n", " ")
         tables_named = set(re.findall(r"(?<=from|join)\s+(\w+)", kql, re.IGNORECASE))
 
+        # HACK ALERT
+        # FIXME: do this correctly with domain defaulting
+        if any(t.startswith("stdin.") for t in tables_named):
+            tables_named = {t.replace("stdin.", "") for t in tables_named}
+            domain = get_domain("stdin")
+        else:
+            domain = get_domain("kubernetes")
+
+        builtins_yaml = Path(__file__).parent.parent / "builtins" / f"{domain.name}.yaml"
+        builtins = UserConfig(**yaml.safe_load(builtins_yaml.read_text()))
+        self.config.resources.update({r.name: r for r in builtins.resources})
+        self.config.create.update({c.table: c for c in builtins.create})
+
         # Reconcile tables created / extended in the config file with tables defined in code, and
         # generate the table builders.
-        domain = get_domain("kubernetes")
         tables = {}
         for name in tables_named:
             code_creator = domain.tables.get(name)
