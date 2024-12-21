@@ -6,9 +6,8 @@ from argparse import ArgumentParser
 
 from .helpers import Limits, ItemHelper, PodHelper, JobHelper
 from kugel.util.jross import run
-from kugel.util.time import parse_utc
+from kugel.util import fail, parse_utc
 from .registry import domain, table
-from .utils import fail
 from ..model.config import Config
 from ..model.constants import ALL_NAMESPACE, WHITESPACE
 

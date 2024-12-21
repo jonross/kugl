@@ -9,7 +9,8 @@ from pathlib import Path
 import pytest
 
 from kugel.impl.helpers import Limits
-from kugel.impl.utils import KugelError, kube_home, kugel_home
+from kugel.impl.utils import kube_home, kugel_home
+from kugel.util import KugelError
 from kugel.main import main1
 from kugel.model import Age
 

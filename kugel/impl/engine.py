@@ -19,8 +19,9 @@ from kugel.model.config import Config, UserConfig, ColumnDef, ExtendTable, Creat
 from kugel.model.constants import CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
 from .registry import get_domain, TableDef
 from kugel.util.jross import run, SqliteDb
-from .utils import add_custom_functions, kugel_home, fail, set_parent
+from .utils import add_custom_functions, kugel_home, set_parent
 import kugel.util.time as ktime
+from kugel.util import fail
 
 # Needed to locate the built-in table builders by class name.
 import kugel.impl.tables

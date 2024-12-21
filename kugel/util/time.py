@@ -8,7 +8,6 @@ from typing import Optional
 
 import arrow
 
-from kugel.model import Age
 
 
 class Clock:
