@@ -17,8 +17,7 @@ import yaml
 
 from .config import Config, UserConfig, ColumnDef, ExtendTable, CreateTable
 from .registry import get_domain, TableDef
-import kugel.util.time as ktime
-from kugel.util import fail, SqliteDb, to_size, Age, to_utc, kugel_home, set_parent
+from kugel.util import fail, SqliteDb, to_size, Age, to_utc, kugel_home, set_parent, clock
 
 # Needed to locate the built-in table builders by class name.
 import kugel.impl.tables
@@ -96,7 +95,7 @@ class Engine:
         refreshable, max_staleness = self.cache.advise_refresh(query.namespace, resources_used, query.cache_flag)
         if not self.config.settings.reckless and max_staleness is not None:
             print(f"(Data may be up to {max_staleness} seconds old.)", file=sys.stderr)
-            ktime.CLOCK.sleep(0.5)
+            clock.CLOCK.sleep(0.5)
 
         # Retrieve resource data in parallel.  If fetching from Kubernetes, update the cache;
         # otherwise just read from the cache.
@@ -189,7 +188,7 @@ class DataCache:
         """The age of a file in seconds, relative to the current time, or None if it doesn't exist."""
         if not path.exists():
             return None
-        return int(ktime.CLOCK.now() - path.stat().st_mtime)
+        return int(clock.CLOCK.now() - path.stat().st_mtime)
 
 
 # TODO: make abstract
@@ -317,8 +316,8 @@ class TableFromConfig(Table):
 
 def add_custom_functions(db):
     db.create_function("to_size", 1, to_size)
-    db.create_function("now", 0, lambda: ktime.CLOCK.now())
-    db.create_function("to_age", 1, lambda x: Age(x - ktime.CLOCK.now()).render())
+    db.create_function("now", 0, lambda: clock.CLOCK.now())
+    db.create_function("to_age", 1, lambda x: Age(x - clock.CLOCK.now()).render())
     db.create_function("to_utc", 1, lambda x: to_utc(x))
 
 

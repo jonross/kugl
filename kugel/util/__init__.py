@@ -1,5 +1,6 @@
 
 from .age import Age, parse_age, to_age
+from .clock import UNIT_TEST_TIMEBASE
 from .misc import (
     debug,
     debugging,
@@ -19,4 +20,5 @@ from .misc import (
 )
 from .size import parse_size, to_size
 from .sqlite import SqliteDb
-from .time import UNIT_TEST_TIMEBASE
+
+import kugel.util.clock as clock
