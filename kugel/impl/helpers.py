@@ -8,8 +8,10 @@ from typing import Optional
 
 import funcy as fn
 
-from kugel.model.constants import MAIN_CONTAINERS
 from kugel.util import parse_size
+
+# What container name is considered the "main" container, if present
+MAIN_CONTAINERS = ["main", "notebook", "app"]
 
 
 @dataclass

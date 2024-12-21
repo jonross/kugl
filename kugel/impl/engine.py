@@ -9,21 +9,25 @@ import json
 from pathlib import Path
 import re
 import sys
-from typing import Tuple, Set, Optional, Dict
+from typing import Tuple, Set, Optional, Dict, Literal
 
 import jmespath
 from tabulate import tabulate
 import yaml
 
 from kugel.model.config import Config, UserConfig, ColumnDef, ExtendTable, CreateTable
-from kugel.model.constants import CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
 from .registry import get_domain, TableDef
 from .utils import add_custom_functions, kugel_home, set_parent
 import kugel.util.time as ktime
-from kugel.util import fail, run, SqliteDb
+from kugel.util import fail, SqliteDb, WHITESPACE
 
 # Needed to locate the built-in table builders by class name.
 import kugel.impl.tables
+
+# Cache behaviors
+# TODO consider an enum
+ALWAYS_UPDATE, CHECK, NEVER_UPDATE = 1, 2, 3
+CacheFlag = Literal[ALWAYS_UPDATE, CHECK, NEVER_UPDATE]
 
 Query = namedtuple("Query", ["sql", "namespace", "cache_flag"])
 

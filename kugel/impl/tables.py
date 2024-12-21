@@ -5,10 +5,12 @@ import json
 from argparse import ArgumentParser
 
 from .helpers import Limits, ItemHelper, PodHelper, JobHelper
-from kugel.util import fail, parse_utc, run
+from kugel.util import fail, parse_utc, run, WHITESPACE
 from .registry import domain, table
 from ..model.config import Config
-from ..model.constants import ALL_NAMESPACE, WHITESPACE
+
+# Fake namespace if "--all-namespaces" option is used
+ALL_NAMESPACE = "__all"
 
 
 @domain("kubernetes")

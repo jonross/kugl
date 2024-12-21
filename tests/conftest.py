@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from kugel.model.constants import UNIT_TEST_TIMEBASE
+from kugel.util import UNIT_TEST_TIMEBASE
 import kugel.util.time as ktime
 from kugel.impl.utils import kube_home
 

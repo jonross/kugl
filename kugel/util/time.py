@@ -6,8 +6,8 @@ import time
 from abc import abstractmethod
 from typing import Optional
 
-import arrow
-
+# For use with simulated clock
+UNIT_TEST_TIMEBASE = 1733798942
 
 
 class Clock:
