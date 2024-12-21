@@ -21,7 +21,8 @@ from kugel.util import fail, SqliteDb, to_size, Age, to_utc, kugel_home, set_par
 from kugel.util import fail, SqliteDb, to_size, Age, to_utc, kugel_home, set_parent
 
 # Needed to locate the built-in table builders by class name.
-import kugel.impl.tables
+import kugel.builtins.kubernetes
+import kugel.builtins.stdin
 
 # Cache behaviors
 # TODO consider an enum

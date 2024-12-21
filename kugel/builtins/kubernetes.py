@@ -1,13 +1,16 @@
 """
 Built-in table definitions for Kubernetes.
+
+NOTE: This is not a good example of how to write user-defined tables.
+FIXME: Remove references to non-API imports.
 """
 import json
 from argparse import ArgumentParser
 
-from .config import Config
 from .helpers import Limits, ItemHelper, PodHelper, JobHelper
-from .registry import domain, table
-from kugel.util import fail, parse_utc, run, WHITESPACE
+from kugel.api import domain, table, fail
+from kugel.impl.config import Config
+from kugel.util import parse_utc, run, WHITESPACE
 
 # Fake namespace if "--all-namespaces" option is used
 ALL_NAMESPACE = "__all"
