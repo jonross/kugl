@@ -108,7 +108,12 @@ In any case, please be mindful of stale data and server load.
 
 ## Rationale
 
-`jq` is great, but remembering `jq` syntax and the layout of Kubernetes resources is a pain.
+`jq` is awesome, but... can you select and join without looking at the manual? Do you know by rote the hierarchical
+data layout of all your Kubernetes resources?  How frustrating is it to do math on numeric fields that are presented 
+non-numerically, like "500Mi" of memory or "200m" CPUs or "2024-11-01T12:34:56Z"?  Can you derive the status of
+a pod from its JSON, equivalent to the STATUS column from `kubectl get pods`?
+
+Probably not.  Kugel can help.
 
 Prior art (as of November 2024)
 
