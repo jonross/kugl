@@ -4,13 +4,13 @@ Built-in table definitions for Kubernetes.
 import json
 from argparse import ArgumentParser
 
+from .config import Config
 from .helpers import Limits, ItemHelper, PodHelper, JobHelper
-from kugel.util.jross import run
-from kugel.util.time import parse_utc
 from .registry import domain, table
-from .utils import fail
-from ..model.config import Config
-from ..model.constants import ALL_NAMESPACE, WHITESPACE
+from kugel.util import fail, parse_utc, run, WHITESPACE
+
+# Fake namespace if "--all-namespaces" option is used
+ALL_NAMESPACE = "__all"
 
 
 @domain("kubernetes")

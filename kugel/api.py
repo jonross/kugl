@@ -3,13 +3,10 @@ from kugel.impl.registry import (
     table
 )
 
-from kugel.util.time import (
+from kugel.util import (
+    fail,
     parse_age,
     parse_utc,
     to_age,
     to_utc,
-)
-
-from kugel.impl.utils import (
-    fail
 )

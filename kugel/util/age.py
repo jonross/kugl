@@ -91,3 +91,11 @@ class Age(dt.timedelta):
     def value(self) -> int:
         return int(self.total_seconds())
 
+
+def parse_age(age: str) -> int:
+    return Age(age).value
+
+
+def to_age(seconds: int) -> str:
+    return Age(seconds).render()
+

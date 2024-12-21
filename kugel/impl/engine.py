@@ -9,21 +9,24 @@ import json
 from pathlib import Path
 import re
 import sys
-from typing import Tuple, Set, Optional, Dict
+from typing import Tuple, Set, Optional, Literal
 
 import jmespath
 from tabulate import tabulate
 import yaml
 
-from kugel.model.config import Config, UserConfig, ColumnDef, ExtendTable, CreateTable
-from kugel.model.constants import CacheFlag, ALL_NAMESPACE, WHITESPACE, ALWAYS_UPDATE, NEVER_UPDATE
+from .config import Config, UserConfig, ColumnDef, ExtendTable, CreateTable
 from .registry import get_domain, TableDef
-from kugel.util.jross import run, SqliteDb
-from .utils import add_custom_functions, kugel_home, fail, set_parent
 import kugel.util.time as ktime
+from kugel.util import fail, SqliteDb, to_size, Age, to_utc, kugel_home, set_parent
 
 # Needed to locate the built-in table builders by class name.
 import kugel.impl.tables
+
+# Cache behaviors
+# TODO consider an enum
+ALWAYS_UPDATE, CHECK, NEVER_UPDATE = 1, 2, 3
+CacheFlag = Literal[ALWAYS_UPDATE, CHECK, NEVER_UPDATE]
 
 Query = namedtuple("Query", ["sql", "namespace", "cache_flag"])
 
@@ -53,7 +56,8 @@ class Engine:
         :return: a tuple of (rows, column names)
         """
 
-        builtins = UserConfig(**yaml.safe_load((Path(__file__).parent / "builtins.yaml").read_text()))
+        builtins_yaml = Path(__file__).parent.parent / "builtins" / "kubernetes.yaml"
+        builtins = UserConfig(**yaml.safe_load(builtins_yaml.read_text()))
         self.config.resources.update({r.name: r for r in builtins.resources})
         self.config.create.update({c.table: c for c in builtins.create})
 
@@ -309,3 +313,12 @@ class TableFromConfig(Table):
                     new_items.append(found)
             items = new_items
         return items
+
+
+def add_custom_functions(db):
+    db.create_function("to_size", 1, to_size)
+    db.create_function("now", 0, lambda: ktime.CLOCK.now())
+    db.create_function("to_age", 1, lambda x: Age(x - ktime.CLOCK.now()).render())
+    db.create_function("to_utc", 1, lambda x: to_utc(x))
+
+

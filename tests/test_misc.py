@@ -9,9 +9,8 @@ from pathlib import Path
 import pytest
 
 from kugel.impl.helpers import Limits
-from kugel.impl.utils import KugelError, kube_home, kugel_home
 from kugel.main import main1
-from kugel.model import Age
+from kugel.util import Age, KugelError, kube_home, kugel_home
 
 
 def test_no_resources():

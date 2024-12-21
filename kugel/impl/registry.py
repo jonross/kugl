@@ -7,7 +7,7 @@ from typing import Type
 
 from pydantic import BaseModel
 
-from .utils import fail
+from kugel.util import fail
 
 _DOMAINS = {}
 

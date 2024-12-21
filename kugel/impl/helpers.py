@@ -8,8 +8,10 @@ from typing import Optional
 
 import funcy as fn
 
-from kugel.model.constants import MAIN_CONTAINERS
-from kugel.util.jross import from_footprint
+from kugel.util import parse_size
+
+# What container name is considered the "main" container, if present
+MAIN_CONTAINERS = ["main", "notebook", "app"]
 
 
 @dataclass
@@ -48,9 +50,9 @@ class Limits:
     def extract(cls, obj):
         if obj is None:
             return Limits(None, None, None)
-        cpu = from_footprint(obj.get("cpu"))
-        gpu = from_footprint(obj.get("nvidia.com/gpu"))
-        mem = from_footprint(obj.get("memory"))
+        cpu = parse_size(obj.get("cpu"))
+        gpu = parse_size(obj.get("nvidia.com/gpu"))
+        mem = parse_size(obj.get("memory"))
         return Limits(cpu, gpu, mem)
 
 
