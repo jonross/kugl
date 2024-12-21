@@ -11,9 +11,8 @@ import yaml
 
 from kugel.impl.registry import get_domain
 from kugel.impl.engine import Engine, Query, CHECK, NEVER_UPDATE, ALWAYS_UPDATE
-from kugel.model.config import parse_model, Config, UserConfig, UserInit, parse_file
-from kugel.impl.utils import debug, kugel_home, kube_home, debugging
-from kugel.util import Age, fail
+from kugel.impl.config import Config, UserConfig, UserInit, parse_file
+from kugel.util import Age, fail, debug, debugging, kugel_home, kube_home
 
 
 def main() -> None:

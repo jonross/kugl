@@ -4,10 +4,10 @@ Built-in table definitions for Kubernetes.
 import json
 from argparse import ArgumentParser
 
+from .config import Config
 from .helpers import Limits, ItemHelper, PodHelper, JobHelper
-from kugel.util import fail, parse_utc, run, WHITESPACE
 from .registry import domain, table
-from ..model.config import Config
+from kugel.util import fail, parse_utc, run, WHITESPACE
 
 # Fake namespace if "--all-namespaces" option is used
 ALL_NAMESPACE = "__all"

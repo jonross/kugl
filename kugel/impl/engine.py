@@ -9,17 +9,17 @@ import json
 from pathlib import Path
 import re
 import sys
-from typing import Tuple, Set, Optional, Dict, Literal
+from typing import Tuple, Set, Optional, Literal
 
 import jmespath
 from tabulate import tabulate
 import yaml
 
-from kugel.model.config import Config, UserConfig, ColumnDef, ExtendTable, CreateTable
+from .config import Config, UserConfig, ColumnDef, ExtendTable, CreateTable
 from .registry import get_domain, TableDef
-from .utils import add_custom_functions, kugel_home, set_parent
+from .utils import set_parent
 import kugel.util.time as ktime
-from kugel.util import fail, SqliteDb, WHITESPACE
+from kugel.util import fail, SqliteDb, to_size, Age, to_utc, kugel_home
 
 # Needed to locate the built-in table builders by class name.
 import kugel.impl.tables
@@ -313,3 +313,12 @@ class TableFromConfig(Table):
                     new_items.append(found)
             items = new_items
         return items
+
+
+def add_custom_functions(db):
+    db.create_function("to_size", 1, to_size)
+    db.create_function("now", 0, lambda: ktime.CLOCK.now())
+    db.create_function("to_age", 1, lambda x: Age(x - ktime.CLOCK.now()).render())
+    db.create_function("to_utc", 1, lambda x: to_utc(x))
+
+

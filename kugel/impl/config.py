@@ -1,8 +1,8 @@
 """
 Pydantic models for configuration files.
 """
+
 import re
-from pathlib import Path
 from typing import Literal, Optional, Tuple
 
 import jmespath
@@ -10,7 +10,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
-from kugel.util import Age, parse_utc, parse_size
+from kugel.util import Age, parse_utc, parse_size, KPath
 
 PARENTED_PATH = re.compile("^(\^*)(.*)")
 
@@ -133,13 +133,6 @@ class Config(BaseModel):
             create={c.table: c for c in user_config.create},
             alias=user_init.alias,
         )
-
-
-class KPath(type(Path())):
-    """It would be nice if Path were smarter, so do that."""
-
-    def is_world_writeable(self) -> bool:
-        return self.stat().st_mode & 0o2 == 0o2
 
 
 # FIXME use typevars
