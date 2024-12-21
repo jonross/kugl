@@ -17,9 +17,8 @@ import yaml
 
 from .config import Config, UserConfig, ColumnDef, ExtendTable, CreateTable
 from .registry import get_domain, TableDef
-from .utils import set_parent
 import kugel.util.time as ktime
-from kugel.util import fail, SqliteDb, to_size, Age, to_utc, kugel_home
+from kugel.util import fail, SqliteDb, to_size, Age, to_utc, kugel_home, set_parent
 
 # Needed to locate the built-in table builders by class name.
 import kugel.impl.tables
@@ -57,7 +56,8 @@ class Engine:
         :return: a tuple of (rows, column names)
         """
 
-        builtins = UserConfig(**yaml.safe_load((Path(__file__).parent / "builtins.yaml").read_text()))
+        builtins_yaml = Path(__file__).parent.parent / "builtins" / "kubernetes.yaml"
+        builtins = UserConfig(**yaml.safe_load(builtins_yaml.read_text()))
         self.config.resources.update({r.name: r for r in builtins.resources})
         self.config.create.update({c.table: c for c in builtins.create})
 
