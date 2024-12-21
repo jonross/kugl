@@ -10,7 +10,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
-from .age import Age
+from kugel.util import Age
 from ..util.jross import from_footprint
 from ..util.time import parse_utc
 

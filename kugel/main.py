@@ -13,9 +13,8 @@ from kugel.impl.registry import get_domain
 from kugel.impl.engine import Engine, Query
 from kugel.model.config import parse_model, Config, UserConfig, UserInit, parse_file
 from kugel.model.constants import CHECK, ALL_NAMESPACE, NEVER_UPDATE, ALWAYS_UPDATE
-from kugel.model import Age
 from kugel.impl.utils import debug, kugel_home, kube_home, debugging
-from kugel.util import fail
+from kugel.util import Age, fail
 
 
 def main() -> None:

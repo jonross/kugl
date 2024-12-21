@@ -5,7 +5,7 @@ More assorted tests, should these be combined with test_misc.py?
 import jmespath
 import pytest
 
-from kugel.model import Age
+from kugel.util import Age
 from kugel.impl.utils import dprint, debug
 
 

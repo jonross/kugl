@@ -6,7 +6,7 @@ from kugel.model.config import Settings, UserConfig, parse_model, ExtendTable, C
 
 import yaml
 
-from kugel.model import Age
+from kugel.util import Age
 
 
 def test_settings_defaults():

@@ -6,7 +6,7 @@ from typing import Optional
 
 from kugel.model.config import KPath
 
-from kugel.model.age import Age
+from kugel.util import Age
 from kugel.util.time import to_utc
 from kugel.util.jross import to_footprint
 import kugel.util.time as ktime
