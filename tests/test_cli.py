@@ -17,7 +17,7 @@ def test_enforce_one_cache_option(test_home):
 
 def test_enforce_one_namespace_option(test_home):
     with pytest.raises(KugelError, match="Cannot use both -a/--all-namespaces and -n/--namespace"):
-        main1(["-a", "-n", "x", "select 1"])
+        main1(["-a", "-n", "x", "select * from pods"])
 
 
 def test_no_such_table(test_home):
@@ -35,7 +35,7 @@ def test_alias_with_invalid_option(test_home, capsys):
         alias:
           foo:
           - --badoption
-          - "select 1"
+          - "select * from pods"
     """)
     with pytest.raises(SystemExit):
         main1(["-a", "foo"])

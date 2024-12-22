@@ -15,7 +15,7 @@ from tabulate import tabulate
 import yaml
 
 from .config import Config, UserConfig
-from .registry import get_domain
+from .registry import get_domain, Domain
 from .tables import TableFromCode, TableFromConfig
 from kugel.util import fail, SqliteDb, to_size, Age, to_utc, kugel_home, clock
 
@@ -74,11 +74,12 @@ class TableRef(BaseModel):
 
 class Engine:
 
-    def __init__(self, config: Config, context_name: str):
+    def __init__(self, domain: Domain, config: Config, context_name: str):
         """
         :param config: the parsed user configuration file
         :param context_name: the Kubernetes context to use, e.g. "minikube", "research-cluster"
         """
+        self.domain = domain
         self.config = config
         self.context_name = context_name
         self.cache = DataCache(self.config, kugel_home() / "cache" / self.context_name)
@@ -97,16 +98,7 @@ class Engine:
         :return: a tuple of (rows, column names)
         """
 
-        table_refs = query.table_refs
-        domain_refs = {ref.domain for ref in table_refs}
-        if len(domain_refs) == 0:
-            domain = get_domain("empty")
-        elif len(domain_refs) == 1:
-            domain = get_domain(next(iter(domain_refs)))
-        else:
-            fail("Cross-domain query not implemented yet")
-
-        builtins_yaml = Path(__file__).parent.parent / "builtins" / f"{domain.name}.yaml"
+        builtins_yaml = Path(__file__).parent.parent / "builtins" / f"{self.domain.name}.yaml"
         if builtins_yaml.exists():
             builtins = UserConfig(**yaml.safe_load(builtins_yaml.read_text()))
             self.config.resources.update({r.name: r for r in builtins.resources})
@@ -115,8 +107,8 @@ class Engine:
         # Reconcile tables created / extended in the config file with tables defined in code, and
         # generate the table builders.
         tables = {}
-        for name in {t.name for t in table_refs}:
-            code_creator = domain.tables.get(name)
+        for name in {t.name for t in query.table_refs}:
+            code_creator = self.domain.tables.get(name)
             config_creator = self.config.create.get(name)
             extender = self.config.extend.get(name)
             if code_creator and config_creator:
@@ -146,7 +138,7 @@ class Engine:
         def fetch(kind):
             try:
                 if kind in refreshable:
-                    self.data[kind] = domain.impl.get_objects(kind, self.config)
+                    self.data[kind] = self.domain.impl.get_objects(kind, self.config)
                     self.cache.dump(query.namespace, kind, self.data[kind])
                 else:
                     self.data[kind] = self.cache.load(query.namespace, kind)

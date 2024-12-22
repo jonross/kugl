@@ -25,8 +25,6 @@ class KubernetesData:
         ap.add_argument("-n", "--namespace", type=str)
 
     def handle_cli_options(self, args):
-        if args.cache and args.update:
-            fail("Cannot use both -c/--cache and -u/--update")
         if args.all_namespaces and args.namespace:
             fail("Cannot use both -a/--all-namespaces and -n/--namespace")
         self.namespace = ALL_NAMESPACE if args.all_namespaces else args.namespace or "default"
