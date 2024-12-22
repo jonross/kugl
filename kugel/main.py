@@ -12,7 +12,7 @@ import yaml
 from kugel.impl.registry import get_domain
 from kugel.impl.engine import Engine, Query, CHECK, NEVER_UPDATE, ALWAYS_UPDATE
 from kugel.impl.config import Config, UserConfig, UserInit, parse_file
-from kugel.util import Age, fail, debug, debugging, kugel_home, kube_home
+from kugel.util import Age, fail, debug, debugging, kugel_home, kube_home, ConfigPath, dprint
 
 
 def main() -> None:
@@ -42,7 +42,7 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
         fail("missing sql query")
 
     # Load init file.
-    init_file = kugel_home() / "init.yaml"
+    init_file = ConfigPath(kugel_home() / "init.yaml")
     init, errors = parse_file(UserInit, init_file)
     if errors:
         fail("\n".join(errors))
@@ -87,9 +87,10 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
         init.settings.reckless = True
     if args.timeout:
         init.settings.cache_timeout = Age(args.timeout)
+    dprint("init", f"Settings: {init.settings}")
 
     # Load config file
-    config_file = kugel_home() / f"{domain.name}.yaml"
+    config_file = ConfigPath(kugel_home() / f"{domain.name}.yaml")
     if config_file.exists():
         config, errors = parse_file(UserConfig, config_file)
         if errors:

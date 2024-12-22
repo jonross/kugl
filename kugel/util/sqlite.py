@@ -1,6 +1,8 @@
 import collections as co
 import sqlite3
 
+from kugel.util import dprint
+
 
 class SqliteDb:
 
@@ -17,6 +19,7 @@ class SqliteDb:
         :param named bool: If True, rows are namedtuples
         :param names list: If an array, append column names to it
         """
+        dprint("sqlite", f"Query: {sql}")
         if self.conn:
             return self._query(self.conn, sql, **kwargs)
         else:
@@ -48,6 +51,7 @@ class SqliteDb:
         :param sql str: SQL query
         :param data list: Optional update args
         """
+        dprint("sqlite", f"Execute: {sql}")
         if self.conn:
             self._execute(self.conn, sql, data or [])
         else:

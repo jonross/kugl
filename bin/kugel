@@ -2,6 +2,8 @@
 #
 # TODO: move beyond dev mode
 
+set -euo pipefail
+
 kugel_home=$(dirname "$0")/..
 . $kugel_home/venv//bin/activate
 PYTHONPATH=$kugel_home

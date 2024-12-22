@@ -7,7 +7,7 @@ from typing import Type
 
 from pydantic import BaseModel
 
-from kugel.util import fail
+from kugel.util import fail, dprint
 
 _DOMAINS = {}
 
@@ -49,6 +49,7 @@ class Domain(BaseModel):
 
 def add_domain(name: str, cls: Type):
     """Register a class to implement a data domain; this is called by the @domain decorator."""
+    dprint("registry", f"Add domain {name} {cls}")
     _DOMAINS[name] = Domain(name=name, impl=cls())
 
 
@@ -60,6 +61,7 @@ def get_domain(name: str) -> Domain:
 
 def add_table(cls, **kwargs):
     """Register a class to define a table; this is called by the @table decorator."""
+    dprint("registry", f"Add table {kwargs}")
     t = TableDef(cls=cls, **kwargs)
     if t.domain not in _DOMAINS:
         fail(f"Must create domain {t.domain} before table {t.domain}.{t.name}")
