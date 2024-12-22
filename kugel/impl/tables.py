@@ -1,151 +1,133 @@
-"""
-Built-in table definitions for Kubernetes.
-"""
-import json
-from argparse import ArgumentParser
+from typing import Optional
 
-from .config import Config
-from .helpers import Limits, ItemHelper, PodHelper, JobHelper
-from .registry import domain, table
-from kugel.util import fail, parse_utc, run, WHITESPACE
+import jmespath
 
-# Fake namespace if "--all-namespaces" option is used
-ALL_NAMESPACE = "__all"
+from .config import ColumnDef, ExtendTable, CreateTable
+
+# TODO: make abstract
+# TODO: completely sever from user configs
+from .registry import TableDef
+from ..util import fail, set_parent
 
 
-@domain("kubernetes")
-class KubernetesData:
+class Table:
+    """The engine-level representation of a table, independent of the config file format"""
 
-    def add_cli_options(self, ap: ArgumentParser):
-        ap.add_argument("-a", "--all-namespaces", default=False, action="store_true")
-        ap.add_argument("-n", "--namespace", type=str)
-
-    def handle_cli_options(self, args):
-        if args.cache and args.update:
-            fail("Cannot use both -c/--cache and -u/--update")
-        if args.all_namespaces and args.namespace:
-            fail("Cannot use both -a/--all-namespaces and -n/--namespace")
-        self.namespace = ALL_NAMESPACE if args.all_namespaces else args.namespace or "default"
-
-    def get_objects(self, kind: str, config: Config)-> dict:
-        """Fetch resources from Kubernetes using kubectl.
-
-        :param kind: Kubernetes resource type e.g. "pods"
-        :return: JSON as output by "kubectl get {kind} -o json"
+    def __init__(self, name: str, resource: str, schema: str, extras: list[ColumnDef]):
         """
-        namespace_flag = ["--all-namespaces"] if self.namespace == ALL_NAMESPACE else ["-n", self.namespace]
-        is_namespaced = config.resources[kind].namespaced
-        if not is_namespaced:
-            _, output, _ = run(["kubectl", "get", kind, "-o", "json"])
-            return json.loads(output)
-        elif kind == "pod_statuses":
-            _, output, _= run(["kubectl", "get", "pods", *namespace_flag])
-            return self._pod_status_from_pod_list(output)
+        :param name: the table name, e.g. "pods"
+        :param resource: the Kubernetes resource type, e.g. "pods"
+        :param schema: the SQL schema, e.g. "name TEXT, age INTEGER"
+        :param extras: extra column definitions from user configs (not from Python-defined tables)
+        """
+        self.name = name
+        self.resource = resource
+        self.schema = schema
+        self.extras = extras
+
+    def build(self, db, kube_data: dict):
+        """Create the table in SQLite and insert the data.
+
+        :param db: the SqliteDb instance
+        :param kube_data: the JSON data from 'kubectl get'
+        """
+        db.execute(f"CREATE TABLE {self.name} ({self.schema})")
+        item_rows = list(self.make_rows(kube_data))
+        if item_rows:
+            if self.extras:
+                extend_row = lambda item, row: row + tuple(column.extract(item) for column in self.extras)
+            else:
+                extend_row = lambda item, row: row
+            rows = [extend_row(item, row) for item, row in item_rows]
+            placeholders = ", ".join("?" * len(rows[0]))
+            db.execute(f"INSERT INTO {self.name} VALUES({placeholders})", rows)
+
+    @staticmethod
+    def column_schema(columns: list[ColumnDef]) -> str:
+        return ", ".join(f"{c.name} {c._sqltype}" for c in columns)
+
+
+class TableFromCode(Table):
+    """A table created from Python code, not from a user config file."""
+
+    def __init__(self, table_def: TableDef, extender: Optional[ExtendTable]):
+        """
+        :param table_def: a TableDef from the @table decorator
+        :param extender: an ExtendTable object from the extend: section of a user config file
+        """
+        impl = table_def.cls()
+        schema = impl.schema
+        if extender:
+            schema += ", " + Table.column_schema(extender.columns)
+            extras = extender.columns
         else:
-            _, output, _= run(["kubectl", "get", kind, *namespace_flag, "-o", "json"])
-            return json.loads(output)
-
-    def _pod_status_from_pod_list(self, output):
-        """Convert the tabular output of 'kubectl get pods' to JSON."""
-        rows = [WHITESPACE.split(line.strip()) for line in output.strip().split("\n")]
-        if len(rows) < 2:
-            return {}
-        header, rows = rows[0], rows[1:]
-        name_index = header.index("NAME")
-        status_index = header.index("STATUS")
-        if name_index is None or status_index is None:
-            raise ValueError("Can't find NAME and STATUS columns in 'kubectl get pods' output")
-        return {row[name_index]: row[status_index] for row in rows}
-
-
-@table(domain="kubernetes", name="nodes", resource="nodes")
-class NodesTable:
-
-    @property
-    def schema(self):
-        return """
-            name TEXT,
-            instance_type TEXT,
-            cpu_alloc REAL,
-            gpu_alloc REAL,
-            mem_alloc INTEGER,
-            cpu_cap REAL,
-            gpu_cap REAL,
-            mem_cap INTEGER
-        """
+            extras = []
+        super().__init__(table_def.name, table_def.resource, schema, extras)
+        self.impl = impl
 
     def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
-        for item in kube_data["items"]:
-            node = ItemHelper(item)
-            yield item, (
-                node.name,
-                node.label("node.kubernetes.io/instance-type") or node.label("beta.kubernetes.io/instance-type"),
-                *Limits.extract(node["status"]["allocatable"]).as_tuple(),
-                *Limits.extract(node["status"]["capacity"]).as_tuple(),
-            )
+        """Delegate to the user-defined table implementation."""
+        return self.impl.make_rows(kube_data)
 
 
-@table(domain="kubernetes", name="pods", resource="pods")
-class PodsTable:
+class TableFromConfig(Table):
+    """A table created from a create: section in a user config file, rather than in Python"""
 
-    @property
-    def schema(self):
-        return """
-            name TEXT,
-            is_daemon INTEGER,
-            namespace TEXT,
-            node_name TEXT,
-            creation_ts INTEGER,
-            command TEXT,
-            status TEXT,
-            cpu_req REAL,
-            gpu_req REAL,
-            mem_req INTEGER,
-            cpu_lim REAL,
-            gpu_lim REAL,
-            mem_lim INTEGER
+    def __init__(self, name: str, creator: CreateTable, extender: Optional[ExtendTable]):
         """
+        :param name: the table name, e.g. "pods"
+        :param creator: a CreateTable object from the create: section of a user config file
+        :param extender: an ExtendTable object from the extend: section of a user config file
+        """
+        if creator.row_source is None:
+            self.itemizer = lambda data: data["items"]
+        else:
+            self.itemizer = lambda data: self._itemize(creator.row_source, data)
+        schema = Table.column_schema(creator.columns)
+        extras = creator.columns
+        if extender:
+            schema += ", " + Table.column_schema(extender.columns)
+            extras += extender.columns
+        super().__init__(name, creator.resource, schema, extras)
+        self.row_source = creator.row_source
 
     def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
-        for item in kube_data["items"]:
-            pod = PodHelper(item)
-            yield item, (
-                pod.name,
-                1 if pod.is_daemon else 0,
-                pod.namespace,
-                pod["spec"].get("nodeName"),
-                parse_utc(pod.metadata["creationTimestamp"]),
-                pod.command,
-                pod["kubectl_status"],
-                *pod.resources("requests").as_tuple(),
-                *pod.resources("limits").as_tuple(),
-            )
-
-
-@table(domain="kubernetes", name="jobs", resource="jobs")
-class JobsTable:
-
-    @property
-    def schema(self):
-        return """
-            name TEXT,
-            namespace TEXT,
-            status TEXT,
-            cpu_req REAL,
-            gpu_req REAL,
-            mem_req INTEGER,
-            cpu_lim REAL,
-            gpu_lim REAL,
-            mem_lim INTEGER
         """
+        Itemize the data according to the configuration, but return empty rows; all the
+        columns will be added by Table.build.
+        """
+        if self.row_source is not None:
+            items = self._itemize(self.row_source, kube_data)
+        else:
+            # FIXME: this default only applies to Kubernetes
+            items = kube_data["items"]
+        return [(item, tuple()) for item in items]
 
-    def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
-        for item in kube_data["items"]:
-            job = JobHelper(item)
-            yield item, (
-                job.name,
-                job.namespace,
-                job.status,
-                *job.resources("requests").as_tuple(),
-                *job.resources("limits").as_tuple(),
-            )
+    def _itemize(self, row_source: list[str], kube_data:dict) -> list[dict]:
+        """
+        Given a row_source like
+          row_source:
+            - items
+            - spec.taints
+        Iterate through each level of the source spec, marking object parents, and generating
+        successive row values
+        """
+        items = [kube_data]
+        for source in row_source:
+            try:
+                finder = jmespath.compile(source)
+            except jmespath.exceptions.ParseError as e:
+                fail(f"invalid row_source {source} for {self.name} table", e)
+            new_items = []
+            for item in items:
+                found = finder.search(item)
+                if isinstance(found, list):
+                    for child in found:
+                        set_parent(child, item)
+                        new_items.append(child)
+                elif found is not None:
+                    set_parent(found, item)
+                    new_items.append(found)
+            items = new_items
+        return items
+

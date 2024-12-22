@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from kugel.impl.helpers import Limits
+from kugel.builtins.helpers import Limits
 from kugel.main import main1
 from kugel.util import Age, KugelError, kube_home, kugel_home
 

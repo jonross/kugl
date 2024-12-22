@@ -4,7 +4,7 @@ Tests for the pods table.
 
 import pytest
 
-from kugel.impl.helpers import PodHelper
+from kugel.builtins.helpers import PodHelper
 from kugel.util import UNIT_TEST_TIMEBASE
 
 from .testing import make_pod, kubectl_response, Container, CGM, assert_query, make_job

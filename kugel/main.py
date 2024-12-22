@@ -55,13 +55,17 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
             fail(f"No alias named '{argv[-1]}'")
         return main1(argv[:-1] + new_argv)
 
-    # Load config file
-    config_file = kugel_home() / "kubernetes.yaml"
-    config, errors = parse_file(UserConfig, config_file)
-    if errors:
-        fail("\n".join(errors))
+    # Need the query domains for command line parsing.
+    # FIXME: Move the namespace & cache flag out of the query
+    query = Query(sql=argv[-1])
+    domain_refs = {ref.domain for ref in query.table_refs}
+    if len(domain_refs) == 0:
+        domain = get_domain("empty")
+    elif len(domain_refs) == 1:
+        domain = get_domain(next(iter(domain_refs)))
+    else:
+        fail("Cross-domain query not implemented yet")
 
-    domain = get_domain("kubernetes")
     ap = ArgumentParser()
     domain.impl.add_cli_options(ap)
     ap.add_argument("-D", "--debug", type=str)
@@ -73,6 +77,9 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
     args = ap.parse_args(argv)
 
     domain.impl.handle_cli_options(args)
+    if args.cache and args.update:
+        fail("Cannot use both -c/--cache and -u/--update")
+
     cache_flag = ALWAYS_UPDATE if args.update else NEVER_UPDATE if args.cache else CHECK
     if args.debug:
         debug(args.debug.split(","))
@@ -80,6 +87,15 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
         init.settings.reckless = True
     if args.timeout:
         init.settings.cache_timeout = Age(args.timeout)
+
+    # Load config file
+    config_file = kugel_home() / f"{domain.name}.yaml"
+    if config_file.exists():
+        config, errors = parse_file(UserConfig, config_file)
+        if errors:
+            fail("\n".join(errors))
+    else:
+        config = UserConfig()
 
     # FIXME: this is silly, factor out a function to assist config edge case testing.
     if return_config:
@@ -94,9 +110,11 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
     if not current_context:
         fail("No current context, please run kubectl config use-context ...")
 
-    engine = Engine(config, current_context)
+    engine = Engine(domain, config, current_context)
     # FIXME bad reference to namespace
-    print(engine.query_and_format(Query(args.sql, domain.impl.namespace, cache_flag)))
+    # FIXME temporary awful hack, rewrite table names properly
+    sql = args.sql.replace("stdin.", "")
+    print(engine.query_and_format(Query(sql=sql, namespace=domain.impl.namespace, cache_flag=cache_flag)))
 
 
 if __name__ == "__main__":

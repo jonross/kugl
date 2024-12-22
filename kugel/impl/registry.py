@@ -42,16 +42,19 @@ class Domain(BaseModel):
     Capture a domain definition from the @domain decorator, example:
         @domain("kubernetes")
     """
+    name: str
     impl: object # FIXME use type vars
     tables: dict[str, TableDef] = {}
 
 
 def add_domain(name: str, cls: Type):
     """Register a class to implement a data domain; this is called by the @domain decorator."""
-    _DOMAINS[name] = Domain(impl=cls())
+    _DOMAINS[name] = Domain(name=name, impl=cls())
 
 
 def get_domain(name: str) -> Domain:
+    if name not in _DOMAINS:
+        fail(f"Data domain {name} is not defined")
     return _DOMAINS[name]
 
 

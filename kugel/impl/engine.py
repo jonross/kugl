@@ -3,7 +3,6 @@ Process Kugel queries.
 If you're looking for Kugel's "brain", you've found it.
 """
 
-from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
 import json
 from pathlib import Path
@@ -11,33 +10,76 @@ import re
 import sys
 from typing import Tuple, Set, Optional, Literal
 
-import jmespath
+from pydantic import BaseModel
 from tabulate import tabulate
 import yaml
 
-from .config import Config, UserConfig, ColumnDef, ExtendTable, CreateTable
-from .registry import get_domain, TableDef
-from kugel.util import fail, SqliteDb, to_size, Age, to_utc, kugel_home, set_parent, clock
-from kugel.util import fail, SqliteDb, to_size, Age, to_utc, kugel_home, set_parent
+from .config import Config, UserConfig
+from .registry import get_domain, Domain
+from .tables import TableFromCode, TableFromConfig
+from kugel.util import fail, SqliteDb, to_size, Age, to_utc, kugel_home, clock
 
 # Needed to locate the built-in table builders by class name.
-import kugel.impl.tables
+import kugel.builtins.empty
+import kugel.builtins.kubernetes
+import kugel.builtins.stdin
 
 # Cache behaviors
 # TODO consider an enum
+
 ALWAYS_UPDATE, CHECK, NEVER_UPDATE = 1, 2, 3
 CacheFlag = Literal[ALWAYS_UPDATE, CHECK, NEVER_UPDATE]
 
-Query = namedtuple("Query", ["sql", "namespace", "cache_flag"])
+
+class Query(BaseModel):
+    """A SQL query + query-related behaviors"""
+    sql: str
+    # TODO: move this elsewhere, it's K8S-specific
+    namespace: str = "default"
+    cache_flag: CacheFlag = ALWAYS_UPDATE
+
+    @property
+    def table_refs(self) -> Set["TableRef"]:
+        # Determine which tables are needed for the query by looking for symmbols that follow
+        # FROM and JOIN.  Some of these may be CTEs, so don't assume they're all availabie in
+        # Kubernetes, just pick out the ones we know about and let SQLite take care of
+        # "unknown table" errors.
+        sql = self.sql.replace("\n", " ")
+        refs = set(re.findall(r"(?<=from|join)\s+([.\w]+)", sql, re.IGNORECASE))
+        return {TableRef.parse(ref) for ref in refs}
+
+
+class TableRef(BaseModel):
+    """A reference to a table in a query."""
+    domain: str  # e.g. "kubernetes"
+    name: str  # e.g. "pods"
+
+    class Config:
+        frozen = True  # make hashable
+
+    @classmethod
+    def parse(cls, ref: str):
+        """Parse a table reference of the form "pods" or "kubernetes.pods".
+        SQLite doesn't actually support schemas, so the domain is just a hint.
+        We replace the dot with an underscore to make it a valid table name."""
+        parts = ref.split(".")
+        if len(parts) == 1:
+            return cls(domain="kubernetes", name=parts[0])
+        if len(parts) == 2:
+            if parts[0] == "k8s":
+                parts[0] = "kubernetes"
+            return cls(domain=parts[0], name=parts[1])
+        fail(f"Invalid table reference: {ref}")
 
 
 class Engine:
 
-    def __init__(self, config: Config, context_name: str):
+    def __init__(self, domain: Domain, config: Config, context_name: str):
         """
         :param config: the parsed user configuration file
         :param context_name: the Kubernetes context to use, e.g. "minikube", "research-cluster"
         """
+        self.domain = domain
         self.config = config
         self.context_name = context_name
         self.cache = DataCache(self.config, kugel_home() / "cache" / self.context_name)
@@ -56,24 +98,17 @@ class Engine:
         :return: a tuple of (rows, column names)
         """
 
-        builtins_yaml = Path(__file__).parent.parent / "builtins" / "kubernetes.yaml"
-        builtins = UserConfig(**yaml.safe_load(builtins_yaml.read_text()))
-        self.config.resources.update({r.name: r for r in builtins.resources})
-        self.config.create.update({c.table: c for c in builtins.create})
-
-        # Determine which tables are needed for the query by looking for symmbols that follow
-        # FROM and JOIN.  Some of these may be CTEs, so don't assume they're all availabie in
-        # Kubernetes, just pick out the ones we know about and let SQLite take care of
-        # "unknown table" errors.
-        kql = query.sql.replace("\n", " ")
-        tables_named = set(re.findall(r"(?<=from|join)\s+(\w+)", kql, re.IGNORECASE))
+        builtins_yaml = Path(__file__).parent.parent / "builtins" / f"{self.domain.name}.yaml"
+        if builtins_yaml.exists():
+            builtins = UserConfig(**yaml.safe_load(builtins_yaml.read_text()))
+            self.config.resources.update({r.name: r for r in builtins.resources})
+            self.config.create.update({c.table: c for c in builtins.create})
 
         # Reconcile tables created / extended in the config file with tables defined in code, and
         # generate the table builders.
-        domain = get_domain("kubernetes")
         tables = {}
-        for name in tables_named:
-            code_creator = domain.tables.get(name)
+        for name in {t.name for t in query.table_refs}:
+            code_creator = self.domain.tables.get(name)
             config_creator = self.config.create.get(name)
             extender = self.config.extend.get(name)
             if code_creator and config_creator:
@@ -103,7 +138,7 @@ class Engine:
         def fetch(kind):
             try:
                 if kind in refreshable:
-                    self.data[kind] = domain.impl.get_objects(kind, self.config)
+                    self.data[kind] = self.domain.impl.get_objects(kind, self.config)
                     self.cache.dump(query.namespace, kind, self.data[kind])
                 else:
                     self.data[kind] = self.cache.load(query.namespace, kind)
@@ -130,7 +165,7 @@ class Engine:
             table.build(self.db, self.data[table.resource])
 
         column_names = []
-        rows = self.db.query(kql, names=column_names)
+        rows = self.db.query(query.sql, names=column_names)
         # %g is susceptible to outputting scientific notation, which we don't want.
         # but %f always outputs trailing zeros, which we also don't want.
         # So turn every value x in each row into an int if x == float(int(x))
@@ -190,129 +225,6 @@ class DataCache:
         if not path.exists():
             return None
         return int(clock.CLOCK.now() - path.stat().st_mtime)
-
-
-# TODO: make abstract
-# TODO: completely sever from user configs
-class Table:
-    """The engine-level representation of a table, independent of the config file format"""
-
-    def __init__(self, name: str, resource: str, schema: str, extras: list[ColumnDef]):
-        """
-        :param name: the table name, e.g. "pods"
-        :param resource: the Kubernetes resource type, e.g. "pods"
-        :param schema: the SQL schema, e.g. "name TEXT, age INTEGER"
-        :param extras: extra column definitions from user configs (not from Python-defined tables)
-        """
-        self.name = name
-        self.resource = resource
-        self.schema = schema
-        self.extras = extras
-
-    def build(self, db, kube_data: dict):
-        """Create the table in SQLite and insert the data.
-
-        :param db: the SqliteDb instance
-        :param kube_data: the JSON data from 'kubectl get'
-        """
-        db.execute(f"CREATE TABLE {self.name} ({self.schema})")
-        item_rows = list(self.make_rows(kube_data))
-        if item_rows:
-            if self.extras:
-                extend_row = lambda item, row: row + tuple(column.extract(item) for column in self.extras)
-            else:
-                extend_row = lambda item, row: row
-            rows = [extend_row(item, row) for item, row in item_rows]
-            placeholders = ", ".join("?" * len(rows[0]))
-            db.execute(f"INSERT INTO {self.name} VALUES({placeholders})", rows)
-
-    @staticmethod
-    def column_schema(columns: list[ColumnDef]) -> str:
-        return ", ".join(f"{c.name} {c._sqltype}" for c in columns)
-
-
-class TableFromCode(Table):
-    """A table created from Python code, not from a user config file."""
-
-    def __init__(self, table_def: TableDef, extender: Optional[ExtendTable]):
-        """
-        :param table_def: a TableDef from the @table decorator
-        :param extender: an ExtendTable object from the extend: section of a user config file
-        """
-        impl = table_def.cls()
-        schema = impl.schema
-        if extender:
-            schema += ", " + Table.column_schema(extender.columns)
-            extras = extender.columns
-        else:
-            extras = []
-        super().__init__(table_def.name, table_def.resource, schema, extras)
-        self.impl = impl
-
-    def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
-        """Delegate to the user-defined table implementation."""
-        return self.impl.make_rows(kube_data)
-
-
-class TableFromConfig(Table):
-    """A table created from a create: section in a user config file, rather than in Python"""
-
-    def __init__(self, name: str, creator: CreateTable, extender: Optional[ExtendTable]):
-        """
-        :param name: the table name, e.g. "pods"
-        :param creator: a CreateTable object from the create: section of a user config file
-        :param extender: an ExtendTable object from the extend: section of a user config file
-        """
-        if creator.row_source is None:
-            self.itemizer = lambda data: data["items"]
-        else:
-            self.itemizer = lambda data: self._itemize(creator.row_source, data)
-        schema = Table.column_schema(creator.columns)
-        extras = creator.columns
-        if extender:
-            schema += ", " + Table.column_schema(extender.columns)
-            extras += extender.columns
-        super().__init__(name, creator.resource, schema, extras)
-        self.row_source = creator.row_source
-
-    def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
-        """
-        Itemize the data according to the configuration, but return empty rows; all the
-        columns will be added by Table.build.
-        """
-        if self.row_source is not None:
-            items = self._itemize(self.row_source, kube_data)
-        else:
-            items = kube_data["items"]
-        return [(item, tuple()) for item in items]
-
-    def _itemize(self, row_source: list[str], kube_data:dict) -> list[dict]:
-        """
-        Given a row_source like
-          row_source:
-            - items
-            - spec.taints
-        Iterate through each level of the source spec, marking object parents, and generating
-        successive row values
-        """
-        items = [kube_data]
-        for source in row_source:
-            try:
-                finder = jmespath.compile(source)
-            except jmespath.exceptions.ParseError as e:
-                fail(f"invalid row_source {source} for {self.name} table", e)
-            new_items = []
-            for item in items:
-                found = finder.search(item)
-                if isinstance(found, list):
-                    for child in found:
-                        set_parent(child, item)
-                        new_items.append(child)
-                elif found is not None:
-                    set_parent(found, item)
-                    new_items.append(found)
-            items = new_items
-        return items
 
 
 def add_custom_functions(db):
