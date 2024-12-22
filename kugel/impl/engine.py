@@ -45,7 +45,7 @@ class Query(BaseModel):
         # Kubernetes, just pick out the ones we know about and let SQLite take care of
         # "unknown table" errors.
         sql = self.sql.replace("\n", " ")
-        refs = set(re.findall(r"(?<=from|join)\s+(\w+)", sql, re.IGNORECASE))
+        refs = set(re.findall(r"(?<=from|join)\s+([.\w]+)", sql, re.IGNORECASE))
         return {TableRef.parse(ref) for ref in refs}
 
 

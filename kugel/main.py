@@ -89,10 +89,13 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
         init.settings.cache_timeout = Age(args.timeout)
 
     # Load config file
-    config_file = kugel_home() / "kubernetes.yaml"
-    config, errors = parse_file(UserConfig, config_file)
-    if errors:
-        fail("\n".join(errors))
+    config_file = kugel_home() / f"{domain.name}.yaml"
+    if config_file.exists():
+        config, errors = parse_file(UserConfig, config_file)
+        if errors:
+            fail("\n".join(errors))
+    else:
+        config = UserConfig()
 
     # FIXME: this is silly, factor out a function to assist config edge case testing.
     if return_config:
@@ -109,7 +112,9 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
 
     engine = Engine(domain, config, current_context)
     # FIXME bad reference to namespace
-    print(engine.query_and_format(Query(sql=args.sql, namespace=domain.impl.namespace, cache_flag=cache_flag)))
+    # FIXME temporary awful hack, rewrite table names properly
+    sql = args.sql.replace("stdin.", "")
+    print(engine.query_and_format(Query(sql=sql, namespace=domain.impl.namespace, cache_flag=cache_flag)))
 
 
 if __name__ == "__main__":

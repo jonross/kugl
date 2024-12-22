@@ -30,4 +30,4 @@ class Stdin:
             return {}
         if text[0] in "{[":
             return json.loads(text)
-        return yaml.safe_parse(text)
+        return yaml.safe_load(text)

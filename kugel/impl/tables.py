@@ -99,6 +99,7 @@ class TableFromConfig(Table):
         if self.row_source is not None:
             items = self._itemize(self.row_source, kube_data)
         else:
+            # FIXME: this default only applies to Kubernetes
             items = kube_data["items"]
         return [(item, tuple()) for item in items]
 
