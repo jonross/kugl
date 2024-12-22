@@ -8,6 +8,8 @@ import json
 import sys
 from argparse import ArgumentParser
 
+import yaml
+
 from kugel.api import domain, table, fail
 
 
@@ -21,4 +23,9 @@ class Stdin:
         pass
 
     def get_objects(self, *_):
-        return json.loads(sys.stdin.read())
+        text = sys.stdin.read()
+        if not text:
+            return {}
+        if text[0] in "{[":
+            return json.loads(text)
+        return yaml.safe_parse(text)
