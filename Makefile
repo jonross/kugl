@@ -1,5 +1,5 @@
 
-VERSION = 0.1.2
+VERSION = 0.2.0
 IMAGE = jonross/kugel:$(VERSION)
 
 venv:
@@ -23,9 +23,6 @@ pintest:
 sdist:
 	python3 setup.py sdist bdist_wheel
 
-clean:
-	rm -rf venv
-
 docker:
 	docker build -t $(IMAGE) .
 
@@ -34,3 +31,6 @@ push: docker
 
 shell: docker
 	docker run -it $(IMAGE) /bin/sh
+
+clean:
+	rm -rf build dist venv kugel.egg-info
