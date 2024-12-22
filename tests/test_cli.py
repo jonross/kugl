@@ -25,14 +25,14 @@ def test_no_such_table(test_home):
         main1(["select * from foo"])
 
 
-def test_unknown_alias(test_home):
-    with pytest.raises(KugelError, match="No alias named 'foo'"):
+def test_unknown_shortcut(test_home):
+    with pytest.raises(KugelError, match="No shortcut named 'foo'"):
         main1(["foo"])
 
 
-def test_alias_with_invalid_option(test_home, capsys):
+def test_shortcut_with_invalid_option(test_home, capsys):
     test_home.joinpath("init.yaml").write_text("""
-        alias:
+        shortcuts:
           foo:
           - --badoption
           - "select * from pods"
@@ -48,9 +48,9 @@ def test_unknown_option(test_home, capsys):
     assert "unrecognized arguments: --badoption" in capsys.readouterr().err
 
 
-def test_enforce_one_cache_option_via_alias(test_home, capsys):
+def test_enforce_one_cache_option_via_shortcut(test_home, capsys):
     test_home.joinpath("init.yaml").write_text("""
-        alias:
+        shortcuts:
           foo:
           - -u
           - "select 1"
@@ -59,9 +59,9 @@ def test_enforce_one_cache_option_via_alias(test_home, capsys):
         main1(["-c", "foo"])
 
 
-def test_simple_alias(test_home, capsys):
+def test_simple_shortcut(test_home, capsys):
     test_home.joinpath("init.yaml").write_text("""
-        alias:
+        shortcuts:
           foo: ["select 1, 2"]
     """)
     main1(["foo"])

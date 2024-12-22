@@ -75,7 +75,7 @@ kugel "with t as (select name, group_concat(key) as taints from taints
        group by 1, 3 order by 1, 2 desc"
 ```
 
-If this query is helpful, [save it](./docs-tmp/aliases.md), then you can run `kugel nodes`.
+If this query is helpful, [save it](./docs-tmp/shortcuts.md), then you can run `kugel nodes`.
 
 ## How it works (important)
 

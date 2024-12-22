@@ -1,13 +1,13 @@
 
 ## Saving queries
 
-The `alias` section in `~/.kugel/init.yaml` is a map from query names to lists of command-line arguments.
+The `shortcuts` section in `~/.kugel/init.yaml` is a map from query names to lists of command-line arguments.
 
 Example, to save the node query shown in the [README](../README.md), 
 add this to `~/.kugel/init.yaml` and run `kugel nodes`.
 
 ```yaml
-alias:
+shortcuts:
   
   # Count nodes by instance type and distinct taint set
   nodes:
