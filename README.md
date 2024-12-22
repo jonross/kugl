@@ -75,7 +75,7 @@ kugel "with t as (select name, group_concat(key) as taints from taints
        group by 1, 3 order by 1, 2 desc"
 ```
 
-If this query is helpful, [save it](./docs/aliases.md), then you can run `kugel nodes`.
+If this query is helpful, [save it](./docs-tmp/aliases.md), then you can run `kugel nodes`.
 
 ## How it works (important)
 
@@ -98,13 +98,13 @@ In any case, please be mindful of stale data and server load.
 
 ## Learn more
 
-* [Command-line syntax](./docs/syntax.md)
-* [Settings](./docs/settings.md)
-* [Built-in tables and functions](./docs/builtins.md)
-* [Configuring new columns and tables](./docs/extending.md)
+* [Command-line syntax](./docs-tmp/syntax.md)
+* [Settings](./docs-tmp/settings.md)
+* [Built-in tables and functions](./docs-tmp/builtins.md)
+* [Configuring new columns and tables](./docs-tmp/extending.md)
 * Adding columns and tables from Python (coming soon)
 * Adding views (coming soon)
-* [Troubleshooting and feedback](./docs/trouble.md)
+* [Troubleshooting and feedback](./docs-tmp/trouble.md)
 * [License](./LICENSE)
 
 ## Rationale
