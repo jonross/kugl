@@ -10,12 +10,12 @@ setup(
     packages=find_packages(),  # Automatically finds `your_package_name/`
     include_package_data=True,
     install_requires=[
-        "arrow==1.2.0",
-        "funcy==1.17",
-        "jmespath==1.0.1",
-        "pydantic==2.6.1",
-        "pyyaml==6.0.1",
-        "tabulate==0.9.0",
+        "arrow>=1.1.1,<=1.3.0",
+        "funcy>=1.15,<=1.18",
+        "jmespath>=1.0.0,<=1.0.1",
+        "pydantic>=2.0.2,<=2.9.2",
+        "pyyaml>=5.3,<=6.0.2",
+        "tabulate>=0.8.8,<=0.9.0",
     ],
     entry_points={
         "console_scripts": [

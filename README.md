@@ -59,7 +59,7 @@ To install from source, do
 ```shell
 git clone https://github.com/jonross/kugel.git
 cd kugel
-make reqs
+make deps
 PATH=${PATH}:$(pwd)/bin
 ```
 

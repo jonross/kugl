@@ -5,7 +5,7 @@ IMAGE = jonross/kugel:$(VERSION)
 venv:
 	python3 -m venv venv
 
-reqs: venv
+deps: venv
 	(cd venv && . bin/activate && pip install -r ../requirements.txt)
 
 test:
