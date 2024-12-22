@@ -7,7 +7,7 @@ from .config import ColumnDef, ExtendTable, CreateTable
 # TODO: make abstract
 # TODO: completely sever from user configs
 from .registry import TableDef
-from ..util import fail, set_parent
+from ..util import fail, set_parent, dprint, debugging
 
 
 class Table:
@@ -62,6 +62,7 @@ class TableFromCode(Table):
             extras = extender.columns
         else:
             extras = []
+        dprint("schema", f"Table {table_def.name} schema: {schema}")
         super().__init__(table_def.name, table_def.resource, schema, extras)
         self.impl = impl
 
@@ -113,12 +114,15 @@ class TableFromConfig(Table):
         successive row values
         """
         items = [kube_data]
+        debug = debugging("itemize")
         for source in row_source:
             try:
                 finder = jmespath.compile(source)
             except jmespath.exceptions.ParseError as e:
                 fail(f"invalid row_source {source} for {self.name} table", e)
             new_items = []
+            if debug:
+                print(f"Itemizing {self.name} at {source} got {len(items)} hits")
             for item in items:
                 found = finder.search(item)
                 if isinstance(found, list):

@@ -17,7 +17,7 @@ import yaml
 from .config import Config, UserConfig
 from .registry import get_domain, Domain
 from .tables import TableFromCode, TableFromConfig
-from kugel.util import fail, SqliteDb, to_size, Age, to_utc, kugel_home, clock
+from kugel.util import fail, SqliteDb, to_size, Age, to_utc, kugel_home, clock, ConfigPath, debugging
 
 # Needed to locate the built-in table builders by class name.
 import kugel.builtins.empty
@@ -96,9 +96,9 @@ class Engine:
         :return: a tuple of (rows, column names)
         """
 
-        builtins_yaml = Path(__file__).parent.parent / "builtins" / f"{self.domain.name}.yaml"
+        builtins_yaml = ConfigPath(__file__).parent.parent / "builtins" / f"{self.domain.name}.yaml"
         if builtins_yaml.exists():
-            builtins = UserConfig(**yaml.safe_load(builtins_yaml.read_text()))
+            builtins = UserConfig(**builtins_yaml.parse_yaml())
             self.config.resources.update({r.name: r for r in builtins.resources})
             self.config.create.update({c.table: c for c in builtins.create})
 
@@ -205,6 +205,11 @@ class DataCache:
         missing = {kind for kind, age in cache_ages.items() if age is None}
         # Always refresh what's missing, and possibly also what's expired
         # Stale data warning for everything else
+        if debugging("cache"):
+            print("Requested", kinds)
+            print("Expired", expired)
+            print("Missing", expired)
+            print("Refreshable", expired)
         refreshable = missing if flag == NEVER_UPDATE else expired | missing
         max_age = max((cache_ages[kind] for kind in (kinds - refreshable)), default=None)
         return refreshable, max_age

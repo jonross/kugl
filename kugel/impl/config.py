@@ -10,7 +10,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
-from kugel.util import Age, parse_utc, parse_size, KPath
+from kugel.util import Age, parse_utc, parse_size, KPath, ConfigPath
 
 PARENTED_PATH = re.compile(r"^(\^*)(.*)")
 
@@ -148,9 +148,8 @@ def parse_model(model_class, root: dict) -> Tuple[object, list[str]]:
         error_location = lambda err: '.'.join(str(x) for x in err['loc'])
         return None, [f"{error_location(err)}: {err['msg']}" for err in e.errors()]
 
-
 # FIXME use typevars
-def parse_file(model_class, path: KPath) -> Tuple[object, list[str]]:
+def parse_file(model_class, path: ConfigPath) -> Tuple[object, list[str]]:
     """Parse a configuration file into a model instance, handling edge cases.
 
     :return: Same as parse_model."""
@@ -158,5 +157,5 @@ def parse_file(model_class, path: KPath) -> Tuple[object, list[str]]:
         return model_class(), None
     if path.is_world_writeable():
         return None, [f"{path} is world writeable, refusing to run"]
-    return parse_model(model_class, yaml.safe_load(path.read_text()) or {})
+    return parse_model(model_class, path.parse_yaml() or {})
 

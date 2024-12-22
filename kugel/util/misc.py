@@ -1,6 +1,7 @@
 """
 Assorted utility functions / classes with no obvious home.
 """
+import json
 import os
 import re
 import subprocess as sp
@@ -9,6 +10,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 import arrow
+import yaml
 
 WHITESPACE = re.compile(r"\s+")
 DEBUG_FLAGS = {}
@@ -21,6 +23,7 @@ def run(args: Union[str, list[str]], error_ok=False):
     """
     if isinstance(args, str):
         args = ["bash", "-c", args]
+    dprint("fetch", f"Running {' '.join(args)}")
     p = sp.run(args, stdout=sp.PIPE, stderr=sp.PIPE, encoding="utf-8")
     if p.returncode != 0 and not error_ok:
         print(f"Failed to run [{' '.join(args)}]:", file=sys.stderr)
@@ -82,6 +85,24 @@ class KPath(type(Path())):
 
     def is_world_writeable(self) -> bool:
         return self.stat().st_mode & 0o2 == 0o2
+
+    def parse_json(self):
+        return json.loads(self.read_text())
+
+    def parse_yaml(self):
+        return yaml.safe_load(self.read_text())
+
+
+class ConfigPath(KPath):
+    """Same as a KPath but adds debug statements"""
+
+    def parse_json(self):
+        dprint("config", f"Loading {self}")
+        return super().parse_json()
+
+    def parse_yaml(self):
+        dprint("config", f"Loading {self}")
+        return super().parse_yaml()
 
 
 def kugel_home() -> KPath:
