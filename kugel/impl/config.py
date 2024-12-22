@@ -26,7 +26,7 @@ class UserInit(BaseModel):
     """The root model for init.yaml; holds the entire file content."""
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     settings: Optional[Settings] = Settings()
-    alias: dict[str, list[str]] = {}
+    shortcuts: dict[str, list[str]] = {}
 
 
 class ColumnDef(BaseModel):
@@ -121,7 +121,7 @@ class Config(BaseModel):
     resources: dict[str, ResourceDef]
     extend: dict[str, ExtendTable]
     create: dict[str, CreateTable]
-    alias: dict[str, list[str]]
+    shortcuts: dict[str, list[str]]
 
     @classmethod
     def collate(cls, user_init: UserInit, user_config: UserConfig) -> 'Config':
@@ -131,7 +131,7 @@ class Config(BaseModel):
             resources={r.name: r for r in user_config.resources},
             extend={e.table: e for e in user_config.extend},
             create={c.table: c for c in user_config.create},
-            alias=user_init.alias,
+            shortcuts=user_init.shortcuts,
         )
 
 

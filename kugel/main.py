@@ -47,12 +47,12 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
     if errors:
         fail("\n".join(errors))
 
-    # Check for aliases now, because they can include command line options.  But the
+    # Check for shortcuts now, because they can include command line options.  But the
     # command line as given also applies.  So we have to treat the last arg as SQL or
-    # alias name, even before we see the options.
+    # shortcut name, even before we see the options.
     if " " not in argv[-1]:
-        if not (new_argv := init.alias.get(argv[-1])):
-            fail(f"No alias named '{argv[-1]}'")
+        if not (new_argv := init.shortcuts.get(argv[-1])):
+            fail(f"No shortcut named '{argv[-1]}'")
         return main1(argv[:-1] + new_argv)
 
     # Need the query domains for command line parsing.
