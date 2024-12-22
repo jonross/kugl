@@ -18,23 +18,25 @@ kugel -a "select owner, sum(gpu_req), sum(cpu_req)
 Without Kugel
 
 ```shell
-nodes=$(kubectl get nodes -o json | jq -r '.items[] 
-        | select(.metadata.labels["beta.kubernetes.io/instance-type"] == "a40") | .metadata.name')
+nodes=$(kubectl get nodes -o json | jq '[.items[] 
+        | select(.metadata.labels["beta.kubernetes.io/instance-type"] == "a40") | .metadata.name]')
 kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
-  .items[]
+  [ .items[]
   | select(.spec.nodeName as $node | $nodes | index($node))
-  | select(.status.phase == "Running" ||
-           (.metadata.deletionTimestamp != null && .status.phase != "Succeeded" && .status.phase != "Failed"))
+  | select(.status.phase == "Running" or 
+           (.metadata.deletionTimestamp != null and .status.phase != "Succeeded" and .status.phase != "Failed"))
   | . as $pod | $pod.spec.containers[]
   | select(.resources.requests["nvidia.com/gpu"] != null)
   | {owner: $pod.metadata.labels["com.mycompany/job-owner"], 
      gpu: .resources.requests["nvidia.com/gpu"], 
      cpu: .resources.requests["cpu"]}
-  | group_by(.owner) 
+  ] | group_by(.owner) 
   | map({owner: .[0].owner, 
          gpu: map(.gpu | tonumber) | add, 
          cpu: map(.cpu | if test("m$") then (sub("m$"; "") | tonumber / 1000) else tonumber end) | add})
-  | .[] | sort_by(-.gpu) | .[:10]'
+  | sort_by(-.gpu) | .[:10]
+  | "\(.gpu) \(.cpu) \(.owner)"'
+
 ```
 
 ## Installing
@@ -109,7 +111,7 @@ In any case, please be mindful of stale data and server load.
 
 ## Rationale
 
-`jq` is awesome, but... can you select and join without looking at the manual? Do you know by rote the hierarchical
+`jq` is awesome, but... can you join and group without looking at the manual? Do you know by rote the hierarchical
 data layout of all your Kubernetes resources?  Can you easily do math on numeric resource fields that are presented 
 non-numerically, like "500Mi" of memory or "200m" CPUs or "2024-11-01T12:34:56Z"?  Can you intuit the correct
 status of a pod from its JSON, equivalent to the STATUS column from `kubectl get pods`?
