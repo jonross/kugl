@@ -20,6 +20,7 @@ from .tables import TableFromCode, TableFromConfig
 from kugel.util import fail, SqliteDb, to_size, Age, to_utc, kugel_home, clock
 
 # Needed to locate the built-in table builders by class name.
+import kugel.builtins.empty
 import kugel.builtins.kubernetes
 import kugel.builtins.stdin
 
@@ -31,18 +32,44 @@ CacheFlag = Literal[ALWAYS_UPDATE, CHECK, NEVER_UPDATE]
 
 
 class Query(BaseModel):
+    """A SQL query + query-related behaviors"""
     sql: str
+    # TODO: move this elsewhere, it's K8S-specific
     namespace: str = "default"
     cache_flag: CacheFlag = ALWAYS_UPDATE
 
     @property
-    def tables_named(self):
+    def table_refs(self) -> Set["TableRef"]:
         # Determine which tables are needed for the query by looking for symmbols that follow
         # FROM and JOIN.  Some of these may be CTEs, so don't assume they're all availabie in
         # Kubernetes, just pick out the ones we know about and let SQLite take care of
         # "unknown table" errors.
         sql = self.sql.replace("\n", " ")
-        return set(re.findall(r"(?<=from|join)\s+(\w+)", sql, re.IGNORECASE))
+        refs = set(re.findall(r"(?<=from|join)\s+(\w+)", sql, re.IGNORECASE))
+        return {TableRef.parse(ref) for ref in refs}
+
+
+class TableRef(BaseModel):
+    """A reference to a table in a query."""
+    domain: str  # e.g. "kubernetes"
+    name: str  # e.g. "pods"
+
+    class Config:
+        frozen = True  # make hashable
+
+    @classmethod
+    def parse(cls, ref: str):
+        """Parse a table reference of the form "pods" or "kubernetes.pods".
+        SQLite doesn't actually support schemas, so the domain is just a hint.
+        We replace the dot with an underscore to make it a valid table name."""
+        parts = ref.split(".")
+        if len(parts) == 1:
+            return cls(domain="kubernetes", name=parts[0])
+        if len(parts) == 2:
+            if parts[0] == "k8s":
+                parts[0] = "kubernetes"
+            return cls(domain=parts[0], name=parts[1])
+        fail(f"Invalid table reference: {ref}")
 
 
 class Engine:
@@ -70,24 +97,25 @@ class Engine:
         :return: a tuple of (rows, column names)
         """
 
-        # HACK ALERT
-        # FIXME: do this correctly with domain defaulting
-        tables_named = query.tables_named
-        if any(t.startswith("stdin.") for t in tables_named):
-            tables_named = {t.replace("stdin.", "") for t in tables_named}
-            domain = get_domain("stdin")
+        table_refs = query.table_refs
+        domain_refs = {ref.domain for ref in table_refs}
+        if len(domain_refs) == 0:
+            domain = get_domain("empty")
+        elif len(domain_refs) == 1:
+            domain = get_domain(next(iter(domain_refs)))
         else:
-            domain = get_domain("kubernetes")
+            fail("Cross-domain query not implemented yet")
 
         builtins_yaml = Path(__file__).parent.parent / "builtins" / f"{domain.name}.yaml"
-        builtins = UserConfig(**yaml.safe_load(builtins_yaml.read_text()))
-        self.config.resources.update({r.name: r for r in builtins.resources})
-        self.config.create.update({c.table: c for c in builtins.create})
+        if builtins_yaml.exists():
+            builtins = UserConfig(**yaml.safe_load(builtins_yaml.read_text()))
+            self.config.resources.update({r.name: r for r in builtins.resources})
+            self.config.create.update({c.table: c for c in builtins.create})
 
         # Reconcile tables created / extended in the config file with tables defined in code, and
         # generate the table builders.
         tables = {}
-        for name in tables_named:
+        for name in {t.name for t in table_refs}:
             code_creator = domain.tables.get(name)
             config_creator = self.config.create.get(name)
             extender = self.config.extend.get(name)

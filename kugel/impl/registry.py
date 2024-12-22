@@ -53,6 +53,8 @@ def add_domain(name: str, cls: Type):
 
 
 def get_domain(name: str) -> Domain:
+    if name not in _DOMAINS:
+        fail(f"Data domain {name} is not defined")
     return _DOMAINS[name]
 
 
