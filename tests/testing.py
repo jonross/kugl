@@ -72,7 +72,7 @@ def make_node(name: str, taints: Optional[List[Taint]] = None):
     node = yaml.safe_load(_resource("sample_node.yaml"))
     node["metadata"]["name"] = name
     if taints:
-        node["spec"]["taints"] = [taint.dict(exclude_none=True) for taint in taints]
+        node["spec"]["taints"] = [taint.model_dump(exclude_none=True) for taint in taints]
     return node
 
 
@@ -109,7 +109,7 @@ def make_pod(name: str,
         obj["spec"]["nodeName"] = node_name
     if creation_ts and not no_metadata:
         obj["metadata"]["creationTimestamp"] = to_utc(creation_ts)
-    obj["spec"]["containers"] = [c.dict(by_alias=True, exclude_none=True) for c in containers]
+    obj["spec"]["containers"] = [c.model_dump(by_alias=True, exclude_none=True) for c in containers]
     return obj
 
 

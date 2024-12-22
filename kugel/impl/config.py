@@ -12,7 +12,7 @@ from pydantic.functional_validators import model_validator
 
 from kugel.util import Age, parse_utc, parse_size, KPath
 
-PARENTED_PATH = re.compile("^(\^*)(.*)")
+PARENTED_PATH = re.compile(r"^(\^*)(.*)")
 
 
 class Settings(BaseModel):
@@ -143,7 +143,7 @@ def parse_model(model_class, root: dict) -> Tuple[object, list[str]]:
         On failure, the parsed object is None.
     """
     try:
-        return model_class.parse_obj(root), None
+        return model_class.model_validate(root), None
     except ValidationError as e:
         error_location = lambda err: '.'.join(str(x) for x in err['loc'])
         return None, [f"{error_location(err)}: {err['msg']}" for err in e.errors()]

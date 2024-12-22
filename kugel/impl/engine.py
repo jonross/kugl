@@ -10,7 +10,7 @@ import re
 import sys
 from typing import Tuple, Set, Optional, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from tabulate import tabulate
 import yaml
 
@@ -51,11 +51,9 @@ class Query(BaseModel):
 
 class TableRef(BaseModel):
     """A reference to a table in a query."""
+    model_config = ConfigDict(frozen=True)
     domain: str  # e.g. "kubernetes"
     name: str  # e.g. "pods"
-
-    class Config:
-        frozen = True  # make hashable
 
     @classmethod
     def parse(cls, ref: str):
