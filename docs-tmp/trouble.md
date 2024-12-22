@@ -33,7 +33,3 @@ Matching `row_source` and `path` to your data layout can be tricky.
 * Make sure JMESPath expressions for columns select single objects
 * Don't try to debug `kubectl` and `kugel` at the same time; use the `stdin` resource and a static
 JSON file for testing.
-
-### Kugel is kinda slow, do you plan to rewrite it in Go or Rust?
-
-Not right now, see note above about "family and day job."  🙂
