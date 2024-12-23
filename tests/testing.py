@@ -142,14 +142,15 @@ def make_job(name: str,
     return obj
 
 
-def assert_query(sql: str, expected: Union[str, list]):
+def assert_query(sql: str, expected: Union[str, list], user_config: UserConfig = None):
     """
     Run a query in the "nocontext" namespace and compare the result with expected output.
     :param sql: SQL query
     :param expected: Output as it would be shown at the CLI.  This will be dedented so the
         caller can indent for neatness.  Or, if a list, each item will be checked in order.
     """
-    engine = Engine(get_domain("kubernetes"), Config.collate(UserInit(), UserConfig()), "nocontext")
+    config = Config.collate(UserInit(), user_config or UserConfig())
+    engine = Engine(get_domain("kubernetes"), config, "nocontext")
     if isinstance(expected, str):
         actual = engine.query_and_format(Query(sql=sql))
         assert actual.strip() == textwrap.dedent(expected).strip()

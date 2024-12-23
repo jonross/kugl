@@ -12,12 +12,11 @@ from typing import Tuple, Set, Optional, Literal
 
 from pydantic import BaseModel, ConfigDict
 from tabulate import tabulate
-import yaml
 
 from .config import Config, UserConfig
 from .registry import get_domain, Domain
 from .tables import TableFromCode, TableFromConfig
-from kugel.util import fail, SqliteDb, to_size, Age, to_utc, kugel_home, clock, ConfigPath, debugging
+from kugel.util import fail, SqliteDb, to_size, to_utc, kugel_home, clock, ConfigPath, debugging, to_age
 
 # Needed to locate the built-in table builders by class name.
 import kugel.builtins.empty
@@ -231,9 +230,10 @@ class DataCache:
 
 
 def add_custom_functions(db):
-    db.create_function("to_size", 1, to_size)
+    db.create_function("to_size", 1, lambda x: to_size(x, iec=True))
+    # This must be a lambda because the clock is patched in unit tests
     db.create_function("now", 0, lambda: clock.CLOCK.now())
-    db.create_function("to_age", 1, lambda x: Age(x - clock.CLOCK.now()).render())
-    db.create_function("to_utc", 1, lambda x: to_utc(x))
+    db.create_function("to_age", 1, to_age)
+    db.create_function("to_utc", 1, to_utc)
 
 

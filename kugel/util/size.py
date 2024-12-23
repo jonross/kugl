@@ -37,9 +37,9 @@ def to_size(nbytes: int, iec=False):
     decimal point.  If iec is True, use IEC binary units (KiB, MiB, etc).
     """
     one_k = 1024 if iec else 1000
-    bytes = "iB" if iec else "B"
+    bytes = "i" if iec else ""
     if nbytes < one_k:
-        return f"{nbytes}B"
+        return f"{nbytes}"
     elif nbytes < one_k ** 2:
         size, suffix = nbytes / one_k, "K" + bytes
     elif nbytes < one_k ** 3:

@@ -56,7 +56,7 @@ kugel() {
 }
 ```
 
-To install from source, do
+If neither of those works for you, it's easy to set up from source:
 
 ```shell
 git clone https://github.com/jonross/kugel.git
@@ -112,8 +112,8 @@ In any case, please be mindful of stale data and server load.
 ## Rationale
 
 `jq` is awesome, but... can you join and group without looking at the manual? Can you do math on non-numeric
-data like "500Mi" of memory or "200m" CPUs or "2024-11-01T12:34:56Z"?  Can you derive the same STATUS for
-a pod as `kubectl get pods`?
+data like "500Mi" of memory or "200m" CPUs or "2024-11-01T12:34:56Z"?  Can you determine the STATUS of a pod
+the way `kubectl get pods` does?
 
 Probably not.  Kugel can help.
 
@@ -122,11 +122,7 @@ Prior art (as of November 2024)
 * [ksql](https://github.com/brendandburns/ksql) is built on Node.js and AlaSQL.  It appears unmaintained (last commit November 2016.)
 * [kubeql](https://github.com/saracen/kubeql) is a SQL-like query language for Kubernetes. It appears unmaintained (last commit October 2017.)
 * [kube-query](https://github.com/aquasecurity/kube-query) is an [osquery](https://osquery.io/) extension. It appears unmaintained (last commit July 2020) and requires recompilation to add columns or tables.
-* [cyphernetes](https://github.com/AvitalTamir/cyphernetes) is in active development.  It uses Cypher, a graph query language.
+* [cyphernetes](https://github.com/AvitalTamir/cyphernetes) is in active development and looks viable, but it uses Cypher (a graph query language) and I'd like SQL.
 
 Kugel hopes to be minimalist and immediately familiar.
-SQLite and `kubectl` are ubiquitous, let's build on those.
-
-This might be applicable to any small JSON data set, but let's not get ahead of ourselves.
-At least, not on `main`.  ;-)
-
+SQLite ships with Python, and if you're reading this you have `kubectl`, so let's build on those.

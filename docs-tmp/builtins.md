@@ -3,7 +3,10 @@
 
 A note about data types
 
-* Timestamps are stored as integers, representing seconds since the Unix epoch.  See below for conversion functions.
+* Timestamps are stored as integers, representing seconds since the Unix epoch.  Timestamps and deltas can be converted
+back to strings like `2021-01-01 12:34:56Z` or `5d`, `4h30m` using the `to_utc` and `to_age` functions, below.
+* Memory is stored as bytes, and can be coverted back to a string like `1Gi` or `3.4Mi` using the `to_size` function, below
+* CPU and GPU limits are stored as floats
 
 ### pods
 

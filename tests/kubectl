@@ -15,8 +15,8 @@ elif re.match("get pods (-n default|--all-namespaces)", args):
     kind = "pod_statuses"
 elif re.match("get jobs (-n default|--all-namespaces) -o json", args):
     kind = "jobs"
-elif re.match("get nodes -o json", args):
-    kind = "nodes"
+elif m := re.match("get (nodes|things) -o json", args):
+    kind = m.group(1)
 else:
     sys.exit(f"Unhandled command line: {args}")
 
