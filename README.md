@@ -111,10 +111,9 @@ In any case, please be mindful of stale data and server load.
 
 ## Rationale
 
-`jq` is awesome, but... can you join and group without looking at the manual? Do you know by rote the hierarchical
-data layout of all your Kubernetes resources?  Can you easily do math on numeric resource fields that are presented 
-non-numerically, like "500Mi" of memory or "200m" CPUs or "2024-11-01T12:34:56Z"?  Can you intuit the correct
-status of a pod from its JSON, equivalent to the STATUS column from `kubectl get pods`?
+`jq` is awesome, but... can you join and group without looking at the manual? Can you do math on non-numeric
+data like "500Mi" of memory or "200m" CPUs or "2024-11-01T12:34:56Z"?  Can you derive the same STATUS for
+a pod as `kubectl get pods`?
 
 Probably not.  Kugel can help.
 

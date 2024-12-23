@@ -10,17 +10,17 @@ A note about data types
 Built from `kubectl get pods`, one row per pod.  Two calls are made to `get pods`, one to get textual outut
 of the STATUS column, since this is difficult to determine from the pod detail.
 
-| Column                          | Type    | Description                                                                                                                                                     |
-|---------------------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| name                            | TEXT    | Pod name, from `metadata.name`                                                                                                                                  |
-| namespace                       | TEXT    | Pod namespace, from `metadata.namespace`                                                                                                                        |
-| node_name                       | TEXT    | Node name, from `spec.nodeName`                                                                                                                                 |
-| status                          | TEXT    | Pod status as reported by `kubectl get pods` (as text, not JSON)                                                                                                |
-| creation_ts                     | INTEGER | Pod creation timestamp, from `metadata.creationTimestamp`                                                                                                       |
-| is_daemon                    | INTEGER | 1 if the pod is in a DaemonSet, 0 otherwise                                                                                                                     |
-| command                         | TEXT    | The concatenated command args from what appears to be the main container (look for containers named `main`, `app`, or `notebook`) else from the first container |
-| cpu_req, gpu_req, mem_req       | REAL | Sum of CPU, GPU and memory values from `resources.requests` in each container; GPU looks for the value tagged `nvidia.com/gpu`                                  |
-| cpu_lim, gpu_lim, mem_lim       | REAL | Sum of CPU, GPU and memory values from `resources.limits` in each container; GPU looks for the value tagged `nvidia.com/gpu`                                      |
+| Column                          | Type    | Description                                                                                                                                                                                      |
+|---------------------------------|---------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| name                            | TEXT    | Pod name, from `metadata.name`                                                                                                                                                                   |
+| namespace                       | TEXT    | Pod namespace, from `metadata.namespace`                                                                                                                                                         |
+| node_name                       | TEXT    | Node name, from `spec.nodeName`                                                                                                                                                                  |
+| status                          | TEXT    | Pod status as reported by `kubectl get pods`                                                                                                                                                     |
+| creation_ts                     | INTEGER | Pod creation timestamp, from `metadata.creationTimestamp`                                                                                                                                        |
+| is_daemon                    | INTEGER | 1 if the pod is in a DaemonSet, 0 otherwise                                                                                                                                                      |
+| command                         | TEXT    | The concatenated command args from what appears to be the main container (look for containers named `main`, `app`, or `notebook`) else from the first container                                  |
+| cpu_req, gpu_req, mem_req       | REAL | Sum of CPU, GPU and memory values from `resources.requests` in each `spec.containers`; GPU looks for the value tagged `nvidia.com/gpu`                                                           |
+| cpu_lim, gpu_lim, mem_lim       | REAL | Sum of CPU, GPU and memory values from `resources.limits` in each `spec.containers`; GPU looks for the value tagged `nvidia.com/gpu` (this isn't necessarily helpful, since limits can be absent) |
 
 ### jobs
 
@@ -31,6 +31,8 @@ Built from `kubectl get jobs`, one row per job
 | name                            | TEXT    | Job name, from `metadata.name`                                                                                                                                                                            |
 | namespace                       | TEXT    | Job namespace, from `metadata.namespace`                                                                                                                                                                  |
 | status                          | TEXT    | Job status as described by [V1JobStatus](https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1JobStatus.md) -- this is one of `Running`, `Complete`, `Suspended`, Failed`, `Unknown` |
+| cpu_req, gpu_req, mem_req       | REAL | Sum of CPU, GPU and memory values from `resources.requests` in each `spec.template.spec.containers`; GPU looks for the value tagged `nvidia.com/gpu`                                                      |
+| cpu_lim, gpu_lim, mem_lim       | REAL | Sum of CPU, GPU and memory values from `resources.limits` in each `spec.template.spec.containers`; GPU looks for the value tagged `nvidia.com/gpu` (this isn't necessarily helpful, since limits can be    |
 
 ### nodes
 
@@ -58,4 +60,6 @@ Built from `kubectl get nodes`, one row per taint
 
 `to_utc(timestamp)` - convert epoch time to string form `YYYY-MM-DD HH:MM:SSZ`
 
-`to_age(timestamp)` - convert epoch time to a human-readable age string as seen in the `AGE` column of `kubectl get pods`, e.g. `5d`, `4h30m`.
+`to_age(timestamp)` - convert epoch time to a more readable age string as seen in the `AGE` column of `kubectl get pods`, e.g. `5d`, `4h30m`.
+
+`to_size(bytes)` - convert a byte count to a more readable string, e.g. `1Gi`, `3.4Mi`
