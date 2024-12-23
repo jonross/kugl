@@ -10,7 +10,7 @@ resources:
     namespaced: false
 
 create:
-  - table: taints
+  - table: node_taints
     resource: nodes
     row_source:
       - items
