@@ -28,7 +28,7 @@ def test_taint_query(test_home):
                                         ]),
         ]
     })
-    assert_query("SELECT * FROM taints ORDER BY 1, 2", """
+    assert_query("SELECT * FROM node_taints ORDER BY 1, 2", """
         node_name    key                               effect
         node-2       node.kubernetes.io/unreachable    NoExecute
         node-2       node.kubernetes.io/unschedulable  NoSchedule

@@ -70,7 +70,7 @@ PATH=${PATH}:$(pwd)/bin
 Report available and unavailable node counts, by instance type and taints.
 
 ```shell
-kugel "with t as (select name, group_concat(key) as taints from taints
+kugel "with t as (select name, group_concat(key) as taints from node_taints
                   where effect in ('NoSchedule', 'NoExecute') group by 1)
        select instance_type, count(1), taints
        from nodes left outer join t on t.node_name = nodes.name

@@ -48,7 +48,7 @@ Built from `kubectl get nodes`, one row per node
 | cpu_alloc, gpu_alloc, mem_alloc | REAL | CPU, GPU and memory values from `status.allocatable`; GPU looks for the value tagged `nvidia.com/gpu`       |
 | cpu_cap, gpu_cap, mem_cap       | REAL | CPU GPU and memory values from `status.capacity`; GPU looks for the value tagged `nvidia.com/gpu`           |
 
-### taints
+### node_taints
 
 Built from `kubectl get nodes`, one row per taint
 

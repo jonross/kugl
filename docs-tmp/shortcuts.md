@@ -12,7 +12,7 @@ shortcuts:
   # Count nodes by instance type and distinct taint set
   nodes:
     - |
-      WITH ts AS (SELECT name, group_concat(key) AS taints FROM taints
+      WITH ts AS (SELECT name, group_concat(key) AS taints FROM node_taints
                   WHERE effect IN ('NoSchedule', 'NoExecute') GROUP BY 1)
       SELECT instance_type, count(1), taints
       FROM nodes LEFT OUTER JOIN ts ON ts.node_name = nodes.name

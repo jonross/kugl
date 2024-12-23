@@ -89,6 +89,6 @@ create:
 ## Coming very soon
 
 Generate multiple rows from one `kubectl get` response item.
-(This is done internally for the taints table, but it's not available to extensions.)
+(This is done internally for the `node_taints` table, but it's not available to extensions.)
 
 Write column extractors and table generators in Python.
