@@ -1,24 +1,24 @@
 
 resources:
-- name: pods
-  namespaced: true
-- name: pod_statuses
-  namespaced: true
-- name: jobs
-  namespaced: true
-- name: nodes
-  namespaced: false
+  - name: pods
+    namespaced: true
+  - name: pod_statuses
+    namespaced: true
+  - name: jobs
+    namespaced: true
+  - name: nodes
+    namespaced: false
 
 create:
-- table: taints
-  resource: nodes
-  row_source:
-  - items
-  - spec.taints
-  columns:
-  - name: node_name
-    path: ^metadata.name
-  - name: key
-    path: key
-  - name: effect
-    path: effect
+  - table: taints
+    resource: nodes
+    row_source:
+      - items
+      - spec.taints
+    columns:
+      - name: node_name
+        path: ^metadata.name
+      - name: key
+        path: key
+      - name: effect
+        path: effect

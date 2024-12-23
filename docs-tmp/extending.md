@@ -72,18 +72,18 @@ Here's a more concise way of defining the `workflows` table, above
 
 ```yaml
 resources:
-- name: workflows
+  - name: workflows
   
 create:
-- table: workflows
-  resource: workflows
-  columns:
-  - name: name
-    path: metadata.name
-  - name: namespace
-    path: metadata.namespace
-  - name: status
-    label: workflows.argoproj.io/phase
+  - table: workflows
+    resource: workflows
+    columns:
+      - name: name
+        path: metadata.name
+      - name: namespace
+        path: metadata.namespace
+      - name: status
+        label: workflows.argoproj.io/phase
 ```
 
 ## Coming very soon
