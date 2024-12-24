@@ -99,10 +99,36 @@ of a column definition and automatically convert response values.
 | `cpu`      | `REAL`       | CPU limit or request; accepts values like `0.5` or `300m`                   |
 | `date`     | `INTEGER`    | Unix epoch timestamp in seconds; accepts values like `2021-01-01T12:34:56Z` |
 
+## Generating multiple rows per respone item
 
-## Coming very soon
+It's rare for a `kubectl get` response item to map directly to a single row in a table.  For example,
+a node can have multiple taints, and a pod can have multiple containers.  Kugel handles this using
+the `row_source` field in a column definition.  Here's how the `node_taints` built-in table is defined.
 
-Generate multiple rows from one `kubectl get` response item.
-(This is done internally for the `node_taints` table, but it's not available to extensions.)
+```yaml
+create:
+  - table: node_taints
+    resource: nodes
+    row_source:
+      - items
+      - spec.taints
+    columns:
+      - name: node_name
+        path: ^metadata.name
+      - name: key
+        path: key
+      - name: effect
+        path: effect
+```
+
+Each element in `row_source` is a JMESPath expression that selects items relative to the prior selector.
+Only the last element in the list is used to generate a row, but `path`s can refer to any part of the chain.
+Each `"^"` at the start of a `path` refers to the part of the response one level higher than the bottom
+`row_source` element.  In this case
+
+* `^metadata.name` means the `.metadata.name` in each element of the response `items` array
+* `key` and `effect` refer to each taint in the `spec.taints` array
+
+## Coming soon
 
 Write column extractors and table generators in Python.

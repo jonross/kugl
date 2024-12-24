@@ -43,7 +43,7 @@ kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
 
 Kugel requires Python 3.9 or later, and kubectl.
 
-**This is an alpha release.**  Please expect bugs and backward-incompatible changes.
+**This is an alpha release.**  Please expect bugs, lackluster performance, and backward-incompatible changes.
 
 To install with `pip`:
 
@@ -89,7 +89,8 @@ If this query is helpful, [save it](./docs-tmp/shortcuts.md), then you can run `
 Kugel is just a thin wrapper on Kubectl and SQLite.  It turns `SELECT ... FROM pods` into 
 `kubectl get pods -o json`, then maps fields from the response to columns
 in SQLite.  If you `JOIN` to other resource tables like `nodes` it calls `kubectl get`
-for those too.  If you need more columns or tables than are built in, there's a config file for that.
+for those too.  If you need more columns or tables than are built in as of this release,
+there's a config file for that.
 
 Because Kugel always fetches all resources from a namespace (or everything, if 
 `-a/--all-namespaces` is used), it tries
@@ -122,7 +123,7 @@ the way `kubectl get pods` does?
 
 Probably not.  Kugel can help.
 
-Prior art (as of November 2024)
+Prior art:
 
 * [ksql](https://github.com/brendandburns/ksql) is built on Node.js and AlaSQL.  It appears unmaintained (last commit November 2016.)
 * [kubeql](https://github.com/saracen/kubeql) is a SQL-like query language for Kubernetes. It appears unmaintained (last commit October 2017.)
