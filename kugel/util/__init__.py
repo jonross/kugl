@@ -19,7 +19,7 @@ from .misc import (
     warn,
     WHITESPACE,
 )
-from .size import parse_size, to_size
+from .size import parse_size, to_size, parse_cpu
 from .sqlite import SqliteDb
 
 import kugel.util.clock as clock

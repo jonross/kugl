@@ -10,7 +10,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
-from kugel.util import Age, parse_utc, parse_size, KPath, ConfigPath, parse_age
+from kugel.util import Age, parse_utc, parse_size, KPath, ConfigPath, parse_age, parse_cpu
 
 PARENTED_PATH = re.compile(r"^(\^*)(.*)")
 
@@ -33,7 +33,7 @@ class ColumnDef(BaseModel):
     """Holds one entry from a columns: list in a user config file."""
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     name: str
-    type: Literal["text", "integer", "real", "date", "age", "size"] = "text"
+    type: Literal["text", "integer", "real", "date", "age", "size", "cpu"] = "text"
     path: Optional[str] = None
     label: Optional[str] = None
     _finder: jmespath.parser.Parser
@@ -76,6 +76,7 @@ KUGEL_TYPE_CONVERTERS = {
     "date": parse_utc,
     "age": parse_age,
     "size": parse_size,
+    "cpu": parse_cpu,
 }
 
 KUGEL_TYPE_TO_SQL_TYPE = {
@@ -84,7 +85,8 @@ KUGEL_TYPE_TO_SQL_TYPE = {
     "text": "text",
     "date": "integer",
     "age": "integer",
-    "size": "integer"
+    "size": "integer",
+    "cpu": "real",
 }
 
 
