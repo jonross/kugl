@@ -22,14 +22,14 @@ nodes=$(kubectl get nodes -o json | jq '[.items[]
         | select(.metadata.labels["beta.kubernetes.io/instance-type"] == "a40") | .metadata.name]')
 kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
   [ .items[]
-  | select(.spec.nodeName as $node | $nodes | index($node))
-  | select(.status.phase == "Running" or 
-           (.metadata.deletionTimestamp != null and .status.phase != "Succeeded" and .status.phase != "Failed"))
-  | . as $pod | $pod.spec.containers[]
-  | select(.resources.requests["nvidia.com/gpu"] != null)
-  | {owner: $pod.metadata.labels["com.mycompany/job-owner"], 
-     gpu: .resources.requests["nvidia.com/gpu"], 
-     cpu: .resources.requests["cpu"]}
+    | select(.spec.nodeName as $node | $nodes | index($node))
+    | select(.status.phase == "Running" or 
+             (.metadata.deletionTimestamp != null and .status.phase != "Succeeded" and .status.phase != "Failed"))
+    | . as $pod | $pod.spec.containers[]
+    | select(.resources.requests["nvidia.com/gpu"] != null)
+    | {owner: $pod.metadata.labels["com.mycompany/job-owner"], 
+       gpu: .resources.requests["nvidia.com/gpu"], 
+       cpu: .resources.requests["cpu"]}
   ] | group_by(.owner) 
   | map({owner: .[0].owner, 
          gpu: map(.gpu | tonumber) | add, 
