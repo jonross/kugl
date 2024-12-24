@@ -1,7 +1,7 @@
 import re
 from typing import Union
 
-SIZE_RE = re.compile(r"([0-9.]+)(([A-Za-z]+)?)")
+SIZE_RE = re.compile(r"([0-9\.]+)(([KMGTP]i?)?)")
 SIZE_MULTIPLIERS = dict(K=10**3, M=10**6, G=10**9, T=10**12,
                         Ki=2**10, Mi=2**20, Gi=2**30, Ti=2**40)
 
@@ -15,13 +15,11 @@ def parse_size(x: Union[str, int, None]):
         return None
     if isinstance(x, int):
         return x
-    m = SIZE_RE.match(x)
+    m = SIZE_RE.fullmatch(x)
     if m is None:
-        raise ValueError(f"Can't translate '{x}' to a size")
+        raise ValueError(f"Can't translate '{x}' to bytes")
     amount, suffix = m.group(1), m.group(2)
     amount = float(amount) if "." in amount else int(amount)
-    if suffix == "m":
-        return amount / 1000
     if suffix == "":
         return amount
     multiplier = SIZE_MULTIPLIERS.get(suffix)
@@ -52,3 +50,14 @@ def to_size(nbytes: int, iec=False):
         return f"{size:.1f}{suffix}"
     else:
         return f"{round(size)}{suffix}"
+
+
+def parse_cpu(x: Union[str, float, int, None]) -> float:
+    """
+    Translate a "number of CPUs" field like "2", "1.5", or "300m" to float.
+    """
+    if x is None or isinstance(x, float) or isinstance(x, int):
+        return x
+    if x.endswith("m"):
+        return float(x[:-1]) / 1000
+    return float(x)

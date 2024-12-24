@@ -37,7 +37,7 @@ extend:
 This works just like extending a table, with these differences
 * Use the `create:` section rather than `extend:`
 * Provide the name of the resource argument to `kubectl get`
-* Indicate whether resource is namespaced
+* If the resource isn't built in (like `pods` or `nodes`), declare the resource and indicate whether it's namespaced.
 
 Example: this defines a new resource type and table for Argo workflows.
 
@@ -85,6 +85,20 @@ create:
       - name: status
         label: workflows.argoproj.io/phase
 ```
+
+## Parsing data into numeric columns
+
+`kubectl` response values like `50Mi` (of memory) are pretty useless in queries, since you can't treat 
+them numerically.  Kugel fixes this, offering additional data types that can be used in the `type` field 
+of a column definition and automatically convert response values.
+
+| Kugel type | SQLite type  | Description                                                                 |
+|------------|--------------|-----------------------------------------------------------------------------|
+| `size`     | `INTEGER`    | Memory size in bytes; accepts values like `50Mi`                            |
+| `age`      | `INTEGER`    | Time delta in seconds; accepts values like `5d` or `4h30m`                  |
+| `cpu`      | `REAL`       | CPU limit or request; accepts values like `0.5` or `300m`                   |
+| `date`     | `INTEGER`    | Unix epoch timestamp in seconds; accepts values like `2021-01-01T12:34:56Z` |
+
 
 ## Coming very soon
 

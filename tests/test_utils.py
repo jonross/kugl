@@ -5,7 +5,7 @@ More assorted tests, should these be combined with test_misc.py?
 import jmespath
 import pytest
 
-from kugel.util import Age, parse_size, to_size, dprint, debug
+from kugel.util import Age, parse_size, to_size, dprint, debug, parse_cpu
 
 
 @pytest.mark.parametrize("input_args,input_kwargs,expected", [
@@ -54,8 +54,8 @@ def test_age(input_args, input_kwargs, expected):
 
 
 @pytest.mark.parametrize("size_str, expected_result", [
-    ("", "Can't translate '' to a size"),
-    ("1n", "Unknown size suffix in '1n'"),
+    ("", "Can't translate '' to bytes"),
+    ("1n", "Can't translate '1n' to bytes"),
     ("15", 15.0),
     ("15K", 15.0 * 10 ** 3),
     ("15Ki", 15.0 * 2 ** 10),
@@ -70,6 +70,22 @@ def test_parse_size(size_str, expected_result):
             parse_size(size_str)
     else:
         assert parse_size(size_str) == expected_result
+
+
+@pytest.mark.parametrize("cpu_str, expected_result", [
+    (None, None),
+    (2, 2),
+    (2.0, 2.0),
+    ("1.5", 1.5),
+    ("300m", 0.3),
+    ("50x", "could not convert string to float"),
+])
+def test_parse_cpu(cpu_str, expected_result):
+    if isinstance(expected_result, str):
+        with pytest.raises(ValueError, match=expected_result):
+            parse_cpu(cpu_str)
+    else:
+        assert parse_cpu(cpu_str) == expected_result
 
 
 @pytest.mark.parametrize("args,result", [
