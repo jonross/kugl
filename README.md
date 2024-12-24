@@ -6,7 +6,7 @@ Stop noodling with `jq`.  Explore Kubernetes resources using SQLite.
 
 Find the top users of a GPU pool, based on instance type and a team-specific pod label.
 
-With Kugel
+With Kugel this could be
 
 ```shell
 kugel -a "select owner, sum(gpu_req), sum(cpu_req)
@@ -45,7 +45,14 @@ Kugel requires Python 3.9 or later, and kubectl.
 
 **This is an alpha release.**  Please expect bugs and backward-incompatible changes.
 
-To use via docker, `mkdir ~/.kugel` then use this Bash alias:
+To install with `pip`:
+
+```shell
+pip install kugel
+```
+
+To use via docker, `mkdir ~/.kugel` then use this Bash alias.  (Sorry, this is an x86 image, I don't have
+multiarch working yet.)
 
 ```shell
 kugel() {
@@ -56,28 +63,26 @@ kugel() {
 }
 ```
 
-If neither of those works for you, it's easy to set up from source:
+If neither of those suits you, it's easy to set up from source.  (This will build a virtualenv in the
+source directory.)
 
 ```shell
 git clone https://github.com/jonross/kugel.git
 cd kugel
 make deps
+# put kugel's bin directory in your PATH
 PATH=${PATH}:$(pwd)/bin
 ```
 
 ### Test it
 
-Report available and unavailable node counts, by instance type and taints.
+Find the pods using the most memory:
 
 ```shell
-kugel "with t as (select name, group_concat(key) as taints from node_taints
-                  where effect in ('NoSchedule', 'NoExecute') group by 1)
-       select instance_type, count(1), taints
-       from nodes left outer join t on t.node_name = nodes.name
-       group by 1, 3 order by 1, 2 desc"
+kg -a "select name, to_size(mem_req) from pods order by mem_req desc limit 15"
 ```
 
-If this query is helpful, [save it](./docs-tmp/shortcuts.md), then you can run `kugel nodes`.
+If this query is helpful, [save it](./docs-tmp/shortcuts.md), then you can run `kugel hi-mem`.
 
 ## How it works (important)
 

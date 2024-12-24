@@ -4,19 +4,15 @@
 The `shortcuts` section in `~/.kugel/init.yaml` is a map from query names to lists of command-line arguments.
 
 Example, to save the node query shown in the [README](../README.md), 
-add this to `~/.kugel/init.yaml` and run `kugel nodes`.
+add this to `~/.kugel/init.yaml` and run `kugel hi-mem`.
 
 ```yaml
 shortcuts:
   
-  # Count nodes by instance type and distinct taint set
-  nodes:
+  hi-mem:
     - |
-      WITH ts AS (SELECT name, group_concat(key) AS taints FROM node_taints
-                  WHERE effect IN ('NoSchedule', 'NoExecute') GROUP BY 1)
-      SELECT instance_type, count(1), taints
-      FROM nodes LEFT OUTER JOIN ts ON ts.node_name = nodes.name
-      GROUP BY 1, 3 ORDER BY 1, 2 DESC
+      SELECT name, to_size(mem_req) FROM pods 
+      ORDER BY mem_req DESC LIMIT 15
 ```
 
 Kugel offers this feature so you can keep all your extensions in one place.
