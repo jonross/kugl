@@ -6,12 +6,12 @@ Stop noodling with `jq`.  Explore Kubernetes resources using SQLite.
 
 Find the top users of a GPU pool, based on instance type and a team-specific pod label.
 
-With Kugel this could be
+With Kugel (and a little configuration)
 
 ```shell
 kugel -a "select owner, sum(gpu_req), sum(cpu_req)
           from pods join nodes on pods.node_name = nodes.name
-          where instance_type = 'a40' and pods.status in ('Running', 'Terminating')
+          where instance_type like 'g5.%large' and pods.status in ('Running', 'Terminating')
           group by 1 order by 2 desc limit 10"
 ```
 
@@ -110,8 +110,8 @@ In any case, please be mindful of stale data and server load.
 * [Settings](./docs-tmp/settings.md)
 * [Built-in tables and functions](./docs-tmp/builtins.md)
 * [Configuring new columns and tables](./docs-tmp/extending.md)
-* Adding columns and tables from Python (coming soon)
-* Adding views (coming soon)
+* Adding columns and tables from Python (not ready yet)
+* Adding views (not ready yet)
 * [Troubleshooting and feedback](./docs-tmp/trouble.md)
 * [License](./LICENSE)
 
@@ -121,14 +121,10 @@ In any case, please be mindful of stale data and server load.
 data like "500Mi" of memory or "200m" CPUs or "2024-11-01T12:34:56Z"?  Can you determine the STATUS of a pod
 the way `kubectl get pods` does?
 
-Probably not.  Kugel can help.
+Me neither.
 
-Prior art:
+I looked for prior art.  It seems to be not maintained, not extensible, or lacks SQL support.
 
-* [ksql](https://github.com/brendandburns/ksql) is built on Node.js and AlaSQL.  It appears unmaintained (last commit November 2016.)
-* [kubeql](https://github.com/saracen/kubeql) is a SQL-like query language for Kubernetes. It appears unmaintained (last commit October 2017.)
-* [kube-query](https://github.com/aquasecurity/kube-query) is an [osquery](https://osquery.io/) extension. It appears unmaintained (last commit July 2020) and requires recompilation to add columns or tables.
-* [cyphernetes](https://github.com/AvitalTamir/cyphernetes) is in active development and looks viable, but it uses Cypher (a graph query language) and I'd like SQL.
-
-Kugel hopes to be minimalist and immediately familiar.
-SQLite ships with Python, and if you're reading this you have `kubectl`, so let's build on those.
+* [ksql](https://github.com/brendandburns/ksql) is built on Node.js and AlaSQL; last commit November 2016.
+* [kubeql](https://github.com/saracen/kubeql) is a SQL-like query language for Kubernetes; last commit October 2017.
+* [kube-query](https://github.com/aquasecurity/kube-query) is an [osquery](https://osquery.io/) extension; last commit July 2020.
