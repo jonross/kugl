@@ -43,22 +43,25 @@ Example: this defines a new resource type and table for Argo workflows.
 
 ```yaml
 resources:
-- name: workflows
-  namespaced: true
+  - name: workflows
+    namespaced: true
 
 create:
-- table: workflows
-  resource: workflows
-  columns:
-  - name: name
-    type: text
-    path: metadata.name
-  - name: namespace
-    type: text
-    path: metadata.namespace
-  - name: status
-    type: text
-    path: metadata.labels."workflows.argoproj.io/phase"
+  - table: workflows
+    resource: workflows
+    columns:
+      - name: name
+        type: text
+        path: metadata.name
+      - name: uid
+        type: text
+        path: metadata.uid
+      - name: namespace
+        type: text
+        path: metadata.namespace
+      - name: status
+        type: text
+        path: metadata.labels."workflows.argoproj.io/phase"
 ```
 
 ## Column extractors and defaults
@@ -80,6 +83,8 @@ create:
     columns:
       - name: name
         path: metadata.name
+      - name: uid
+        path: metadata.uid
       - name: namespace
         path: metadata.namespace
       - name: status
@@ -128,6 +133,11 @@ Each `"^"` at the start of a `path` refers to the part of the response one level
 
 * `^metadata.uid` means the `.metadata.uid` in each element of the response `items` array
 * `key` and `effect` refer to each taint in the `spec.taints` array
+
+## Tips
+
+If creating multiple tables from a resource, you should use the `uid` column (sourced from `metadata.uid`)
+as a join key, since this is a guaranteed unique key.
 
 ## Coming soon
 
