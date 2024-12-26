@@ -63,7 +63,7 @@ class Container(BaseModel):
         self.requests = self.limits = None
 
 
-def make_node(name: str, taints: Optional[List[Taint]] = None):
+def make_node(name: str, taints: Optional[List[Taint]] = None, labels: Optional[dict] = None):
     """
     Construct a Node dict from a generic chunk of node YAML that we can alter to simulate different
     responses from the K8S API.
@@ -73,6 +73,8 @@ def make_node(name: str, taints: Optional[List[Taint]] = None):
     node["metadata"]["name"] = name
     if taints:
         node["spec"]["taints"] = [taint.model_dump(exclude_none=True) for taint in taints]
+    if labels is not None:
+        node["metadata"]["labels"] = labels
     return node
 
 
@@ -85,6 +87,7 @@ def make_pod(name: str,
              namespace: Optional[str] = None,
              node_name: Optional[str] = None,
              containers: List[Container] = [Container()],
+             labels: Optional[dict] = None,
              ):
     """
     Construct a Pod dict from a generic chunk of pod YAML that we can alter to simulate different
@@ -107,6 +110,8 @@ def make_pod(name: str,
         obj["metadata"]["namespace"] = namespace
     if node_name:
         obj["spec"]["nodeName"] = node_name
+    if labels is not None:
+        obj["metadata"]["labels"] = labels
     if creation_ts and not no_metadata:
         obj["metadata"]["creationTimestamp"] = to_utc(creation_ts)
     obj["spec"]["containers"] = [c.model_dump(by_alias=True, exclude_none=True) for c in containers]
@@ -118,6 +123,7 @@ def make_job(name: str,
              active_count: Optional[int] = None,
              condition: Optional[Tuple[str, str, Optional[str]]] = None,
              pod: Optional[dict] = None,
+            labels: Optional[dict] = None,
              ):
     """
     Construct a Job dict from a generic chunk of pod YAML that we can alter to simulate different
@@ -137,6 +143,8 @@ def make_job(name: str,
         obj["status"]["active"] = active_count
     if condition is not None:
         obj["status"]["conditions"] = [{"type": condition[0], "status": condition[1], "reason": condition[2]}]
+    if labels is not None:
+        obj["metadata"]["labels"] = labels
     if pod is not None:
         obj["spec"]["template"]["spec"] = pod["spec"]
     return obj

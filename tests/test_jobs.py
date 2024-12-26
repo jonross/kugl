@@ -31,3 +31,23 @@ def test_job_status(test_home):
         job-8   example      Failed
         job-9   example      Complete
     """)
+
+
+def test_job_labels(test_home):
+    kubectl_response("jobs", {
+        "items": [
+            make_job("job-1", labels=dict(foo="bar")),
+            make_job("job-2", labels=dict(a="b", c="d", e="f")),
+            make_job("job-3", labels=dict()),
+            make_job("job-4", labels=dict(one="two", three="four")),
+        ]
+    })
+    assert_query("SELECT job_name, key, value FROM job_labels ORDER BY 2, 1", """
+        job_name    key    value
+        job-2       a      b
+        job-2       c      d
+        job-2       e      f
+        job-1       foo    bar
+        job-4       one    two
+        job-4       three  four
+    """)
