@@ -82,10 +82,10 @@ Built from `kubectl get nodes`, one row per label.
 
 Built from `kubectl get nodes`, one row per taint
 
-| Column                          | Type    | Description                                                  |
-|:--------------------------------|---------|--------------------------------------------------------------|
-| node_name                       | TEXT    | Node name, from `metadata.name`                              |
-| key, value, effect              | TEXT    | Taint key, value and effect from each entry in `spec.taints` |
+| Column             | Type    | Description                                                  |
+|:-------------------|---------|--------------------------------------------------------------|
+| node_uid           | TEXT    | Node UID, from `metadata.uid`                                |
+| key, value, effect | TEXT    | Taint key, value and effect from each entry in `spec.taints` |
 
 ## Built-in functions
 

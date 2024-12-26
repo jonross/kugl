@@ -28,11 +28,15 @@ def test_taint_query(test_home):
                                         ]),
         ]
     })
-    assert_query("SELECT * FROM node_taints ORDER BY 1, 2", """
-        node_name    key                               effect
-        node-2       node.kubernetes.io/unreachable    NoExecute
-        node-2       node.kubernetes.io/unschedulable  NoSchedule
-        node-3       mycompany.com/priority            NoSchedule
+    assert_query("""
+        SELECT n.name, nt.key, nt.effect
+        FROM nodes n join node_taints nt on nt.node_uid = n.uid
+        ORDER BY 1, 2
+    """, """
+        name    key                               effect
+        node-2  node.kubernetes.io/unreachable    NoExecute
+        node-2  node.kubernetes.io/unschedulable  NoSchedule
+        node-3  mycompany.com/priority            NoSchedule
     """)
 
 

@@ -113,8 +113,8 @@ create:
       - items
       - spec.taints
     columns:
-      - name: node_name
-        path: ^metadata.name
+      - name: node_uid
+        path: ^metadata.uid
       - name: key
         path: key
       - name: effect
@@ -126,7 +126,7 @@ Only the last element in the list is used to generate a row, but `path`s can ref
 Each `"^"` at the start of a `path` refers to the part of the response one level higher than the bottom
 `row_source` element.  In this case
 
-* `^metadata.name` means the `.metadata.name` in each element of the response `items` array
+* `^metadata.uid` means the `.metadata.uid` in each element of the response `items` array
 * `key` and `effect` refer to each taint in the `spec.taints` array
 
 ## Coming soon

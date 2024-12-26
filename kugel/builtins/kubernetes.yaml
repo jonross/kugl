@@ -16,8 +16,8 @@ create:
       - items
       - spec.taints
     columns:
-      - name: node_name
-        path: ^metadata.name
+      - name: node_uid
+        path: ^metadata.uid
       - name: key
         path: key
       - name: effect
