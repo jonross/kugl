@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="kugel",  # Replace with your package name
-    version="0.2.0",
+    version="0.2.3",
     description="Explore Kubernetes resources using SQLite",
     author="Jon Ross",
     author_email="kugel.devel@gmail.com",
