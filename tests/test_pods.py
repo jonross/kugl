@@ -38,7 +38,7 @@ def test_by_cpu(test_home):
             make_pod("pod-1"),
             make_pod("pod-2"),
             make_pod("pod-3", containers=[Container(requests=CGM(cpu=2, mem="10M"))]),
-            make_pod("pod-4", containers=[Container(requests=CGM(cpu=2, mem="10M"))]),
+            make_pod("pod-4", containers=[Container(requests=CGM(cpu="2000m", mem="10M"))]),
             # should get dropped because no status available
             make_pod("pod-5", containers=[Container(requests=CGM(cpu=2, mem="10M"))]),
         ]

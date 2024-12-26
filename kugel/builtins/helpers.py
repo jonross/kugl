@@ -8,7 +8,7 @@ from typing import Optional
 
 import funcy as fn
 
-from kugel.util import parse_size
+from kugel.util import parse_size, parse_cpu
 
 # What container name is considered the "main" container, if present
 MAIN_CONTAINERS = ["main", "notebook", "app"]
@@ -50,8 +50,8 @@ class Limits:
     def extract(cls, obj):
         if obj is None:
             return Limits(None, None, None)
-        cpu = parse_size(obj.get("cpu"))
-        gpu = parse_size(obj.get("nvidia.com/gpu"))
+        cpu = parse_cpu(obj.get("cpu"))
+        gpu = parse_cpu(obj.get("nvidia.com/gpu"))
         mem = parse_size(obj.get("memory"))
         return Limits(cpu, gpu, mem)
 
