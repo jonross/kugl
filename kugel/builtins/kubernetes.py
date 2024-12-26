@@ -151,3 +151,35 @@ class JobsTable:
                 *job.resources("requests").as_tuple(),
                 *job.resources("limits").as_tuple(),
             )
+
+
+class LabelsTable:
+
+    @property
+    def schema(self):
+        return f"""
+            {self.NAME_FIELD} TEXT,
+            key TEXT,
+            value TEXT
+        """
+
+    def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
+        for item in kube_data["items"]:
+            thing = ItemHelper(item)
+            for key, value in thing.labels.items():
+                yield item, (thing.name, key, value)
+
+
+@table(domain="kubernetes", name="node_labels", resource="nodes")
+class NodeLabelsTable(LabelsTable):
+    NAME_FIELD = "node_name"
+
+
+@table(domain="kubernetes", name="pod_labels", resource="pods")
+class PodLabelsTable(LabelsTable):
+    NAME_FIELD = "pod_name"
+
+
+@table(domain="kubernetes", name="job_labels", resource="jobs")
+class JobLabelsTable(LabelsTable):
+    NAME_FIELD = "job_name"

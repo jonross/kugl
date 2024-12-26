@@ -25,6 +25,15 @@ of the STATUS column, since this is difficult to determine from the pod detail.
 | cpu_req, gpu_req, mem_req       | REAL | Sum of CPU, GPU and memory values from `resources.requests` in each `spec.containers`; GPU looks for the value tagged `nvidia.com/gpu`                                                           |
 | cpu_lim, gpu_lim, mem_lim       | REAL | Sum of CPU, GPU and memory values from `resources.limits` in each `spec.containers`; GPU looks for the value tagged `nvidia.com/gpu` (this isn't necessarily helpful, since limits can be absent) |
 
+### pod_labels
+
+Built from `kubectl get pods`, one row per label.
+
+| Column                          | Type    | Description                                                                                   |
+|---------------------------------|---------|-----------------------------------------------------------------------------------------------|
+| pod_name                        | TEXT    | Pod name, from `metadata.name`                                                               |
+| key, value                      | TEXT    | Label key and value from each entry in `metadata.labels`                                      |
+
 ### jobs
 
 Built from `kubectl get jobs`, one row per job
@@ -37,6 +46,15 @@ Built from `kubectl get jobs`, one row per job
 | cpu_req, gpu_req, mem_req       | REAL | Sum of CPU, GPU and memory values from `resources.requests` in each `spec.template.spec.containers`; GPU looks for the value tagged `nvidia.com/gpu`                                                      |
 | cpu_lim, gpu_lim, mem_lim       | REAL | Sum of CPU, GPU and memory values from `resources.limits` in each `spec.template.spec.containers`; GPU looks for the value tagged `nvidia.com/gpu` (this isn't necessarily helpful, since limits can be    |
 
+### job_labels
+
+Built from `kubectl get jobs`, one row per label.
+
+| Column     | Type    | Description                                              |
+|------------|---------|----------------------------------------------------------|
+| job_name   | TEXT    | Job name, from `metadata.name`                           |
+| key, value | TEXT    | Label key and value from each entry in `metadata.labels` |
+
 ### nodes
 
 Built from `kubectl get nodes`, one row per node
@@ -47,6 +65,15 @@ Built from `kubectl get nodes`, one row per node
 | instance_type                   | TEXT    | Node instance type, from the label `node.kubernetes.io/instance-type` or `beta.kubernetes.io/instance-type` |
 | cpu_alloc, gpu_alloc, mem_alloc | REAL | CPU, GPU and memory values from `status.allocatable`; GPU looks for the value tagged `nvidia.com/gpu`       |
 | cpu_cap, gpu_cap, mem_cap       | REAL | CPU GPU and memory values from `status.capacity`; GPU looks for the value tagged `nvidia.com/gpu`           |
+
+### node_labels
+
+Built from `kubectl get nodes`, one row per label.
+
+| Column     | Type    | Description                                              |
+|------------|---------|----------------------------------------------------------|
+| node_name  | TEXT    | Node name, from `metadata.name`                          |
+| key, value | TEXT    | Label key and value from each entry in `metadata.labels` |
 
 ### node_taints
 

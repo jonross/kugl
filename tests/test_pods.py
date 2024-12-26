@@ -112,3 +112,29 @@ def test_resource_summing(test_home, containers, expected):
     kubectl_response("jobs", {"items": [job]})
     assert_query("SELECT cpu_req, cpu_lim, mem_req, mem_lim, gpu_req, gpu_lim FROM jobs", expected)
 
+
+def test_pod_labels(test_home):
+    kubectl_response("pods", {
+        "items": [
+            make_pod("pod-1", labels=dict(foo="bar")),
+            make_pod("pod-2", labels=dict(a="b", c="d", e="f")),
+            make_pod("pod-3", labels=dict()),
+            make_pod("pod-4", labels=dict(one="two", three="four")),
+        ]
+    })
+    kubectl_response("pod_statuses", """
+        NAME   STATUS
+        pod-1  Init:1
+        pod-2  Init:2
+        pod-3  Init:3
+        pod-4  Init:4
+    """)
+    assert_query("SELECT pod_name, key, value FROM pod_labels ORDER BY 2, 1", """
+        pod_name    key    value
+        pod-2       a      b
+        pod-2       c      d
+        pod-2       e      f
+        pod-1       foo    bar
+        pod-4       one    two
+        pod-4       three  four
+    """)

@@ -35,3 +35,22 @@ def test_taint_query(test_home):
         node-3       mycompany.com/priority            NoSchedule
     """)
 
+
+def test_node_labels(test_home):
+    kubectl_response("nodes", {
+        "items": [
+            make_node("node-1", labels=dict(foo="bar")),
+            make_node("node-2", labels=dict(a="b", c="d", e="f")),
+            make_node("node-3", labels=dict()),
+            make_node("node-4", labels=dict(one="two", three="four")),
+        ]
+    })
+    assert_query("SELECT node_name, key, value FROM node_labels ORDER BY 2, 1", """
+        node_name    key    value
+        node-2       a      b
+        node-2       c      d
+        node-2       e      f
+        node-1       foo    bar
+        node-4       one    two
+        node-4       three  four
+    """)
