@@ -5,12 +5,15 @@
 kugel [options] [sql | shortcut]
 ```
 
-Kubernetes options (these are given to `kubectl`)
+### Kubernetes options
+
+Most invocations of Kugel will need `-a` or `-n namespace`, just like `kubectl`.
+If your cluster is small, you could also (for instance) `alias kg="kugel -a"` and use `where namespace = ...` instead.
 
 * `-a, --all-namespaces` - Look in all namespaces for Kubernetes resources.  May not be combine with `-n`.
 * `-n, --namespace NS` - Look in namespace `NS` for Kubernetes resources.  May not be combined with `-a`.
 
-Cache control
+### Cache control
 
 * `-c, --cache` - Always use cached data, if available, regardless of its age
 * `-r, --reckless` - Don't print stale data warnings
