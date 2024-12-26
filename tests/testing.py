@@ -153,15 +153,20 @@ def make_job(name: str,
     return obj
 
 
-def assert_query(sql: str, expected: Union[str, list], user_config: UserConfig = None):
+def assert_query(sql: str, expected: Union[str, list],
+                 user_config: UserConfig = None,
+                 all_ns: bool = False):
     """
     Run a query in the "nocontext" namespace and compare the result with expected output.
     :param sql: SQL query
     :param expected: Output as it would be shown at the CLI.  This will be dedented so the
         caller can indent for neatness.  Or, if a list, each item will be checked in order.
+    :param all_ns: FIXME temporary hack until we get namespaces out of engine.py
     """
+    domain = get_domain("kubernetes")
+    domain.impl.set_namespace(all_ns, "__all" if all_ns else "default")
     config = Config.collate(UserInit(), user_config or UserConfig())
-    engine = Engine(get_domain("kubernetes"), config, "nocontext")
+    engine = Engine(domain, config, "nocontext")
     if isinstance(expected, str):
         actual = engine.query_and_format(Query(sql=sql))
         assert actual.strip() == textwrap.dedent(expected).strip()

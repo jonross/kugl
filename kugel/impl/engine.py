@@ -121,7 +121,8 @@ class Engine:
 
         resources_used = {t.resource for t in tables.values()}
         if "pods" in resources_used:
-            # This is fake, _get_objects knows to get it via "kubectl get pods" not as JSON
+            # This is fake, _get_objects knows to get it via "kubectl get pods" not as JSON.
+            # TODO: move this hack to kubernetes.py
             resources_used.add("pod_statuses")
 
         # Identify what to fetch vs what's stale or expired.
@@ -147,9 +148,12 @@ class Engine:
 
         # There won't really be a pod_statuses table, just grab the statuses and put them
         # on the pod objects.  Drop the pods where we didn't get status back from kubectl.
+        # TODO: move this hack to kubernetes.py
         if "pods" in resources_used:
+            statuses = self.data.get("pod_statuses")
             def pod_with_updated_status(pod):
-                status = self.data["pod_statuses"].get(pod["metadata"]["name"])
+                metadata = pod["metadata"]
+                status = statuses.get(f"{metadata['namespace']}/{metadata['name']}")
                 if status:
                     pod["kubectl_status"] = status
                     return pod

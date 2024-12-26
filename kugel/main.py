@@ -115,7 +115,7 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
     # FIXME bad reference to namespace
     # FIXME temporary awful hack, rewrite table names properly
     sql = args.sql.replace("stdin.", "")
-    print(engine.query_and_format(Query(sql=sql, namespace=domain.impl.namespace, cache_flag=cache_flag)))
+    print(engine.query_and_format(Query(sql=sql, namespace=domain.impl.ns, cache_flag=cache_flag)))
 
 
 if __name__ == "__main__":

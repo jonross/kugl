@@ -13,9 +13,6 @@ from kugel.api import domain, table, fail
 from kugel.impl.config import Config
 from kugel.util import parse_utc, run, WHITESPACE
 
-# Fake namespace if "--all-namespaces" option is used
-ALL_NAMESPACE = "__all"
-
 
 @domain("kubernetes")
 class KubernetesData:
@@ -27,7 +24,16 @@ class KubernetesData:
     def handle_cli_options(self, args):
         if args.all_namespaces and args.namespace:
             fail("Cannot use both -a/--all-namespaces and -n/--namespace")
-        self.namespace = ALL_NAMESPACE if args.all_namespaces else args.namespace or "default"
+        self.set_namespace(args.all_namespaces, args.namespace)
+
+    def set_namespace(self, all_namespaces: bool, namespace: str):
+        if all_namespaces:
+            # FIXME: engine.py and testing.py still use this
+            self.ns = "__all"
+            self.all_ns = True
+        else:
+            self.ns = namespace or "default"
+            self.all_ns = False
 
     def get_objects(self, kind: str, config: Config)-> dict:
         """Fetch resources from Kubernetes using kubectl.
@@ -35,7 +41,7 @@ class KubernetesData:
         :param kind: Kubernetes resource type e.g. "pods"
         :return: JSON as output by "kubectl get {kind} -o json"
         """
-        namespace_flag = ["--all-namespaces"] if self.namespace == ALL_NAMESPACE else ["-n", self.namespace]
+        namespace_flag = ["--all-namespaces"] if self.ns else ["-n", self.ns]
         is_namespaced = config.resources[kind].namespaced
         if not is_namespaced:
             _, output, _ = run(["kubectl", "get", kind, "-o", "json"])
@@ -47,17 +53,24 @@ class KubernetesData:
             _, output, _= run(["kubectl", "get", kind, *namespace_flag, "-o", "json"])
             return json.loads(output)
 
-    def _pod_status_from_pod_list(self, output):
-        """Convert the tabular output of 'kubectl get pods' to JSON."""
+    def _pod_status_from_pod_list(self, output) -> dict[str, str]:
+        """
+        Convert the tabular output of 'kubectl get pods' to JSON.
+        :return: a dict mapping "namespace/name" to status
+        """
         rows = [WHITESPACE.split(line.strip()) for line in output.strip().split("\n")]
         if len(rows) < 2:
             return {}
         header, rows = rows[0], rows[1:]
         name_index = header.index("NAME")
         status_index = header.index("STATUS")
-        if name_index is None or status_index is None:
-            raise ValueError("Can't find NAME and STATUS columns in 'kubectl get pods' output")
-        return {row[name_index]: row[status_index] for row in rows}
+        # It would be nice if 'kubectl get pods' printed the UID, but it doesn't, so use
+        # "namespace/name" as the key.  (Can't use a tuple since this has to be JSON-dumped.)
+        if self.all_ns:
+            namespace_index = header.index("NAMESPACE")
+            return {f"{row[namespace_index]}/{row[name_index]}": row[status_index] for row in rows}
+        else:
+            return {f"{self.ns}/{row[name_index]}": row[status_index] for row in rows}
 
 
 @table(domain="kubernetes", name="nodes", resource="nodes")

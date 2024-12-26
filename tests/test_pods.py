@@ -66,11 +66,11 @@ def test_other_pod_fields(test_home):
         ]
     })
     kubectl_response("pod_statuses", """
-        NAME   STATUS
-        pod-1  Running
-        pod-2  Running
-        pod-3  Running
-        pod-4  Running
+        NAMESPACE  NAME   STATUS
+        xyz        pod-1  Running
+        default    pod-2  Running
+        default    pod-3  Running
+        default    pod-4  Running
     """)
     assert_query("""
         SELECT namespace, uid, is_daemon, node_name, command, to_utc(creation_ts) AS created
@@ -78,9 +78,9 @@ def test_other_pod_fields(test_home):
     """, """
         namespace    uid          is_daemon  node_name    command     created
         xyz          uid-pod-1            1  worker5      echo hello  2024-12-10T02:49:02Z
-        research     uid-pod-3            0  joe          echo hello  2024-12-10T02:50:02Z
-        research     uid-pod-4            0  worker5      echo bye    2024-12-10T02:49:02Z
-    """)
+        default      uid-pod-3            0  joe          echo hello  2024-12-10T02:50:02Z
+        default      uid-pod-4            0  worker5      echo bye    2024-12-10T02:49:02Z
+    """, all_ns=True)
 
 
 @pytest.mark.parametrize("containers,expected", [

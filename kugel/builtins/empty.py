@@ -16,7 +16,7 @@ class Empty:
 
     def add_cli_options(self, ap: ArgumentParser):
         # FIXME, artifact of assuming kubernetes
-        self.namespace = "default"
+        self.ns = "default"
         pass
 
     def handle_cli_options(self, args):
