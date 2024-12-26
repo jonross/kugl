@@ -45,12 +45,12 @@ def test_node_labels(test_home):
             make_node("node-4", labels=dict(one="two", three="four")),
         ]
     })
-    assert_query("SELECT node_name, key, value FROM node_labels ORDER BY 2, 1", """
-        node_name    key    value
-        node-2       a      b
-        node-2       c      d
-        node-2       e      f
-        node-1       foo    bar
-        node-4       one    two
-        node-4       three  four
+    assert_query("SELECT node_uid, key, value FROM node_labels ORDER BY 2, 1", """
+        node_uid    key    value
+        uid-node-2  a      b
+        uid-node-2  c      d
+        uid-node-2  e      f
+        uid-node-1  foo    bar
+        uid-node-4  one    two
+        uid-node-4  three  four
     """)

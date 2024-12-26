@@ -129,12 +129,12 @@ def test_pod_labels(test_home):
         pod-3  Init:3
         pod-4  Init:4
     """)
-    assert_query("SELECT pod_name, key, value FROM pod_labels ORDER BY 2, 1", """
-        pod_name    key    value
-        pod-2       a      b
-        pod-2       c      d
-        pod-2       e      f
-        pod-1       foo    bar
-        pod-4       one    two
-        pod-4       three  four
+    assert_query("SELECT pod_uid, key, value FROM pod_labels ORDER BY 2, 1", """
+        pod_uid    key    value
+        uid-pod-2  a      b
+        uid-pod-2  c      d
+        uid-pod-2  e      f
+        uid-pod-1  foo    bar
+        uid-pod-4  one    two
+        uid-pod-4  three  four
     """)

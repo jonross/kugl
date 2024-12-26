@@ -164,7 +164,7 @@ class LabelsTable:
     @property
     def schema(self):
         return f"""
-            {self.NAME_FIELD} TEXT,
+            {self.UID_FIELD} TEXT,
             key TEXT,
             value TEXT
         """
@@ -173,19 +173,19 @@ class LabelsTable:
         for item in kube_data["items"]:
             thing = ItemHelper(item)
             for key, value in thing.labels.items():
-                yield item, (thing.name, key, value)
+                yield item, (thing.metadata.get("uid"), key, value)
 
 
 @table(domain="kubernetes", name="node_labels", resource="nodes")
 class NodeLabelsTable(LabelsTable):
-    NAME_FIELD = "node_name"
+    UID_FIELD = "node_uid"
 
 
 @table(domain="kubernetes", name="pod_labels", resource="pods")
 class PodLabelsTable(LabelsTable):
-    NAME_FIELD = "pod_name"
+    UID_FIELD = "pod_uid"
 
 
 @table(domain="kubernetes", name="job_labels", resource="jobs")
 class JobLabelsTable(LabelsTable):
-    NAME_FIELD = "job_name"
+    UID_FIELD = "job_uid"

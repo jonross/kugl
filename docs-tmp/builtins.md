@@ -30,10 +30,10 @@ of the STATUS column, since this is difficult to determine from the pod detail.
 
 Built from `kubectl get pods`, one row per label.
 
-| Column                          | Type    | Description                                                                                   |
-|---------------------------------|---------|-----------------------------------------------------------------------------------------------|
-| pod_name                        | TEXT    | Pod name, from `metadata.name`                                                               |
-| key, value                      | TEXT    | Label key and value from each entry in `metadata.labels`                                      |
+| Column     | Type    | Description                                              |
+|------------|---------|----------------------------------------------------------|
+| pod_uid    | TEXT    | Pod UID, from `metadata.uid`                             |
+| key, value | TEXT    | Label key and value from each entry in `metadata.labels` |
 
 ### jobs
 
@@ -54,7 +54,7 @@ Built from `kubectl get jobs`, one row per label.
 
 | Column     | Type    | Description                                              |
 |------------|---------|----------------------------------------------------------|
-| job_name   | TEXT    | Job name, from `metadata.name`                           |
+| job_uid    | TEXT    | Job UID, from `metadata.uid`                             |
 | key, value | TEXT    | Label key and value from each entry in `metadata.labels` |
 
 ### nodes
@@ -75,7 +75,7 @@ Built from `kubectl get nodes`, one row per label.
 
 | Column     | Type    | Description                                              |
 |------------|---------|----------------------------------------------------------|
-| node_name  | TEXT    | Node name, from `metadata.name`                          |
+| node_uid   | TEXT    | Node UID, from `metadata.uid`                            |
 | key, value | TEXT    | Label key and value from each entry in `metadata.labels` |
 
 ### node_taints

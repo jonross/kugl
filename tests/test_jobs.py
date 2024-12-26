@@ -42,12 +42,12 @@ def test_job_labels(test_home):
             make_job("job-4", labels=dict(one="two", three="four")),
         ]
     })
-    assert_query("SELECT job_name, key, value FROM job_labels ORDER BY 2, 1", """
-        job_name    key    value
-        job-2       a      b
-        job-2       c      d
-        job-2       e      f
-        job-1       foo    bar
-        job-4       one    two
-        job-4       three  four
+    assert_query("SELECT job_uid, key, value FROM job_labels ORDER BY 2, 1", """
+        job_uid    key    value
+        uid-job-2  a      b
+        uid-job-2  c      d
+        uid-job-2  e      f
+        uid-job-1  foo    bar
+        uid-job-4  one    two
+        uid-job-4  three  four
     """)
