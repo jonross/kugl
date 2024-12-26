@@ -12,8 +12,8 @@ def test_node_query(test_home):
         ]
     })
     assert_query("SELECT * FROM nodes", """
-        name    instance_type      cpu_alloc    gpu_alloc     mem_alloc    cpu_cap    gpu_cap       mem_cap
-        node-1  a40                       93            4  807771639808         96          4  810023981056
+        name    uid         instance_type      cpu_alloc    gpu_alloc     mem_alloc    cpu_cap    gpu_cap       mem_cap
+        node-1  uid-node-1  a40                       93            4  807771639808         96          4  810023981056
     """)
 
 

@@ -19,17 +19,17 @@ def test_job_status(test_home):
             make_job("job-9", condition=("SuccessCriteriaMet", "False", None)),
         ]
     })
-    assert_query("SELECT name, namespace, status FROM jobs ORDER BY 1", """
-        name    namespace    status
-        job-1   example      Unknown
-        job-2   example      Running
-        job-3   xyz          Unknown
-        job-4   xyz          Failed
-        job-5   example      DeadlineExceeded
-        job-6   example      Suspended
-        job-7   example      Complete
-        job-8   example      Failed
-        job-9   example      Complete
+    assert_query("SELECT name, uid, namespace, status FROM jobs ORDER BY 1", """
+        name    uid        namespace    status
+        job-1   uid-job-1  example      Unknown
+        job-2   uid-job-2  example      Running
+        job-3   uid-job-3  xyz          Unknown
+        job-4   uid-job-4  xyz          Failed
+        job-5   uid-job-5  example      DeadlineExceeded
+        job-6   uid-job-6  example      Suspended
+        job-7   uid-job-7  example      Complete
+        job-8   uid-job-8  example      Failed
+        job-9   uid-job-9  example      Complete
     """)
 
 

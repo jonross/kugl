@@ -67,6 +67,7 @@ class NodesTable:
     def schema(self):
         return """
             name TEXT,
+            uid TEXT,
             instance_type TEXT,
             cpu_alloc REAL,
             gpu_alloc REAL,
@@ -81,6 +82,7 @@ class NodesTable:
             node = ItemHelper(item)
             yield item, (
                 node.name,
+                node.metadata.get("uid"),
                 node.label("node.kubernetes.io/instance-type") or node.label("beta.kubernetes.io/instance-type"),
                 *Limits.extract(node["status"]["allocatable"]).as_tuple(),
                 *Limits.extract(node["status"]["capacity"]).as_tuple(),
@@ -94,6 +96,7 @@ class PodsTable:
     def schema(self):
         return """
             name TEXT,
+            uid TEXT,
             is_daemon INTEGER,
             namespace TEXT,
             node_name TEXT,
@@ -113,6 +116,7 @@ class PodsTable:
             pod = PodHelper(item)
             yield item, (
                 pod.name,
+                pod.metadata.get("uid"),
                 1 if pod.is_daemon else 0,
                 pod.namespace,
                 pod["spec"].get("nodeName"),
@@ -131,6 +135,7 @@ class JobsTable:
     def schema(self):
         return """
             name TEXT,
+            uid TEXT,
             namespace TEXT,
             status TEXT,
             cpu_req REAL,
@@ -146,6 +151,7 @@ class JobsTable:
             job = JobHelper(item)
             yield item, (
                 job.name,
+                job.metadata.get("uid"),
                 job.namespace,
                 job.status,
                 *job.resources("requests").as_tuple(),

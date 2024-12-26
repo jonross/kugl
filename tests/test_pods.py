@@ -73,13 +73,13 @@ def test_other_pod_fields(test_home):
         pod-4  Running
     """)
     assert_query("""
-        SELECT namespace, is_daemon, node_name, command, to_utc(creation_ts) AS created
+        SELECT namespace, uid, is_daemon, node_name, command, to_utc(creation_ts) AS created
         FROM pods ORDER BY name
     """, """
-        namespace      is_daemon  node_name    command     created
-        xyz                    1  worker5      echo hello  2024-12-10T02:49:02Z
-        research               0  joe          echo hello  2024-12-10T02:50:02Z
-        research               0  worker5      echo bye    2024-12-10T02:49:02Z
+        namespace    uid          is_daemon  node_name    command     created
+        xyz          uid-pod-1            1  worker5      echo hello  2024-12-10T02:49:02Z
+        research     uid-pod-3            0  joe          echo hello  2024-12-10T02:50:02Z
+        research     uid-pod-4            0  worker5      echo bye    2024-12-10T02:49:02Z
     """)
 
 

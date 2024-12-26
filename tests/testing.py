@@ -71,6 +71,7 @@ def make_node(name: str, taints: Optional[List[Taint]] = None, labels: Optional[
     """
     node = yaml.safe_load(_resource("sample_node.yaml"))
     node["metadata"]["name"] = name
+    node["metadata"]["uid"] = "uid-" + name
     if taints:
         node["spec"]["taints"] = [taint.model_dump(exclude_none=True) for taint in taints]
     if labels is not None:
@@ -102,6 +103,7 @@ def make_pod(name: str,
         obj["name"] = name
     elif not no_name:
         obj["metadata"]["name"] = name
+    obj["metadata"]["uid"] = "uid-" + name
     if no_metadata:
         del obj["metadata"]
     if is_daemon:
@@ -136,6 +138,7 @@ def make_job(name: str,
     """
     obj = yaml.safe_load(_resource("sample_job.yaml"))
     obj["metadata"]["name"] = name
+    obj["metadata"]["uid"] = "uid-" + name
     obj["metadata"]["labels"]["job-name"] = name
     if namespace is not None:
         obj["metadata"]["namespace"] = namespace
