@@ -19,7 +19,8 @@ Without Kugel
 
 ```shell
 nodes=$(kubectl get nodes -o json | jq '[.items[] 
-        | select(.metadata.labels["beta.kubernetes.io/instance-type"] == "a40") | .metadata.name]')
+        | select(.metadata.labels["beta.kubernetes.io/instance-type"] | test("g5.*large")) 
+        | .metadata.name]')
 kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
   [ .items[]
     | select(.spec.nodeName as $node | $nodes | index($node))
