@@ -81,7 +81,6 @@ class NodesTable:
         return """
             name TEXT,
             uid TEXT,
-            instance_type TEXT,
             cpu_alloc REAL,
             gpu_alloc REAL,
             mem_alloc INTEGER,
@@ -96,7 +95,6 @@ class NodesTable:
             yield item, (
                 node.name,
                 node.metadata.get("uid"),
-                node.label("node.kubernetes.io/instance-type") or node.label("beta.kubernetes.io/instance-type"),
                 *Limits.extract(node["status"]["allocatable"]).as_tuple(),
                 *Limits.extract(node["status"]["capacity"]).as_tuple(),
             )
