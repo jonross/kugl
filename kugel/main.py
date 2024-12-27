@@ -13,7 +13,7 @@ import yaml
 from kugel.impl.registry import get_domain
 from kugel.impl.engine import Engine, Query, CHECK, NEVER_UPDATE, ALWAYS_UPDATE
 from kugel.impl.config import Config, UserConfig, UserInit, parse_file
-from kugel.util import Age, fail, debug, debugging, kugel_home, kube_home, ConfigPath, dprint
+from kugel.util import Age, fail, debug, debugging, kugel_home, kube_home, ConfigPath, dprint, KugelError
 
 
 def main() -> None:
@@ -29,6 +29,9 @@ def main1(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
 
     try:
         return main2(argv, return_config=return_config)
+    except KugelError as e:
+        # These are raised by fail(), we only want the error message.
+        severe, exc = False, e
     except DatabaseError as e:
         # DB errors are common when writing queries, don't make them look like a crash.
         severe, exc = False, e
