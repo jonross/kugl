@@ -3,7 +3,7 @@ Pydantic models for configuration files.
 """
 
 import re
-from typing import Literal, Optional, Tuple
+from typing import Literal, Optional, Tuple, Callable
 
 import jmespath
 import yaml
@@ -36,37 +36,68 @@ class ColumnDef(BaseModel):
     type: Literal["text", "integer", "real", "date", "age", "size", "cpu"] = "text"
     path: Optional[str] = None
     label: Optional[str] = None
-    _finder: jmespath.parser.Parser
+    _extract: Callable[[object], object]
     _parents: int
     _sqltype: str
     _convert: type
 
     @model_validator(mode="after")
     @classmethod
-    def parse_path(cls, config: 'ColumnDef') -> 'ColumnDef':
+    def gen_extractor(cls, config: 'ColumnDef') -> 'ColumnDef':
+        """
+        Generate the extract function for a column definition; given an object, it will
+        return a coluumn value of the appropriate type.
+        """
         if config.path and config.label:
             raise ValueError("cannot specify both path and label")
-        if not config.path and not config.label:
+        elif config.path:
+            config._extract = cls._gen_jmespath_extractor(config)
+        elif config.label:
+            config._extract = cls._gen_label_extractor(config)
+        else:
             raise ValueError("must specify either path or label")
-        if config.label:
-            config.path = f"metadata.labels.\"{config.label}\""
-        m = PARENTED_PATH.match(config.path)
-        config._parents = len(m.group(1))
-        try:
-            config._finder = jmespath.compile(m.group(2))
-        except jmespath.exceptions.ParseError as e:
-            raise ValueError(f"invalid JMESPath expression {m.group(2)} in column {config.name}") from e
         config._sqltype = KUGEL_TYPE_TO_SQL_TYPE[config.type]
         config._convert = KUGEL_TYPE_CONVERTERS[config.type]
         return config
 
     def extract(self, obj: object) -> object:
+        """Extract the column value from an object."""
+        if obj is None:
+            return None
+        value = self._extract(obj)
+        return None if value is None else self._convert(value)
+
+    @classmethod
+    def _gen_jmespath_extractor(cls, config: 'ColumnDef') -> Callable[[object], object]:
+        """Generate a JMESPath extractor function for a column definition."""
+        m = PARENTED_PATH.match(config.path)
+        parents = len(m.group(1))
+        try:
+            finder = jmespath.compile(m.group(2))
+        except jmespath.exceptions.ParseError as e:
+            raise ValueError(f"invalid JMESPath expression {m.group(2)} in column {config.name}") from e
+        return lambda obj: cls._extract_jmespath(obj, finder, parents)
+
+    @classmethod
+    def _extract_jmespath(cls, obj: object, finder: jmespath.parser.Parser, parents: int) -> object:
+        """Extract a value from an object using a JMESPath finder."""
         count = 0
-        while count < self._parents and obj is not None:
+        while count < parents and obj is not None:
             obj = obj.get("__parent")
             count += 1
-        value = None if obj is None else self._finder.search(obj)
-        return None if value is None else self._convert(value)
+        return  None if obj is None else finder.search(obj)
+
+    @classmethod
+    def _gen_label_extractor(cls, config: 'ColumnDef') -> Callable[[object], object]:
+        """Generate a label extractor function for a column definition."""
+        return lambda obj: cls._extract_label(obj, config.label)
+
+    @classmethod
+    def _extract_label(cls, obj: object, label: str) -> object:
+        """Extract a value from an object using a label."""
+        while (parent := obj.get("__parent")) is not None:
+            obj = parent
+        return obj.get("metadata", {}).get("labels", {}).get(label)
 
 
 KUGEL_TYPE_CONVERTERS = {
