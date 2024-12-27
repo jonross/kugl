@@ -60,11 +60,11 @@ class ColumnDef(BaseModel):
         config._convert = KUGEL_TYPE_CONVERTERS[config.type]
         return config
 
-    def extract(self, obj: object) -> object:
+    def extract(self, obj: object, context) -> object:
         """Extract the column value from an object."""
         if obj is None:
             return None
-        value = self._extract(obj)
+        value = self._extract(obj, context)
         return None if value is None else self._convert(value)
 
     @classmethod
@@ -76,14 +76,14 @@ class ColumnDef(BaseModel):
             finder = jmespath.compile(m.group(2))
         except jmespath.exceptions.ParseError as e:
             raise ValueError(f"invalid JMESPath expression {m.group(2)} in column {config.name}") from e
-        return lambda obj: cls._extract_jmespath(obj, finder, parents)
+        return lambda obj, context: cls._extract_jmespath(obj, context, finder, parents)
 
     @classmethod
-    def _extract_jmespath(cls, obj: object, finder: jmespath.parser.Parser, parents: int) -> object:
+    def _extract_jmespath(cls, obj: object, context, finder: jmespath.parser.Parser, parents: int) -> object:
         """Extract a value from an object using a JMESPath finder."""
         count = 0
         while count < parents and obj is not None:
-            obj = obj.get("__parent")
+            obj = context.get_parent(obj)
             count += 1
         return  None if obj is None else finder.search(obj)
 
@@ -91,12 +91,12 @@ class ColumnDef(BaseModel):
     def _gen_label_extractor(cls, config: 'ColumnDef') -> Callable[[object], object]:
         """Generate a label extractor function for a column definition."""
         labels = config.label if isinstance(config.label, list) else [config.label]
-        return lambda obj: cls._extract_label(obj, labels)
+        return lambda obj, context: cls._extract_label(obj, context, labels)
 
     @classmethod
-    def _extract_label(cls, obj: object, labels: list[str]) -> object:
+    def _extract_label(cls, obj: object, context, labels: list[str]) -> object:
         """Extract a value from an object using a label."""
-        while (parent := obj.get("__parent")) is not None:
+        while (parent := context.get_parent(obj)) is not None:
             obj = parent
         available = obj.get("metadata", {}).get("labels", {})
         for label in labels:

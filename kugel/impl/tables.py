@@ -7,7 +7,7 @@ from .config import ColumnDef, ExtendTable, CreateTable
 # TODO: make abstract
 # TODO: completely sever from user configs
 from .registry import TableDef
-from ..util import fail, set_parent, dprint, debugging
+from ..util import fail, dprint, debugging
 
 
 class Table:
@@ -31,11 +31,12 @@ class Table:
         :param db: the SqliteDb instance
         :param kube_data: the JSON data from 'kubectl get'
         """
+        context = RowContext(kube_data)
         db.execute(f"CREATE TABLE {self.name} ({self.schema})")
-        item_rows = list(self.make_rows(kube_data))
+        item_rows = list(self.make_rows(context))
         if item_rows:
             if self.extras:
-                extend_row = lambda item, row: row + tuple(column.extract(item) for column in self.extras)
+                extend_row = lambda item, row: row + tuple(column.extract(item, context) for column in self.extras)
             else:
                 extend_row = lambda item, row: row
             rows = [extend_row(item, row) for item, row in item_rows]
@@ -66,9 +67,9 @@ class TableFromCode(Table):
         super().__init__(table_def.name, table_def.resource, schema, extras)
         self.impl = impl
 
-    def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
+    def make_rows(self, context: "RowContext") -> list[tuple[dict, tuple]]:
         """Delegate to the user-defined table implementation."""
-        return self.impl.make_rows(kube_data)
+        return self.impl.make_rows(context)
 
 
 class TableFromConfig(Table):
@@ -92,19 +93,19 @@ class TableFromConfig(Table):
         super().__init__(name, creator.resource, schema, extras)
         self.row_source = creator.row_source
 
-    def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
+    def make_rows(self, context: "RowContext") -> list[tuple[dict, tuple]]:
         """
         Itemize the data according to the configuration, but return empty rows; all the
         columns will be added by Table.build.
         """
         if self.row_source is not None:
-            items = self._itemize(self.row_source, kube_data)
+            items = self._itemize(self.row_source, context)
         else:
             # FIXME: this default only applies to Kubernetes
-            items = kube_data["items"]
+            items = context.data["items"]
         return [(item, tuple()) for item in items]
 
-    def _itemize(self, row_source: list[str], kube_data:dict) -> list[dict]:
+    def _itemize(self, row_source: list[str], context: "RowContext") -> list[dict]:
         """
         Given a row_source like
           row_source:
@@ -113,7 +114,7 @@ class TableFromConfig(Table):
         Iterate through each level of the source spec, marking object parents, and generating
         successive row values
         """
-        items = [kube_data]
+        items = [context.data]
         debug = debugging("itemize")
         for source in row_source:
             try:
@@ -127,11 +128,28 @@ class TableFromConfig(Table):
                 found = finder.search(item)
                 if isinstance(found, list):
                     for child in found:
-                        set_parent(child, item)
+                        context.set_parent(child, item)
                         new_items.append(child)
                 elif found is not None:
-                    set_parent(found, item)
+                    context.set_parent(found, item)
                     new_items.append(found)
             items = new_items
         return items
+
+
+class RowContext:
+    """One of these is passed to row-generating and column-extracting functions.
+    It provides information like the parent map for evaluating JMESPath expressions, and
+    removes the risk of changing row and column function signatures in the future."""
+
+    def __init__(self, data):
+        self.data = data
+        self._parents = {}
+
+    def set_parent(self, child, parent):
+        self._parents[id(child)] = parent
+
+    def get_parent(self, child):
+        return self._parents.get(id(child))
+
 

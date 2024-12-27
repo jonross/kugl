@@ -89,8 +89,8 @@ class NodesTable:
             mem_cap INTEGER
         """
 
-    def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
-        for item in kube_data["items"]:
+    def make_rows(self, context) -> list[tuple[dict, tuple]]:
+        for item in context.data["items"]:
             node = ItemHelper(item)
             yield item, (
                 node.name,
@@ -122,8 +122,8 @@ class PodsTable:
             mem_lim INTEGER
         """
 
-    def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
-        for item in kube_data["items"]:
+    def make_rows(self, context) -> list[tuple[dict, tuple]]:
+        for item in context.data["items"]:
             pod = PodHelper(item)
             yield item, (
                 pod.name,
@@ -157,8 +157,8 @@ class JobsTable:
             mem_lim INTEGER
         """
 
-    def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
-        for item in kube_data["items"]:
+    def make_rows(self, context) -> list[tuple[dict, tuple]]:
+        for item in context.data["items"]:
             job = JobHelper(item)
             yield item, (
                 job.name,
@@ -180,8 +180,8 @@ class LabelsTable:
             value TEXT
         """
 
-    def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
-        for item in kube_data["items"]:
+    def make_rows(self, context) -> list[tuple[dict, tuple]]:
+        for item in context.data["items"]:
             thing = ItemHelper(item)
             for key, value in thing.labels.items():
                 yield item, (thing.metadata.get("uid"), key, value)
