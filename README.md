@@ -108,6 +108,7 @@ In any case, please be mindful of stale data and server load.
 ## Learn more
 
 * [Command-line syntax](./docs-tmp/syntax.md)
+* [Recommended configuration](./docs-tmp/recommended.md)
 * [Settings](./docs-tmp/settings.md)
 * [Built-in tables and functions](./docs-tmp/builtins.md)
 * [Configuring new columns and tables](./docs-tmp/extending.md)

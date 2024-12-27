@@ -59,13 +59,13 @@ Built from `kubectl get jobs`, one row per label.
 
 ### nodes
 
-Built from `kubectl get nodes`, one row per node
+Built from `kubectl get nodes`, one row per node.  See [recommended configuration](./recommended.md)
+about adding node instance type.
 
 | Column                          | Type    | Description                                                                                                 |
 |---------------------------------|---------|-------------------------------------------------------------------------------------------------------------|
 | name                            | TEXT    | Node name, from `metadata.name`                                                                             |
 | uid                             | TEXT    | Node UID, from `metadata.uid`                                                                               |
-| instance_type                   | TEXT    | Node instance type, from the label `node.kubernetes.io/instance-type` or `beta.kubernetes.io/instance-type` |
 | cpu_alloc, gpu_alloc, mem_alloc | REAL | CPU, GPU and memory values from `status.allocatable`; GPU looks for the value tagged `nvidia.com/gpu`       |
 | cpu_cap, gpu_cap, mem_cap       | REAL | CPU GPU and memory values from `status.capacity`; GPU looks for the value tagged `nvidia.com/gpu`           |
 
