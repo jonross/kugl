@@ -5,6 +5,7 @@ Command-line entry point.
 import os
 from argparse import ArgumentParser
 import sys
+from sqlite3 import DatabaseError
 from typing import List, Optional, Union
 
 import yaml
@@ -28,11 +29,15 @@ def main1(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
 
     try:
         return main2(argv, return_config=return_config)
+    except DatabaseError as e:
+        # DB errors are common when writing queries, don't make them look like a crash.
+        severe, exc = False, e
     except Exception as e:
-        if debugging() or "KUGEL_UNIT_TESTING" in os.environ:
-            raise
-        print(e, file=sys.stderr)
-        sys.exit(1)
+        severe, exc = True, e
+    if severe or debugging() or "KUGEL_UNIT_TESTING" in os.environ:
+        raise exc
+    print(exc, file=sys.stderr)
+    sys.exit(1)
 
 
 def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserInit, UserConfig]]:
