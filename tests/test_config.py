@@ -1,12 +1,13 @@
 """
 Tests for user configuration file content.
 """
+import pytest
 
 from kugel.impl.config import Settings, UserConfig, parse_model, ExtendTable, CreateTable, Config, UserInit
 
 import yaml
 
-from kugel.util import Age
+from kugel.util import Age, KugelError
 
 
 def test_settings_defaults():
@@ -58,6 +59,8 @@ def test_config_with_table_extension():
 
 def test_config_with_table_creation():
     c, e = parse_model(UserConfig, yaml.safe_load("""
+        resources:
+          - name: pods
         create:
           - table: pods
             resource: pods
@@ -79,6 +82,18 @@ def test_config_with_table_creation():
     assert columns[1].name == "bar"
     assert columns[1].type == "integer"
     assert columns[1].path == "metadata.creationTimestamp"
+
+
+def test_config_with_missing_resource():
+    c, e = parse_model(UserConfig, yaml.safe_load("""
+        create:
+          - table: pods
+            resource: pods
+            columns: []
+    """))
+    assert e is None
+    with pytest.raises(KugelError, match="Table 'pods' needs unknown resource 'pods'"):
+        Config.collate(UserInit(), c)
 
 
 def test_unknown_type():

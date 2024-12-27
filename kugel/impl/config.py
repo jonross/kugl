@@ -5,12 +5,12 @@ Pydantic models for configuration files.
 import re
 from typing import Literal, Optional, Tuple, Callable
 
+import funcy as fn
 import jmespath
-import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
-from kugel.util import Age, parse_utc, parse_size, KPath, ConfigPath, parse_age, parse_cpu
+from kugel.util import Age, parse_utc, parse_size, KPath, ConfigPath, parse_age, parse_cpu, fail
 
 PARENTED_PATH = re.compile(r"^(\^*)(.*)")
 
@@ -159,13 +159,17 @@ class Config(BaseModel):
     @classmethod
     def collate(cls, user_init: UserInit, user_config: UserConfig) -> 'Config':
         """Turn a UserConfig into a more convenient form."""
-        return Config(
+        config = Config(
             settings=user_init.settings,
             resources={r.name: r for r in user_config.resources},
             extend={e.table: e for e in user_config.extend},
             create={c.table: c for c in user_config.create},
             shortcuts=user_init.shortcuts,
         )
+        for table in config.create.values():
+            if table.resource not in config.resources:
+                fail(f"Table '{table.table}' needs unknown resource '{table.resource}'")
+        return config
 
 
 # FIXME use typevars
