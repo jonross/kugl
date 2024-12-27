@@ -3,7 +3,7 @@ Pydantic models for configuration files.
 """
 
 import re
-from typing import Literal, Optional, Tuple, Callable
+from typing import Literal, Optional, Tuple, Callable, Union
 
 import funcy as fn
 import jmespath
@@ -35,7 +35,7 @@ class ColumnDef(BaseModel):
     name: str
     type: Literal["text", "integer", "real", "date", "age", "size", "cpu"] = "text"
     path: Optional[str] = None
-    label: Optional[str] = None
+    label: Optional[Union[str, list[str]]] = None
     _extract: Callable[[object], object]
     _parents: int
     _sqltype: str
@@ -90,14 +90,18 @@ class ColumnDef(BaseModel):
     @classmethod
     def _gen_label_extractor(cls, config: 'ColumnDef') -> Callable[[object], object]:
         """Generate a label extractor function for a column definition."""
-        return lambda obj: cls._extract_label(obj, config.label)
+        labels = config.label if isinstance(config.label, list) else [config.label]
+        return lambda obj: cls._extract_label(obj, labels)
 
     @classmethod
-    def _extract_label(cls, obj: object, label: str) -> object:
+    def _extract_label(cls, obj: object, labels: list[str]) -> object:
         """Extract a value from an object using a label."""
         while (parent := obj.get("__parent")) is not None:
             obj = parent
-        return obj.get("metadata", {}).get("labels", {}).get(label)
+        available = obj.get("metadata", {}).get("labels", {})
+        for label in labels:
+            if (value := available.get(label)) is not None:
+                return value
 
 
 KUGEL_TYPE_CONVERTERS = {
