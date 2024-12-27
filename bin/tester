@@ -18,6 +18,6 @@ fi
 
 . venv/bin/activate 
 echo "Testing with versions:"
-pip list installed
+pip list installed | egrep -i 'arrow|funcy|jmespath|pydantic|pyyaml|tabulate'
 PYTHONPATH=. pytest --cov --cov-report=html:coverage -vv -s --tb=native tests
 
