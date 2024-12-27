@@ -208,12 +208,13 @@ class DataCache:
         missing = {kind for kind, age in cache_ages.items() if age is None}
         # Always refresh what's missing, and possibly also what's expired
         # Stale data warning for everything else
+        refreshable = missing if flag == NEVER_UPDATE else expired | missing
         if debugging("cache"):
             print("Requested", kinds)
+            print("Ages", cache_ages)
             print("Expired", expired)
-            print("Missing", expired)
-            print("Refreshable", expired)
-        refreshable = missing if flag == NEVER_UPDATE else expired | missing
+            print("Missing", missing)
+            print("Refreshable", refreshable)
         max_age = max((cache_ages[kind] for kind in (kinds - refreshable)), default=None)
         return refreshable, max_age
 
