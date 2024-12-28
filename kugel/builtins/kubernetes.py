@@ -173,6 +173,7 @@ class JobsTable:
 
 
 class LabelsTable:
+    """Base class for all built-in label tables; subclasses need only define UID_FIELD."""
 
     @property
     def schema(self):

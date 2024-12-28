@@ -48,6 +48,9 @@ class Limits:
 
     @classmethod
     def extract(cls, obj):
+        """Extract a Limits object from a dictionary, or return an empty one if the dictionary is None.
+
+        :param obj: A dictionary with keys "cpu", "nvidia.com/gpu" and "memory" """
         if obj is None:
             return Limits(None, None, None)
         cpu = parse_cpu(obj.get("cpu"))
@@ -57,9 +60,7 @@ class Limits:
 
 
 class ItemHelper:
-    """
-    Some common code for wrappers on JSON for pods, nodes et cetera
-    """
+    """Some common code for wrappers on JSON for pods, nodes et cetera."""
 
     def __init__(self, obj):
         self.obj = obj
@@ -81,9 +82,7 @@ class ItemHelper:
         return self.metadata.get("namespace")
 
     def label(self, name):
-        """
-        Return one of the labels from the object, or None if it doesn't have that label.
-        """
+        """Return one of the labels from the object, or None if it doesn't have that label."""
         return self.labels.get(name)
 
 

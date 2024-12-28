@@ -1,6 +1,7 @@
 """
 Process Kugel queries.
 If you're looking for Kugel's "brain", you've found it.
+See also tables.py
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -14,7 +15,7 @@ from pydantic import BaseModel, ConfigDict
 from tabulate import tabulate
 
 from .config import Config, UserConfig
-from .registry import get_domain, Domain
+from .registry import Domain
 from .tables import TableFromCode, TableFromConfig
 from kugel.util import fail, SqliteDb, to_size, to_utc, kugel_home, clock, ConfigPath, debugging, to_age
 
@@ -43,6 +44,7 @@ class Query(BaseModel):
         # FROM and JOIN.  Some of these may be CTEs, so don't assume they're all availabie in
         # Kubernetes, just pick out the ones we know about and let SQLite take care of
         # "unknown table" errors.
+        # FIXME: use sqlparse package
         sql = self.sql.replace("\n", " ")
         refs = set(re.findall(r"(?<=from|join)\s+([.\w]+)", sql, re.IGNORECASE))
         return {TableRef.parse(ref) for ref in refs}

@@ -106,12 +106,14 @@ class ConfigPath(KPath):
 
 
 def kugel_home() -> KPath:
+    # KUGEL_HOME override is for unit tests, not for users (as least for now)
     if "KUGEL_HOME" in os.environ:
         return KPath(os.environ["KUGEL_HOME"])
     return KPath.home() / ".kugel"
 
 
 def kube_home() -> KPath:
+    # KUGEL_HOME override is for unit tests, not for users (as least for now)
     if "KUGEL_HOME" in os.environ:
         return KPath(os.environ["KUGEL_HOME"]) / ".kube"
     return KPath.home() / ".kube"

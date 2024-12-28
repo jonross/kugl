@@ -1,3 +1,8 @@
+"""
+This is separate from engine.py for maintainability.
+SQLite tables are defined and populated here.
+"""
+
 from typing import Optional
 
 import jmespath
@@ -82,6 +87,7 @@ class TableFromConfig(Table):
         :param extender: an ExtendTable object from the extend: section of a user config file
         """
         if creator.row_source is None:
+            # FIXME: kubernetes-specific
             self.itemizer = lambda data: data["items"]
         else:
             self.itemizer = lambda data: self._itemize(creator.row_source, data)

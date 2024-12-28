@@ -9,6 +9,9 @@ resources:
   - name: nodes
     namespaced: false
 
+# node_taints builtin is defined here because it doesn't have any special column extraction
+# logic, and because it serves as a good unit test.
+
 create:
   - table: node_taints
     resource: nodes

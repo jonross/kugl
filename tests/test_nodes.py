@@ -1,6 +1,7 @@
 """
 Tests for the nodes and taints tables.
 """
+
 import yaml
 
 from kugel.impl.config import parse_model, UserConfig

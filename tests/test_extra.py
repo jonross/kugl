@@ -1,6 +1,7 @@
 """
 Assorted query tests not covered elsewhere.
 """
+
 import pytest
 import yaml
 

@@ -5,7 +5,6 @@ Pydantic models for configuration files.
 import re
 from typing import Literal, Optional, Tuple, Callable, Union
 
-import funcy as fn
 import jmespath
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
@@ -156,7 +155,7 @@ class Config(BaseModel):
 
     @classmethod
     def collate(cls, user_init: UserInit, user_config: UserConfig) -> 'Config':
-        """Turn a UserConfig into a more convenient form."""
+        """Combine UserInit and UserConfig into a more convenient form, and perform final validation."""
         config = Config(
             settings=user_init.settings,
             resources={r.name: r for r in user_config.resources},
