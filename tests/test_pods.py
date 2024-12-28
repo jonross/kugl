@@ -60,26 +60,26 @@ def test_by_cpu(test_home):
 def test_other_pod_fields(test_home):
     kubectl_response("pods", {
         "items": [
-            make_pod("pod-1", namespace="xyz", is_daemon=True),
+            make_pod("pod-1", namespace="xyz", is_daemon=True, phase="Pending"),
             make_pod("pod-3", node_name="joe", creation_ts=UNIT_TEST_TIMEBASE + 60),
             make_pod("pod-4", containers=[Container(command=["echo", "bye"])]),
         ]
     })
     kubectl_response("pod_statuses", """
         NAMESPACE  NAME   STATUS
-        xyz        pod-1  Running
+        xyz        pod-1  Pending
         default    pod-2  Running
-        default    pod-3  Running
-        default    pod-4  Running
+        default    pod-3  Terminating
+        default    pod-4  Terminating
     """)
     assert_query("""
-        SELECT namespace, uid, is_daemon, node_name, command, to_utc(creation_ts) AS created
+        SELECT namespace, phase, uid, is_daemon, node_name, command, to_utc(creation_ts) AS created
         FROM pods ORDER BY name
     """, """
-        namespace    uid          is_daemon  node_name    command     created
-        xyz          uid-pod-1            1  worker5      echo hello  2024-12-10T02:49:02Z
-        default      uid-pod-3            0  joe          echo hello  2024-12-10T02:50:02Z
-        default      uid-pod-4            0  worker5      echo bye    2024-12-10T02:49:02Z
+        namespace    phase    uid          is_daemon  node_name    command     created
+        xyz          Pending  uid-pod-1            1  worker5      echo hello  2024-12-10T02:49:02Z
+        default      Running  uid-pod-3            0  joe          echo hello  2024-12-10T02:50:02Z
+        default      Running  uid-pod-4            0  worker5      echo bye    2024-12-10T02:49:02Z
     """, all_ns=True)
 
 

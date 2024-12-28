@@ -89,6 +89,7 @@ def make_pod(name: str,
              node_name: Optional[str] = None,
              containers: List[Container] = [Container()],
              labels: Optional[dict] = None,
+             phase: Optional[str] = "Running",
              ):
     """
     Construct a Pod dict from a generic chunk of pod YAML that we can alter to simulate different
@@ -117,6 +118,7 @@ def make_pod(name: str,
     if creation_ts and not no_metadata:
         obj["metadata"]["creationTimestamp"] = to_utc(creation_ts)
     obj["spec"]["containers"] = [c.model_dump(by_alias=True, exclude_none=True) for c in containers]
+    obj["status"]["phase"] = phase
     return obj
 
 
