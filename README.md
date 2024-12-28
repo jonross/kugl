@@ -44,9 +44,9 @@ kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
 
 Kugel requires Python 3.9 or later, and kubectl.
 
-**This is an alpha release.**  Please expect bugs, lackluster performance, and backward-incompatible changes.
+**This is an alpha release.**  Please expect bugs and backward-incompatible changes.
 
-To install with `pip`:
+If you don't mind Kugel cluttering your Python with its [dependencies](./reqs_public.txt):
 
 ```shell
 pip install kugel

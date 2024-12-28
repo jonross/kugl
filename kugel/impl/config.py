@@ -92,10 +92,10 @@ class ColumnDef(BaseModel):
     def _extract_label(self, obj: object, context) -> object:
         """Extract a value from an object using a label."""
         obj = context.get_root(obj)
-        available = obj.get("metadata", {}).get("labels", {})
-        for label in self.label:
-            if (value := available.get(label)) is not None:
-                return value
+        if available := obj.get("metadata", {}).get("labels", {}):
+            for label in self.label:
+                if (value := available.get(label)) is not None:
+                    return value
 
 
 KUGEL_TYPE_CONVERTERS = {
