@@ -11,7 +11,7 @@ With Kugel (and a little configuration)
 ```shell
 kugel -a "select owner, sum(gpu_req), sum(cpu_req)
           from pods join nodes on pods.node_name = nodes.name
-          where instance_type like 'g5.%large' and pods.status in ('Running', 'Terminating')
+          where instance_type like 'g5.%large' and pods.phase in ('Running', 'Pending')
           group by 1 order by 2 desc limit 10"
 ```
 
@@ -19,13 +19,12 @@ Without Kugel
 
 ```shell
 nodes=$(kubectl get nodes -o json | jq '[.items[] 
-        | select(.metadata.labels["beta.kubernetes.io/instance-type"] | test("g5.*large")) 
+        | select((.metadata.labels["node.kubernetes.io/instance-type"] // "") | test("g5.*large")) 
         | .metadata.name]')
 kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
   [ .items[]
     | select(.spec.nodeName as $node | $nodes | index($node))
-    | select(.status.phase == "Running" or 
-             (.metadata.deletionTimestamp != null and .status.phase != "Succeeded" and .status.phase != "Failed"))
+    | select(.status.phase == "Running" or .status.phase == "Pending")
     | . as $pod | $pod.spec.containers[]
     | select(.resources.requests["nvidia.com/gpu"] != null)
     | {owner: $pod.metadata.labels["com.mycompany/job-owner"], 
@@ -35,7 +34,7 @@ kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
   | map({owner: .[0].owner, 
          gpu: map(.gpu | tonumber) | add, 
          cpu: map(.cpu | if test("m$") then (sub("m$"; "") | tonumber / 1000) else tonumber end) | add})
-  | sort_by(-.gpu) | .[:10]
+  | sort_by(-.gpu) | .[:10] | .[]
   | "\(.gpu) \(.cpu) \(.owner)"'
 
 ```
