@@ -85,6 +85,8 @@ kg -a "select name, to_size(mem_req) from pods order by mem_req desc limit 15"
 
 If this query is helpful, [save it](./docs-tmp/shortcuts.md), then you can run `kugel hi-mem`.
 
+Please also see the [recommended configuration](./docs-tmp/recommended.md).
+
 ## How it works (important)
 
 Kugel is just a thin wrapper on Kubectl and SQLite.  It turns `SELECT ... FROM pods` into 

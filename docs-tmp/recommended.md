@@ -15,14 +15,14 @@ extend:
 ```
 
 This will handle common cases.  If your cluster uses a different label, add it to the list.
-You can use Kugel itself to explore what's available, for example:
+You can use Kugel itself to find what's available, for example:
 
 ```shell
 kugel "select distinct key from node_labels where key like '%instance-type%'"
 ```
 
 Once you've set up the correct labels, here's a handy report that reports available capacity,
-partitioning nodes by distinct instance type and `NoSchedule` / `NoExecute` taints:
+partitioning nodes by instance type and `NoSchedule` / `NoExecute` taints:
 
 ```shell
 kugel "
@@ -35,3 +35,5 @@ kugel "
     GROUP BY 1, 5 ORDER BY 1, 5
 "
 ```
+
+If this query is helpful, [save it](./shortcuts.md) for future use.

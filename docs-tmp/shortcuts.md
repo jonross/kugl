@@ -3,8 +3,8 @@
 
 The `shortcuts` section in `~/.kugel/init.yaml` is a map from query names to lists of command-line arguments.
 
-Example, to save the node query shown in the [README](../README.md), 
-add this to `~/.kugel/init.yaml` and run `kugel hi-mem`.
+Example, to save the queries shown in the [README](../README.md) and in 
+[recommended configuration](./recommended.md), add this to `~/.kugel/init.yaml`:
 
 ```yaml
 shortcuts:
@@ -12,9 +12,21 @@ shortcuts:
   hi-mem:
     - |
       SELECT name, to_size(mem_req) FROM pods 
+      WHERE phase = 'Running'
       ORDER BY mem_req DESC LIMIT 15
+
+  nodes:
+    - |
+      WITH t AS (
+        SELECT node_uid, group_concat(key) AS taints FROM node_taints
+        WHERE effect IN ('NoSchedule', 'NoExecute') GROUP BY 1
+      )
+      SELECT instance_type, count(1) AS count, sum(cpu_alloc) AS cpu, sum(gpu_alloc) AS gpu, t.taints
+      FROM nodes LEFT OUTER JOIN t ON t.node_uid = nodes.uid
+      GROUP BY 1, 5 ORDER BY 1, 5
 ```
 
-Kugel offers this feature so you can keep all your extensions in one place.
+To run, type `kugel hi-mem` or `kugel nodes`.
+
 Simple parameter substitution might be offered in the future, but if you
 need more powerful templates, your own wrapper script is the short-term answer.
