@@ -138,9 +138,11 @@ class TableFromConfig(Table):
 
 
 class RowContext:
-    """One of these is passed to row-generating and column-extracting functions.
-    It provides information like the parent map for evaluating JMESPath expressions, and
-    removes the risk of changing row and column function signatures in the future."""
+    """Provide helpers to row-generating functions.
+
+    Primarily, the `.data` attribute holds the JSON data from 'kubectl get' or similar.
+    The `.set_parent` and `.get_parent` methods allow row-generating functions to track
+    parent objects as they iterate through nested data structures."""
 
     def __init__(self, data):
         self.data = data
@@ -149,7 +151,14 @@ class RowContext:
     def set_parent(self, child, parent):
         self._parents[id(child)] = parent
 
-    def get_parent(self, child):
-        return self._parents.get(id(child))
+    def get_parent(self, child, depth: int = 1):
+        while depth > 0 and child is not None:
+            child = self._parents.get(id(child))
+            depth -= 1
+        return child
 
+    def get_root(self, child):
+        while (parent := self._parents.get(id(child))) is not None:
+            child = parent
+        return child
 

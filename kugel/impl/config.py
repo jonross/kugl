@@ -36,24 +36,38 @@ class ColumnDef(BaseModel):
     type: Literal["text", "integer", "real", "date", "age", "size", "cpu"] = "text"
     path: Optional[str] = None
     label: Optional[Union[str, list[str]]] = None
+    # Function to extract a column value from an object.
     _extract: Callable[[object], object]
-    _parents: int
-    _sqltype: str
+    # Function to convert the extracted value to the SQL type
     _convert: type
+    # Parsed value of self.path
+    _finder: jmespath.parser.Parser
+    # Number of ^ in self.path
+    _parents: int
+    # SQL type for this column
+    _sqltype: str
 
     @model_validator(mode="after")
     @classmethod
     def gen_extractor(cls, config: 'ColumnDef') -> 'ColumnDef':
         """
         Generate the extract function for a column definition; given an object, it will
-        return a coluumn value of the appropriate type.
+        return a column value of the appropriate type.
         """
         if config.path and config.label:
             raise ValueError("cannot specify both path and label")
         elif config.path:
-            config._extract = cls._gen_jmespath_extractor(config)
+            m = PARENTED_PATH.match(config.path)
+            config._parents = len(m.group(1))
+            try:
+                config._finder = jmespath.compile(m.group(2))
+            except jmespath.exceptions.ParseError as e:
+                raise ValueError(f"invalid JMESPath expression {m.group(2)} in column {config.name}") from e
+            config._extract = config._extract_jmespath
         elif config.label:
-            config._extract = cls._gen_label_extractor(config)
+            if not isinstance(config.label, list):
+                config.label = [config.label]
+            config._extract = config._extract_label
         else:
             raise ValueError("must specify either path or label")
         config._sqltype = KUGEL_TYPE_TO_SQL_TYPE[config.type]
@@ -61,45 +75,25 @@ class ColumnDef(BaseModel):
         return config
 
     def extract(self, obj: object, context) -> object:
-        """Extract the column value from an object."""
+        """Extract the column value from an object and convert to the correct type."""
         if obj is None:
             return None
         value = self._extract(obj, context)
         return None if value is None else self._convert(value)
 
-    @classmethod
-    def _gen_jmespath_extractor(cls, config: 'ColumnDef') -> Callable[[object], object]:
-        """Generate a JMESPath extractor function for a column definition."""
-        m = PARENTED_PATH.match(config.path)
-        parents = len(m.group(1))
-        try:
-            finder = jmespath.compile(m.group(2))
-        except jmespath.exceptions.ParseError as e:
-            raise ValueError(f"invalid JMESPath expression {m.group(2)} in column {config.name}") from e
-        return lambda obj, context: cls._extract_jmespath(obj, context, finder, parents)
-
-    @classmethod
-    def _extract_jmespath(cls, obj: object, context, finder: jmespath.parser.Parser, parents: int) -> object:
+    def _extract_jmespath(self, obj: object, context) -> object:
         """Extract a value from an object using a JMESPath finder."""
-        count = 0
-        while count < parents and obj is not None:
-            obj = context.get_parent(obj)
-            count += 1
-        return  None if obj is None else finder.search(obj)
+        if self._parents > 0:
+            obj = context.get_parent(obj, self._parents)
+        if obj is None:
+            fail(f"Missing parent or too many ^ while evaluating {self.path}")
+        return self._finder.search(obj)
 
-    @classmethod
-    def _gen_label_extractor(cls, config: 'ColumnDef') -> Callable[[object], object]:
-        """Generate a label extractor function for a column definition."""
-        labels = config.label if isinstance(config.label, list) else [config.label]
-        return lambda obj, context: cls._extract_label(obj, context, labels)
-
-    @classmethod
-    def _extract_label(cls, obj: object, context, labels: list[str]) -> object:
+    def _extract_label(self, obj: object, context) -> object:
         """Extract a value from an object using a label."""
-        while (parent := context.get_parent(obj)) is not None:
-            obj = parent
+        obj = context.get_root(obj)
         available = obj.get("metadata", {}).get("labels", {})
-        for label in labels:
+        for label in self.label:
             if (value := available.get(label)) is not None:
                 return value
 

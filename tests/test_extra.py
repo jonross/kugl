@@ -5,7 +5,7 @@ import pytest
 import yaml
 
 from kugel.impl.config import UserConfig, parse_model
-from kugel.util import fail, to_age, parse_age
+from kugel.util import fail, to_age, parse_age, KugelError
 from .testing import make_job, kubectl_response, assert_query
 
 @pytest.fixture
@@ -32,8 +32,7 @@ def thing_config():
               type: date
               path: date
     """))
-    if errors:
-        fail("\n".join(errors))
+    assert not errors
     return config
 
 
@@ -49,3 +48,26 @@ def test_non_sql_types(test_home, thing_config):
         10Ki     2.5  2d   2021-01-01T00:00:00Z
         2.0Gi    0.3  4h   2021-12-31T23:59:59Z
     """, user_config=thing_config)
+
+
+def test_too_many_parents(test_home):
+    config, errors = parse_model(UserConfig, yaml.safe_load("""
+      resources:
+        - name: things
+          namespaced: false
+      create:
+        - table: things
+          resource: things
+          columns:
+            - name: something
+              path: ^^^invalid
+    """))
+    assert not errors
+    kubectl_response("things", {
+        "items": [
+            {"something": "foo"},
+            {"something": "foo"},
+        ]
+    })
+    with pytest.raises(KugelError, match="Missing parent or too many . while evaluating ...invalid"):
+        assert_query("SELECT something from things", "", user_config=config)
