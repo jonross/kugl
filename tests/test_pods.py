@@ -108,6 +108,7 @@ def test_resource_summing(test_home, containers, expected):
     kubectl_response("pods", {"items": [pod]})
     kubectl_response("pod_statuses", "NAME    STATUS\npod-1  Running")
     assert_query("SELECT cpu_req, cpu_lim, mem_req, mem_lim, gpu_req, gpu_lim FROM pods", expected)
+    # Try the same thing but with a job
     job = make_job("job-1", pod=pod)
     kubectl_response("jobs", {"items": [job]})
     assert_query("SELECT cpu_req, cpu_lim, mem_req, mem_lim, gpu_req, gpu_lim FROM jobs", expected)

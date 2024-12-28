@@ -52,8 +52,8 @@ If you don't mind Kugel cluttering your Python with its [dependencies](./reqs_pu
 pip install kugel
 ```
 
-To use via docker, `mkdir ~/.kugel` then use this Bash alias.  (Sorry, this is an x86 image, I don't have
-multiarch working yet.)
+To use via Docker instead, `mkdir ~/.kugel` and use this Bash alias.  (Sorry, this is an x86 image,
+I don't have multiarch working yet.)
 
 ```shell
 kugel() {
@@ -65,7 +65,7 @@ kugel() {
 ```
 
 If neither of those suits you, it's easy to set up from source.  (This will build a virtualenv in the
-source directory.)
+directory where you clone it.)
 
 ```shell
 git clone https://github.com/jonross/kugel.git
