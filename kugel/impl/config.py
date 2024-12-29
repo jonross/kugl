@@ -163,9 +163,6 @@ class Config(BaseModel):
             create={c.table: c for c in user_config.create},
             shortcuts=user_init.shortcuts,
         )
-        for table in config.create.values():
-            if table.resource not in config.resources:
-                fail(f"Table '{table.table}' needs unknown resource '{table.resource}'")
         return config
 
 

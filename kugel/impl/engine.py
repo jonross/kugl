@@ -97,11 +97,17 @@ class Engine:
         :return: a tuple of (rows, column names)
         """
 
+        # Load built-ins for the target domain
         builtins_yaml = ConfigPath(__file__).parent.parent / "builtins" / f"{self.domain.name}.yaml"
         if builtins_yaml.exists():
             builtins = UserConfig(**builtins_yaml.parse_yaml())
             self.config.resources.update({r.name: r for r in builtins.resources})
             self.config.create.update({c.table: c for c in builtins.create})
+
+        # Verify user-defined tables have the needed resources
+        for table in self.config.create.values():
+            if table.resource not in self.config.resources:
+                fail(f"Table '{table.table}' needs unknown resource '{table.resource}'")
 
         # Reconcile tables created / extended in the config file with tables defined in code, and
         # generate the table builders.

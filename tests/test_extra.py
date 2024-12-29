@@ -71,4 +71,17 @@ def test_too_many_parents(test_home):
         ]
     })
     with pytest.raises(KugelError, match="Missing parent or too many . while evaluating ...invalid"):
-        assert_query("SELECT something from things", "", user_config=config)
+        assert_query("SELECT * FROM things", "", user_config=config)
+
+
+def test_config_with_missing_resource():
+    config, errors = parse_model(UserConfig, yaml.safe_load("""
+        create:
+          - table: stuff
+            resource: stuff
+            columns: []
+    """))
+    assert errors is None
+    with pytest.raises(KugelError, match="Table 'stuff' needs unknown resource 'stuff'"):
+        assert_query("SELECT * FROM stuff", "", user_config=config)
+

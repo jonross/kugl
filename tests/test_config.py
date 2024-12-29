@@ -84,18 +84,6 @@ def test_config_with_table_creation():
     assert columns[1].path == "metadata.creationTimestamp"
 
 
-def test_config_with_missing_resource():
-    c, e = parse_model(UserConfig, yaml.safe_load("""
-        create:
-          - table: pods
-            resource: pods
-            columns: []
-    """))
-    assert e is None
-    with pytest.raises(KugelError, match="Table 'pods' needs unknown resource 'pods'"):
-        Config.collate(UserInit(), c)
-
-
 def test_unknown_type():
     _, errors = parse_model(ExtendTable, yaml.safe_load("""
         table: xyz
