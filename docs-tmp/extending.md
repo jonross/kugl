@@ -139,6 +139,35 @@ Each `"^"` at the start of a `path` refers to the part of the response one level
 If creating multiple tables from a resource, you should use the `uid` column (sourced from `metadata.uid`)
 as a join key, since this is a guaranteed unique key.
 
+## Defining tables against any JSON data
+
+(This is experimental and subject to change.)
+
+You can define tables against any JSON data, not just Kubernetes resources.  This is useful for
+trying out JMESPath expressions and SQLite queries  If the table is defined in 
+`~/.kugel/stdin.yaml` and references the `stdin` resource, it will be available for queries
+against data piped to Kugel's standard input.  Example, given
+
+```yaml
+create:
+  - table: awsgroups
+    resource: stdin
+    row_source:
+      - Groups
+    columns:
+      - name: arn
+        path: Arn
+      - name: created
+        type: date
+        path: CreateDate
+```
+
+you can write
+
+```shell
+aws iam list-groups | kugel "select arn, to_utc(created) from stdin.awsgroups"
+```
+
 ## Coming soon
 
 Write column extractors and table generators in Python.
