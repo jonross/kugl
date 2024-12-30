@@ -31,5 +31,3 @@ Matching `row_source` and `path` to your data layout can be tricky.
 * Build up one `row_source` at a time
 * Extend parent references `"^"` and test `select * from` after each step
 * Make sure JMESPath expressions for columns select single objects
-* Don't try to debug `kubectl` and `kugel` at the same time; use the `stdin` resource and a static
-JSON file for testing.

@@ -13,7 +13,7 @@ from pydantic import Field, BaseModel, ConfigDict
 
 from kugel.impl.config import Config, UserConfig, UserInit
 from kugel.impl.engine import Engine, Query, ALWAYS_UPDATE
-from kugel.impl.registry import get_domain
+from kugel.impl.registry import get_schema
 from kugel.util import to_utc, UNIT_TEST_TIMEBASE
 
 
@@ -71,6 +71,7 @@ def make_node(name: str, taints: Optional[List[Taint]] = None, labels: Optional[
     """
     node = yaml.safe_load(_resource("sample_node.yaml"))
     node["metadata"]["name"] = name
+    node["metadata"]["uid"] = "uid-" + name
     if taints:
         node["spec"]["taints"] = [taint.model_dump(exclude_none=True) for taint in taints]
     if labels is not None:
@@ -88,6 +89,7 @@ def make_pod(name: str,
              node_name: Optional[str] = None,
              containers: List[Container] = [Container()],
              labels: Optional[dict] = None,
+             phase: Optional[str] = "Running",
              ):
     """
     Construct a Pod dict from a generic chunk of pod YAML that we can alter to simulate different
@@ -102,6 +104,7 @@ def make_pod(name: str,
         obj["name"] = name
     elif not no_name:
         obj["metadata"]["name"] = name
+    obj["metadata"]["uid"] = "uid-" + name
     if no_metadata:
         del obj["metadata"]
     if is_daemon:
@@ -115,6 +118,7 @@ def make_pod(name: str,
     if creation_ts and not no_metadata:
         obj["metadata"]["creationTimestamp"] = to_utc(creation_ts)
     obj["spec"]["containers"] = [c.model_dump(by_alias=True, exclude_none=True) for c in containers]
+    obj["status"]["phase"] = phase
     return obj
 
 
@@ -136,6 +140,7 @@ def make_job(name: str,
     """
     obj = yaml.safe_load(_resource("sample_job.yaml"))
     obj["metadata"]["name"] = name
+    obj["metadata"]["uid"] = "uid-" + name
     obj["metadata"]["labels"]["job-name"] = name
     if namespace is not None:
         obj["metadata"]["namespace"] = namespace
@@ -150,15 +155,20 @@ def make_job(name: str,
     return obj
 
 
-def assert_query(sql: str, expected: Union[str, list], user_config: UserConfig = None):
+def assert_query(sql: str, expected: Union[str, list],
+                 user_config: UserConfig = None,
+                 all_ns: bool = False):
     """
     Run a query in the "nocontext" namespace and compare the result with expected output.
     :param sql: SQL query
     :param expected: Output as it would be shown at the CLI.  This will be dedented so the
         caller can indent for neatness.  Or, if a list, each item will be checked in order.
+    :param all_ns: FIXME temporary hack until we get namespaces out of engine.py
     """
+    schema = get_schema("kubernetes")
+    schema.impl.set_namespace(all_ns, "__all" if all_ns else "default")
     config = Config.collate(UserInit(), user_config or UserConfig())
-    engine = Engine(get_domain("kubernetes"), config, "nocontext")
+    engine = Engine(schema, config, "nocontext")
     if isinstance(expected, str):
         actual = engine.query_and_format(Query(sql=sql))
         assert actual.strip() == textwrap.dedent(expected).strip()

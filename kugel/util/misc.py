@@ -106,23 +106,14 @@ class ConfigPath(KPath):
 
 
 def kugel_home() -> KPath:
+    # KUGEL_HOME override is for unit tests, not for users (as least for now)
     if "KUGEL_HOME" in os.environ:
         return KPath(os.environ["KUGEL_HOME"])
     return KPath.home() / ".kugel"
 
 
 def kube_home() -> KPath:
+    # KUGEL_HOME override is for unit tests, not for users (as least for now)
     if "KUGEL_HOME" in os.environ:
         return KPath(os.environ["KUGEL_HOME"]) / ".kube"
     return KPath.home() / ".kube"
-
-
-def set_parent(item: dict, parent: dict):
-    item["__parent"] = parent
-
-
-def parent(item: dict):
-    parent = item.get("__parent")
-    if parent is None:
-        warn("Item parent is missing")
-    return parent

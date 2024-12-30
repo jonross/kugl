@@ -1,11 +1,17 @@
 #!/bin/bash
+#
+# Wrapper script to run Kugel test suite against different sets of requirements.
 
 set -euo pipefail
 
 case ${1:-none} in
+    # Run against low end of version range
     --lo) reqs=reqs_lo.txt ;;
+    # Run against high end of version range
     --hi) reqs=reqs_hi.txt ;;
+    # Run against pinned versions used during development
     --pin) reqs=requirements.txt ;;
+    # Run against last set of versions specified
     none) reqs=none
 esac
 
@@ -18,6 +24,6 @@ fi
 
 . venv/bin/activate 
 echo "Testing with versions:"
-pip list installed
+pip list installed | egrep -i 'arrow|funcy|jmespath|pydantic|pyyaml|tabulate'
 PYTHONPATH=. pytest --cov --cov-report=html:coverage -vv -s --tb=native tests
 

@@ -3,14 +3,13 @@ Pydantic models for configuration files.
 """
 
 import re
-from typing import Literal, Optional, Tuple
+from typing import Literal, Optional, Tuple, Callable, Union
 
 import jmespath
-import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
-from kugel.util import Age, parse_utc, parse_size, KPath, ConfigPath, parse_age, parse_cpu
+from kugel.util import Age, parse_utc, parse_size, KPath, ConfigPath, parse_age, parse_cpu, fail
 
 PARENTED_PATH = re.compile(r"^(\^*)(.*)")
 
@@ -35,38 +34,67 @@ class ColumnDef(BaseModel):
     name: str
     type: Literal["text", "integer", "real", "date", "age", "size", "cpu"] = "text"
     path: Optional[str] = None
-    label: Optional[str] = None
-    _finder: jmespath.parser.Parser
-    _parents: int
-    _sqltype: str
+    label: Optional[Union[str, list[str]]] = None
+    # Function to extract a column value from an object.
+    _extract: Callable[[object], object]
+    # Function to convert the extracted value to the SQL type
     _convert: type
+    # Parsed value of self.path
+    _finder: jmespath.parser.Parser
+    # Number of ^ in self.path
+    _parents: int
+    # SQL type for this column
+    _sqltype: str
 
     @model_validator(mode="after")
     @classmethod
-    def parse_path(cls, config: 'ColumnDef') -> 'ColumnDef':
+    def gen_extractor(cls, config: 'ColumnDef') -> 'ColumnDef':
+        """
+        Generate the extract function for a column definition; given an object, it will
+        return a column value of the appropriate type.
+        """
         if config.path and config.label:
             raise ValueError("cannot specify both path and label")
-        if not config.path and not config.label:
+        elif config.path:
+            m = PARENTED_PATH.match(config.path)
+            config._parents = len(m.group(1))
+            try:
+                config._finder = jmespath.compile(m.group(2))
+            except jmespath.exceptions.ParseError as e:
+                raise ValueError(f"invalid JMESPath expression {m.group(2)} in column {config.name}") from e
+            config._extract = config._extract_jmespath
+        elif config.label:
+            if not isinstance(config.label, list):
+                config.label = [config.label]
+            config._extract = config._extract_label
+        else:
             raise ValueError("must specify either path or label")
-        if config.label:
-            config.path = f"metadata.labels.\"{config.label}\""
-        m = PARENTED_PATH.match(config.path)
-        config._parents = len(m.group(1))
-        try:
-            config._finder = jmespath.compile(m.group(2))
-        except jmespath.exceptions.ParseError as e:
-            raise ValueError(f"invalid JMESPath expression {m.group(2)} in column {config.name}") from e
         config._sqltype = KUGEL_TYPE_TO_SQL_TYPE[config.type]
         config._convert = KUGEL_TYPE_CONVERTERS[config.type]
         return config
 
-    def extract(self, obj: object) -> object:
-        count = 0
-        while count < self._parents and obj is not None:
-            obj = obj.get("__parent")
-            count += 1
-        value = None if obj is None else self._finder.search(obj)
+    def extract(self, obj: object, context) -> object:
+        """Extract the column value from an object and convert to the correct type."""
+        if obj is None:
+            return None
+        value = self._extract(obj, context)
         return None if value is None else self._convert(value)
+
+    def _extract_jmespath(self, obj: object, context) -> object:
+        """Extract a value from an object using a JMESPath finder."""
+        if self._parents > 0:
+            obj = context.get_parent(obj, self._parents)
+        if obj is None:
+            fail(f"Missing parent or too many ^ while evaluating {self.path}")
+        return self._finder.search(obj)
+
+    def _extract_label(self, obj: object, context) -> object:
+        """Extract a value from an object using a label."""
+        obj = context.get_root(obj)
+        if available := obj.get("metadata", {}).get("labels", {}):
+            for label in self.label:
+                if (value := available.get(label)) is not None:
+                    return value
 
 
 KUGEL_TYPE_CONVERTERS = {
@@ -127,14 +155,17 @@ class Config(BaseModel):
 
     @classmethod
     def collate(cls, user_init: UserInit, user_config: UserConfig) -> 'Config':
-        """Turn a UserConfig into a more convenient form."""
-        return Config(
+        """Combine UserInit and UserConfig into a more convenient form, and perform final validation."""
+        config = Config(
             settings=user_init.settings,
             resources={r.name: r for r in user_config.resources},
             extend={e.table: e for e in user_config.extend},
             create={c.table: c for c in user_config.create},
             shortcuts=user_init.shortcuts,
         )
+        # FIXME: also prevent the user from defining stdin
+        config.resources["stdin"] = ResourceDef(name="stdin", namespaced=False)
+        return config
 
 
 # FIXME use typevars

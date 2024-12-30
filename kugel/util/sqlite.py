@@ -1,3 +1,7 @@
+"""
+Our entire interface to SQLite features is here.
+"""
+
 import collections as co
 import sqlite3
 

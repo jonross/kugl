@@ -38,7 +38,7 @@ def test_by_cpu(test_home):
             make_pod("pod-1"),
             make_pod("pod-2"),
             make_pod("pod-3", containers=[Container(requests=CGM(cpu=2, mem="10M"))]),
-            make_pod("pod-4", containers=[Container(requests=CGM(cpu=2, mem="10M"))]),
+            make_pod("pod-4", containers=[Container(requests=CGM(cpu="2000m", mem="10M"))]),
             # should get dropped because no status available
             make_pod("pod-5", containers=[Container(requests=CGM(cpu=2, mem="10M"))]),
         ]
@@ -60,27 +60,27 @@ def test_by_cpu(test_home):
 def test_other_pod_fields(test_home):
     kubectl_response("pods", {
         "items": [
-            make_pod("pod-1", namespace="xyz", is_daemon=True),
+            make_pod("pod-1", namespace="xyz", is_daemon=True, phase="Pending"),
             make_pod("pod-3", node_name="joe", creation_ts=UNIT_TEST_TIMEBASE + 60),
             make_pod("pod-4", containers=[Container(command=["echo", "bye"])]),
         ]
     })
     kubectl_response("pod_statuses", """
-        NAME   STATUS
-        pod-1  Running
-        pod-2  Running
-        pod-3  Running
-        pod-4  Running
+        NAMESPACE  NAME   STATUS
+        xyz        pod-1  Pending
+        default    pod-2  Running
+        default    pod-3  Terminating
+        default    pod-4  Terminating
     """)
     assert_query("""
-        SELECT namespace, is_daemon, node_name, command, to_utc(creation_ts) AS created
+        SELECT namespace, phase, uid, is_daemon, node_name, command, to_utc(creation_ts) AS created
         FROM pods ORDER BY name
     """, """
-        namespace      is_daemon  node_name    command     created
-        xyz                    1  worker5      echo hello  2024-12-10T02:49:02Z
-        research               0  joe          echo hello  2024-12-10T02:50:02Z
-        research               0  worker5      echo bye    2024-12-10T02:49:02Z
-    """)
+        namespace    phase    uid          is_daemon  node_name    command     created
+        xyz          Pending  uid-pod-1            1  worker5      echo hello  2024-12-10T02:49:02Z
+        default      Running  uid-pod-3            0  joe          echo hello  2024-12-10T02:50:02Z
+        default      Running  uid-pod-4            0  worker5      echo bye    2024-12-10T02:49:02Z
+    """, all_ns=True)
 
 
 @pytest.mark.parametrize("containers,expected", [
@@ -108,6 +108,7 @@ def test_resource_summing(test_home, containers, expected):
     kubectl_response("pods", {"items": [pod]})
     kubectl_response("pod_statuses", "NAME    STATUS\npod-1  Running")
     assert_query("SELECT cpu_req, cpu_lim, mem_req, mem_lim, gpu_req, gpu_lim FROM pods", expected)
+    # Try the same thing but with a job
     job = make_job("job-1", pod=pod)
     kubectl_response("jobs", {"items": [job]})
     assert_query("SELECT cpu_req, cpu_lim, mem_req, mem_lim, gpu_req, gpu_lim FROM jobs", expected)
@@ -129,12 +130,12 @@ def test_pod_labels(test_home):
         pod-3  Init:3
         pod-4  Init:4
     """)
-    assert_query("SELECT pod_name, key, value FROM pod_labels ORDER BY 2, 1", """
-        pod_name    key    value
-        pod-2       a      b
-        pod-2       c      d
-        pod-2       e      f
-        pod-1       foo    bar
-        pod-4       one    two
-        pod-4       three  four
+    assert_query("SELECT pod_uid, key, value FROM pod_labels ORDER BY 2, 1", """
+        pod_uid    key    value
+        uid-pod-2  a      b
+        uid-pod-2  c      d
+        uid-pod-2  e      f
+        uid-pod-1  foo    bar
+        uid-pod-4  one    two
+        uid-pod-4  three  four
     """)

@@ -1,11 +1,17 @@
 """
 Assorted query tests not covered elsewhere.
 """
+import io
+import json
+import sys
+import textwrap
+
 import pytest
 import yaml
 
 from kugel.impl.config import UserConfig, parse_model
-from kugel.util import fail, to_age, parse_age
+from kugel.main import main1
+from kugel.util import fail, to_age, parse_age, KugelError
 from .testing import make_job, kubectl_response, assert_query
 
 @pytest.fixture
@@ -32,8 +38,7 @@ def thing_config():
               type: date
               path: date
     """))
-    if errors:
-        fail("\n".join(errors))
+    assert not errors
     return config
 
 
@@ -49,3 +54,66 @@ def test_non_sql_types(test_home, thing_config):
         10Ki     2.5  2d   2021-01-01T00:00:00Z
         2.0Gi    0.3  4h   2021-12-31T23:59:59Z
     """, user_config=thing_config)
+
+
+def test_too_many_parents(test_home):
+    config, errors = parse_model(UserConfig, yaml.safe_load("""
+      resources:
+        - name: things
+          namespaced: false
+      create:
+        - table: things
+          resource: things
+          columns:
+            - name: something
+              path: ^^^invalid
+    """))
+    assert not errors
+    kubectl_response("things", {
+        "items": [
+            {"something": "foo"},
+            {"something": "foo"},
+        ]
+    })
+    with pytest.raises(KugelError, match="Missing parent or too many . while evaluating ...invalid"):
+        assert_query("SELECT * FROM things", "", user_config=config)
+
+
+def test_config_with_missing_resource():
+    config, errors = parse_model(UserConfig, yaml.safe_load("""
+        create:
+          - table: stuff
+            resource: stuff
+            columns: []
+    """))
+    assert errors is None
+    with pytest.raises(KugelError, match="Table 'stuff' needs unknown resource 'stuff'"):
+        assert_query("SELECT * FROM stuff", "", user_config=config)
+
+
+def test_select_from_stdin(test_home, monkeypatch, capsys):
+    (test_home / "any.yaml").write_text("""
+        create:
+          - table: people
+            resource: stdin
+            row_source:
+              - people
+            columns:
+              - name: name
+                path: name
+              - name: age
+                path: age
+                type: integer
+    """)
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps({"people": [
+        {"name": "Jim", "age": 42},
+        {"name": "Jill", "age": 43},
+    ]})))
+    main1(["SELECT name, age FROM any.people"])
+    out, _ = capsys.readouterr()
+    assert out.strip() == textwrap.dedent("""
+        name      age
+        Jim        42
+        Jill       43
+    """).strip()
+

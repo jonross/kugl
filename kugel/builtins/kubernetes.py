@@ -9,15 +9,12 @@ import json
 from argparse import ArgumentParser
 
 from .helpers import Limits, ItemHelper, PodHelper, JobHelper
-from kugel.api import domain, table, fail
+from kugel.api import schema, table, fail
 from kugel.impl.config import Config
 from kugel.util import parse_utc, run, WHITESPACE
 
-# Fake namespace if "--all-namespaces" option is used
-ALL_NAMESPACE = "__all"
 
-
-@domain("kubernetes")
+@schema("kubernetes")
 class KubernetesData:
 
     def add_cli_options(self, ap: ArgumentParser):
@@ -27,7 +24,16 @@ class KubernetesData:
     def handle_cli_options(self, args):
         if args.all_namespaces and args.namespace:
             fail("Cannot use both -a/--all-namespaces and -n/--namespace")
-        self.namespace = ALL_NAMESPACE if args.all_namespaces else args.namespace or "default"
+        self.set_namespace(args.all_namespaces, args.namespace)
+
+    def set_namespace(self, all_namespaces: bool, namespace: str):
+        if all_namespaces:
+            # FIXME: engine.py and testing.py still use this
+            self.ns = "__all"
+            self.all_ns = True
+        else:
+            self.ns = namespace or "default"
+            self.all_ns = False
 
     def get_objects(self, kind: str, config: Config)-> dict:
         """Fetch resources from Kubernetes using kubectl.
@@ -35,7 +41,7 @@ class KubernetesData:
         :param kind: Kubernetes resource type e.g. "pods"
         :return: JSON as output by "kubectl get {kind} -o json"
         """
-        namespace_flag = ["--all-namespaces"] if self.namespace == ALL_NAMESPACE else ["-n", self.namespace]
+        namespace_flag = ["--all-namespaces"] if self.ns else ["-n", self.ns]
         is_namespaced = config.resources[kind].namespaced
         if not is_namespaced:
             _, output, _ = run(["kubectl", "get", kind, "-o", "json"])
@@ -47,27 +53,34 @@ class KubernetesData:
             _, output, _= run(["kubectl", "get", kind, *namespace_flag, "-o", "json"])
             return json.loads(output)
 
-    def _pod_status_from_pod_list(self, output):
-        """Convert the tabular output of 'kubectl get pods' to JSON."""
+    def _pod_status_from_pod_list(self, output) -> dict[str, str]:
+        """
+        Convert the tabular output of 'kubectl get pods' to JSON.
+        :return: a dict mapping "namespace/name" to status
+        """
         rows = [WHITESPACE.split(line.strip()) for line in output.strip().split("\n")]
         if len(rows) < 2:
             return {}
         header, rows = rows[0], rows[1:]
         name_index = header.index("NAME")
         status_index = header.index("STATUS")
-        if name_index is None or status_index is None:
-            raise ValueError("Can't find NAME and STATUS columns in 'kubectl get pods' output")
-        return {row[name_index]: row[status_index] for row in rows}
+        # It would be nice if 'kubectl get pods' printed the UID, but it doesn't, so use
+        # "namespace/name" as the key.  (Can't use a tuple since this has to be JSON-dumped.)
+        if self.all_ns:
+            namespace_index = header.index("NAMESPACE")
+            return {f"{row[namespace_index]}/{row[name_index]}": row[status_index] for row in rows}
+        else:
+            return {f"{self.ns}/{row[name_index]}": row[status_index] for row in rows}
 
 
-@table(domain="kubernetes", name="nodes", resource="nodes")
+@table(schema="kubernetes", name="nodes", resource="nodes")
 class NodesTable:
 
     @property
     def schema(self):
         return """
             name TEXT,
-            instance_type TEXT,
+            uid TEXT,
             cpu_alloc REAL,
             gpu_alloc REAL,
             mem_alloc INTEGER,
@@ -76,29 +89,31 @@ class NodesTable:
             mem_cap INTEGER
         """
 
-    def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
-        for item in kube_data["items"]:
+    def make_rows(self, context) -> list[tuple[dict, tuple]]:
+        for item in context.data["items"]:
             node = ItemHelper(item)
             yield item, (
                 node.name,
-                node.label("node.kubernetes.io/instance-type") or node.label("beta.kubernetes.io/instance-type"),
+                node.metadata.get("uid"),
                 *Limits.extract(node["status"]["allocatable"]).as_tuple(),
                 *Limits.extract(node["status"]["capacity"]).as_tuple(),
             )
 
 
-@table(domain="kubernetes", name="pods", resource="pods")
+@table(schema="kubernetes", name="pods", resource="pods")
 class PodsTable:
 
     @property
     def schema(self):
         return """
             name TEXT,
+            uid TEXT,
             is_daemon INTEGER,
             namespace TEXT,
             node_name TEXT,
             creation_ts INTEGER,
             command TEXT,
+            phase TEXT,
             status TEXT,
             cpu_req REAL,
             gpu_req REAL,
@@ -108,29 +123,32 @@ class PodsTable:
             mem_lim INTEGER
         """
 
-    def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
-        for item in kube_data["items"]:
+    def make_rows(self, context) -> list[tuple[dict, tuple]]:
+        for item in context.data["items"]:
             pod = PodHelper(item)
             yield item, (
                 pod.name,
+                pod.metadata.get("uid"),
                 1 if pod.is_daemon else 0,
                 pod.namespace,
                 pod["spec"].get("nodeName"),
                 parse_utc(pod.metadata["creationTimestamp"]),
                 pod.command,
+                pod["status"]["phase"],
                 pod["kubectl_status"],
                 *pod.resources("requests").as_tuple(),
                 *pod.resources("limits").as_tuple(),
             )
 
 
-@table(domain="kubernetes", name="jobs", resource="jobs")
+@table(schema="kubernetes", name="jobs", resource="jobs")
 class JobsTable:
 
     @property
     def schema(self):
         return """
             name TEXT,
+            uid TEXT,
             namespace TEXT,
             status TEXT,
             cpu_req REAL,
@@ -141,11 +159,12 @@ class JobsTable:
             mem_lim INTEGER
         """
 
-    def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
-        for item in kube_data["items"]:
+    def make_rows(self, context) -> list[tuple[dict, tuple]]:
+        for item in context.data["items"]:
             job = JobHelper(item)
             yield item, (
                 job.name,
+                job.metadata.get("uid"),
                 job.namespace,
                 job.status,
                 *job.resources("requests").as_tuple(),
@@ -154,32 +173,33 @@ class JobsTable:
 
 
 class LabelsTable:
+    """Base class for all built-in label tables; subclasses need only define UID_FIELD."""
 
     @property
     def schema(self):
         return f"""
-            {self.NAME_FIELD} TEXT,
+            {self.UID_FIELD} TEXT,
             key TEXT,
             value TEXT
         """
 
-    def make_rows(self, kube_data: dict) -> list[tuple[dict, tuple]]:
-        for item in kube_data["items"]:
+    def make_rows(self, context) -> list[tuple[dict, tuple]]:
+        for item in context.data["items"]:
             thing = ItemHelper(item)
             for key, value in thing.labels.items():
-                yield item, (thing.name, key, value)
+                yield item, (thing.metadata.get("uid"), key, value)
 
 
-@table(domain="kubernetes", name="node_labels", resource="nodes")
+@table(schema="kubernetes", name="node_labels", resource="nodes")
 class NodeLabelsTable(LabelsTable):
-    NAME_FIELD = "node_name"
+    UID_FIELD = "node_uid"
 
 
-@table(domain="kubernetes", name="pod_labels", resource="pods")
+@table(schema="kubernetes", name="pod_labels", resource="pods")
 class PodLabelsTable(LabelsTable):
-    NAME_FIELD = "pod_name"
+    UID_FIELD = "pod_uid"
 
 
-@table(domain="kubernetes", name="job_labels", resource="jobs")
+@table(schema="kubernetes", name="job_labels", resource="jobs")
 class JobLabelsTable(LabelsTable):
-    NAME_FIELD = "job_name"
+    UID_FIELD = "job_uid"

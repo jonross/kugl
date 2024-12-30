@@ -9,7 +9,7 @@ metadata:
     example.com/uvw: a label
     example.com/xyz: another label
     job-name: my-important-job
-  namespace: research
+  namespace: default
   ownerReferences:
   - apiVersion: batch/v1
     blockOwnerDeletion: true

@@ -1,6 +1,7 @@
 """
 Process Kugel queries.
 If you're looking for Kugel's "brain", you've found it.
+See also tables.py
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -10,18 +11,16 @@ import re
 import sys
 from typing import Tuple, Set, Optional, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from tabulate import tabulate
 
 from .config import Config, UserConfig
-from .registry import get_domain, Domain
+from .registry import Schema
 from .tables import TableFromCode, TableFromConfig
 from kugel.util import fail, SqliteDb, to_size, to_utc, kugel_home, clock, ConfigPath, debugging, to_age
 
 # Needed to locate the built-in table builders by class name.
-import kugel.builtins.empty
 import kugel.builtins.kubernetes
-import kugel.builtins.stdin
 
 # Cache behaviors
 # TODO consider an enum
@@ -43,40 +42,47 @@ class Query(BaseModel):
         # FROM and JOIN.  Some of these may be CTEs, so don't assume they're all availabie in
         # Kubernetes, just pick out the ones we know about and let SQLite take care of
         # "unknown table" errors.
+        # FIXME: use sqlparse package
         sql = self.sql.replace("\n", " ")
         refs = set(re.findall(r"(?<=from|join)\s+([.\w]+)", sql, re.IGNORECASE))
         return {TableRef.parse(ref) for ref in refs}
+
+    @property
+    def sql_schemaless(self) -> str:
+        """Return the SQL query with schema hints removed."""
+        sql = self.sql.replace("\n", " ")
+        return re.sub(r"((from|join)\s+)[^.\s]+\.", r"\1", sql, flags=re.IGNORECASE)
 
 
 class TableRef(BaseModel):
     """A reference to a table in a query."""
     model_config = ConfigDict(frozen=True)
-    domain: str  # e.g. "kubernetes"
+    schema_name: str = Field(..., alias="schema")  # e.g. "kubernetes"
     name: str  # e.g. "pods"
 
     @classmethod
     def parse(cls, ref: str):
         """Parse a table reference of the form "pods" or "kubernetes.pods".
-        SQLite doesn't actually support schemas, so the domain is just a hint.
+        SQLite doesn't actually support schemas, so the schema is just a hint.
         We replace the dot with an underscore to make it a valid table name."""
         parts = ref.split(".")
         if len(parts) == 1:
-            return cls(domain="kubernetes", name=parts[0])
+            return cls(schema="kubernetes", name=parts[0])
         if len(parts) == 2:
             if parts[0] == "k8s":
                 parts[0] = "kubernetes"
-            return cls(domain=parts[0], name=parts[1])
+            return cls(schema=parts[0], name=parts[1])
         fail(f"Invalid table reference: {ref}")
 
 
 class Engine:
 
-    def __init__(self, domain: Domain, config: Config, context_name: str):
+    def __init__(self, schema: Schema, config: Config, context_name: str):
         """
         :param config: the parsed user configuration file
         :param context_name: the Kubernetes context to use, e.g. "minikube", "research-cluster"
         """
-        self.domain = domain
+        self.schema = schema
         self.config = config
         self.context_name = context_name
         self.cache = DataCache(self.config, kugel_home() / "cache" / self.context_name)
@@ -95,17 +101,23 @@ class Engine:
         :return: a tuple of (rows, column names)
         """
 
-        builtins_yaml = ConfigPath(__file__).parent.parent / "builtins" / f"{self.domain.name}.yaml"
+        # Load built-ins for the target schema
+        builtins_yaml = ConfigPath(__file__).parent.parent / "builtins" / f"{self.schema.name}.yaml"
         if builtins_yaml.exists():
             builtins = UserConfig(**builtins_yaml.parse_yaml())
             self.config.resources.update({r.name: r for r in builtins.resources})
             self.config.create.update({c.table: c for c in builtins.create})
 
+        # Verify user-defined tables have the needed resources
+        for table in self.config.create.values():
+            if table.resource not in self.config.resources:
+                fail(f"Table '{table.table}' needs unknown resource '{table.resource}'")
+
         # Reconcile tables created / extended in the config file with tables defined in code, and
         # generate the table builders.
         tables = {}
         for name in {t.name for t in query.table_refs}:
-            code_creator = self.domain.tables.get(name)
+            code_creator = self.schema.tables.get(name)
             config_creator = self.config.create.get(name)
             extender = self.config.extend.get(name)
             if code_creator and config_creator:
@@ -121,7 +133,8 @@ class Engine:
 
         resources_used = {t.resource for t in tables.values()}
         if "pods" in resources_used:
-            # This is fake, _get_objects knows to get it via "kubectl get pods" not as JSON
+            # This is fake, _get_objects knows to get it via "kubectl get pods" not as JSON.
+            # TODO: move this hack to kubernetes.py
             resources_used.add("pod_statuses")
 
         # Identify what to fetch vs what's stale or expired.
@@ -135,7 +148,7 @@ class Engine:
         def fetch(kind):
             try:
                 if kind in refreshable:
-                    self.data[kind] = self.domain.impl.get_objects(kind, self.config)
+                    self.data[kind] = self.schema.impl.get_objects(kind, self.config)
                     self.cache.dump(query.namespace, kind, self.data[kind])
                 else:
                     self.data[kind] = self.cache.load(query.namespace, kind)
@@ -147,9 +160,12 @@ class Engine:
 
         # There won't really be a pod_statuses table, just grab the statuses and put them
         # on the pod objects.  Drop the pods where we didn't get status back from kubectl.
+        # TODO: move this hack to kubernetes.py
         if "pods" in resources_used:
+            statuses = self.data.get("pod_statuses")
             def pod_with_updated_status(pod):
-                status = self.data["pod_statuses"].get(pod["metadata"]["name"])
+                metadata = pod["metadata"]
+                status = statuses.get(f"{metadata['namespace']}/{metadata['name']}")
                 if status:
                     pod["kubectl_status"] = status
                     return pod
@@ -204,12 +220,13 @@ class DataCache:
         missing = {kind for kind, age in cache_ages.items() if age is None}
         # Always refresh what's missing, and possibly also what's expired
         # Stale data warning for everything else
+        refreshable = missing if flag == NEVER_UPDATE else expired | missing
         if debugging("cache"):
             print("Requested", kinds)
+            print("Ages", cache_ages)
             print("Expired", expired)
-            print("Missing", expired)
-            print("Refreshable", expired)
-        refreshable = missing if flag == NEVER_UPDATE else expired | missing
+            print("Missing", missing)
+            print("Refreshable", refreshable)
         max_age = max((cache_ages[kind] for kind in (kinds - refreshable)), default=None)
         return refreshable, max_age
 

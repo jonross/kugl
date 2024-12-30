@@ -11,7 +11,7 @@ With Kugel (and a little configuration)
 ```shell
 kugel -a "select owner, sum(gpu_req), sum(cpu_req)
           from pods join nodes on pods.node_name = nodes.name
-          where instance_type like 'g5.%large' and pods.status in ('Running', 'Terminating')
+          where instance_type like 'g5.%large' and pods.phase in ('Running', 'Pending')
           group by 1 order by 2 desc limit 10"
 ```
 
@@ -19,12 +19,12 @@ Without Kugel
 
 ```shell
 nodes=$(kubectl get nodes -o json | jq '[.items[] 
-        | select(.metadata.labels["beta.kubernetes.io/instance-type"] == "a40") | .metadata.name]')
+        | select((.metadata.labels["node.kubernetes.io/instance-type"] // "") | test("g5.*large")) 
+        | .metadata.name]')
 kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
   [ .items[]
     | select(.spec.nodeName as $node | $nodes | index($node))
-    | select(.status.phase == "Running" or 
-             (.metadata.deletionTimestamp != null and .status.phase != "Succeeded" and .status.phase != "Failed"))
+    | select(.status.phase == "Running" or .status.phase == "Pending")
     | . as $pod | $pod.spec.containers[]
     | select(.resources.requests["nvidia.com/gpu"] != null)
     | {owner: $pod.metadata.labels["com.mycompany/job-owner"], 
@@ -34,7 +34,7 @@ kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
   | map({owner: .[0].owner, 
          gpu: map(.gpu | tonumber) | add, 
          cpu: map(.cpu | if test("m$") then (sub("m$"; "") | tonumber / 1000) else tonumber end) | add})
-  | sort_by(-.gpu) | .[:10]
+  | sort_by(-.gpu) | .[:10] | .[]
   | "\(.gpu) \(.cpu) \(.owner)"'
 
 ```
@@ -43,28 +43,28 @@ kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
 
 Kugel requires Python 3.9 or later, and kubectl.
 
-**This is an alpha release.**  Please expect bugs, lackluster performance, and backward-incompatible changes.
+**This is an alpha release.**  Please expect bugs and backward-incompatible changes.
 
-To install with `pip`:
+If you don't mind Kugel cluttering your Python with its [dependencies](./reqs_public.txt):
 
 ```shell
 pip install kugel
 ```
 
-To use via docker, `mkdir ~/.kugel` then use this Bash alias.  (Sorry, this is an x86 image, I don't have
-multiarch working yet.)
+To use via Docker instead, `mkdir ~/.kugel` and use this Bash alias.  (Sorry, this is an x86 image,
+I don't have multiarch working yet.)
 
 ```shell
 kugel() {
     docker run \
         -v ~/.kube:/root/.kube \
         -v ~/.kugel:/root/.kugel \
-        jonross/kugel:0.2.0 python3 -m kugel.main "$@"
+        jonross/kugel:0.2.3 python3 -m kugel.main "$@"
 }
 ```
 
 If neither of those suits you, it's easy to set up from source.  (This will build a virtualenv in the
-source directory.)
+directory where you clone it.)
 
 ```shell
 git clone https://github.com/jonross/kugel.git
@@ -83,6 +83,8 @@ kg -a "select name, to_size(mem_req) from pods order by mem_req desc limit 15"
 ```
 
 If this query is helpful, [save it](./docs-tmp/shortcuts.md), then you can run `kugel hi-mem`.
+
+Please also see the [recommended configuration](./docs-tmp/recommended.md).
 
 ## How it works (important)
 
@@ -107,6 +109,7 @@ In any case, please be mindful of stale data and server load.
 ## Learn more
 
 * [Command-line syntax](./docs-tmp/syntax.md)
+* [Recommended configuration](./docs-tmp/recommended.md)
 * [Settings](./docs-tmp/settings.md)
 * [Built-in tables and functions](./docs-tmp/builtins.md)
 * [Configuring new columns and tables](./docs-tmp/extending.md)

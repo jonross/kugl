@@ -1,20 +1,23 @@
 """
-Data domain registry of resources and tables, independent of configuration file format.
+Registry of resources and tables, independent of configuration file format.
 This is Kugel's global state outside the SQLite database.
 """
-
+import json
+import sys
+from argparse import ArgumentParser
 from typing import Type
 
-from pydantic import BaseModel
+import yaml
+from pydantic import BaseModel, Field
 
 from kugel.util import fail, dprint
 
-_DOMAINS = {}
+_SCHEMAS = {}
 
 
-def domain(name: str):
+def schema(name: str):
     def wrap(cls):
-        add_domain(name, cls)
+        add_schema(name, cls)
         return cls
     return wrap
 
@@ -29,40 +32,60 @@ def table(**kwargs):
 class TableDef(BaseModel):
     """
     Capture a table definition from the @table decorator, example:
-        @table(domain="kubernetes", name="pods", resource="pods")
+        @table(schema="kubernetes", name="pods", resource="pods")
     """
     cls: Type
     name: str
-    domain: str
+    schema_name: str = Field(..., alias="schema")
     resource: str
 
 
-class Domain(BaseModel):
+class Schema(BaseModel):
     """
-    Capture a domain definition from the @domain decorator, example:
-        @domain("kubernetes")
+    Capture a schema definition from the @schema decorator, example:
+        @schema("kubernetes")
     """
     name: str
     impl: object # FIXME use type vars
     tables: dict[str, TableDef] = {}
 
 
-def add_domain(name: str, cls: Type):
-    """Register a class to implement a data domain; this is called by the @domain decorator."""
-    dprint("registry", f"Add domain {name} {cls}")
-    _DOMAINS[name] = Domain(name=name, impl=cls())
+def add_schema(name: str, cls: Type):
+    """Register a class to implement a schema; this is called by the @schema decorator."""
+    dprint("registry", f"Add schema {name} {cls}")
+    _SCHEMAS[name] = Schema(name=name, impl=cls())
 
 
-def get_domain(name: str) -> Domain:
-    if name not in _DOMAINS:
-        fail(f"Data domain {name} is not defined")
-    return _DOMAINS[name]
+def get_schema(name: str) -> Schema:
+    if name not in _SCHEMAS:
+        add_schema(name, GenericSchema)
+    return _SCHEMAS[name]
 
 
 def add_table(cls, **kwargs):
     """Register a class to define a table; this is called by the @table decorator."""
     dprint("registry", f"Add table {kwargs}")
     t = TableDef(cls=cls, **kwargs)
-    if t.domain not in _DOMAINS:
-        fail(f"Must create domain {t.domain} before table {t.domain}.{t.name}")
-    _DOMAINS[t.domain].tables[t.name] = t
+    if t.schema_name not in _SCHEMAS:
+        fail(f"Must create schema {t.schema_name} before table {t.schema_name}.{t.name}")
+    _SCHEMAS[t.schema_name].tables[t.name] = t
+
+
+class GenericSchema:
+    """get_schema auto-generates one of these when an undefined schema is referenced."""
+
+    def add_cli_options(self, ap: ArgumentParser):
+        # FIXME, artifact of assuming kubernetes
+        self.ns = "default"
+        pass
+
+    def handle_cli_options(self, args):
+        pass
+
+    def get_objects(self, *_):
+        text = sys.stdin.read()
+        if not text:
+            return {}
+        if text[0] in "{[":
+            return json.loads(text)
+        return yaml.safe_load(text)
