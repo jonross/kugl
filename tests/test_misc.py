@@ -10,7 +10,7 @@ import pytest
 
 from kugel.builtins.helpers import Limits
 from kugel.main import main1
-from kugel.util import Age, KuglError, kube_home, kugel_home
+from kugel.util import Age, KugelError, kube_home, kugel_home
 
 
 def test_no_resources():
@@ -19,13 +19,13 @@ def test_no_resources():
 
 def test_kube_home_missing(test_home, tmp_path):
     os.environ["KUGL_HOME"] = str(tmp_path / "doesnt_exist")
-    with pytest.raises(KuglError, match="can't determine current context"):
+    with pytest.raises(KugelError, match="can't determine current context"):
         main1(["select 1"])
 
 
 def test_no_kube_context(test_home, tmp_path):
     kube_home().joinpath("config").write_text("")
-    with pytest.raises(KuglError, match="No current context"):
+    with pytest.raises(KugelError, match="No current context"):
         main1(["select 1"])
 
 
@@ -51,7 +51,7 @@ def test_reject_world_writeable_config(test_home):
     init_file = kugel_home() / "init.yaml"
     init_file.write_text("foo: bar")
     init_file.chmod(0o777)
-    with pytest.raises(KuglError, match="is world writeable"):
+    with pytest.raises(KugelError, match="is world writeable"):
         main1(["select 1"])
 
 

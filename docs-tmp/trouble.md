@@ -18,7 +18,7 @@ Defintely.  You can reach the author at `kugel dot devel at gmail dot com`.
 
 Like many open source committers, the author has a family and a day job.  🙂
 
-Please be patient, and thank you for trying Kugl!
+Please be patient, and thank you for trying Kugel!
 
 ### I'm not seeing any output from my queries
 

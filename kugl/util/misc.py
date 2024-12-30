@@ -46,11 +46,11 @@ def warn(message: str):
 
 def fail(message: str, e: Optional[Exception] = None):
     if e is not None:
-        raise KuglError(message) from e
-    raise KuglError(message)
+        raise KugelError(message) from e
+    raise KugelError(message)
 
 
-class KuglError(Exception):
+class KugelError(Exception):
     pass
 
 

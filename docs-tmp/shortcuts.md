@@ -15,6 +15,6 @@ shortcuts:
       ORDER BY mem_req DESC LIMIT 15
 ```
 
-Kugl offers this feature so you can keep all your extensions in one place.
+Kugel offers this feature so you can keep all your extensions in one place.
 Simple parameter substitution might be offered in the future, but if you
 need more powerful templates, your own wrapper script is the short-term answer.

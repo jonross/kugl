@@ -1,6 +1,6 @@
 """
 Data domain registry of resources and tables, independent of configuration file format.
-This is Kugl's global state outside the SQLite database.
+This is Kugel's global state outside the SQLite database.
 """
 
 from typing import Type

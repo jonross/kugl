@@ -118,7 +118,7 @@ class UserConfig(BaseModel):
 
 
 class Config(BaseModel):
-    """The actual configuration model used by the rest of Kugl."""
+    """The actual configuration model used by the rest of Kugel."""
     settings: Settings
     resources: dict[str, ResourceDef]
     extend: dict[str, ExtendTable]

@@ -7,16 +7,16 @@ import sqlite3
 import pytest
 
 from kugel.main import main1
-from kugel.util import KuglError
+from kugel.util import KugelError
 
 
 def test_enforce_one_cache_option(test_home):
-    with pytest.raises(KuglError, match="Cannot use both -c/--cache and -u/--update"):
+    with pytest.raises(KugelError, match="Cannot use both -c/--cache and -u/--update"):
         main1(["-c", "-u", "select 1"])
 
 
 def test_enforce_one_namespace_option(test_home):
-    with pytest.raises(KuglError, match="Cannot use both -a/--all-namespaces and -n/--namespace"):
+    with pytest.raises(KugelError, match="Cannot use both -a/--all-namespaces and -n/--namespace"):
         main1(["-a", "-n", "x", "select * from pods"])
 
 
@@ -26,7 +26,7 @@ def test_no_such_table(test_home):
 
 
 def test_unknown_shortcut(test_home):
-    with pytest.raises(KuglError, match="No shortcut named 'foo'"):
+    with pytest.raises(KugelError, match="No shortcut named 'foo'"):
         main1(["foo"])
 
 
@@ -55,7 +55,7 @@ def test_enforce_one_cache_option_via_shortcut(test_home, capsys):
           - -u
           - "select 1"
     """)
-    with pytest.raises(KuglError, match="Cannot use both -c/--cache and -u/--update"):
+    with pytest.raises(KugelError, match="Cannot use both -c/--cache and -u/--update"):
         main1(["-c", "foo"])
 
 
