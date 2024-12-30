@@ -11,11 +11,11 @@ import re
 import sys
 from typing import Tuple, Set, Optional, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from tabulate import tabulate
 
 from .config import Config, UserConfig
-from .registry import Domain
+from .registry import Schema
 from .tables import TableFromCode, TableFromConfig
 from kugel.util import fail, SqliteDb, to_size, to_utc, kugel_home, clock, ConfigPath, debugging, to_age
 
@@ -53,32 +53,32 @@ class Query(BaseModel):
 class TableRef(BaseModel):
     """A reference to a table in a query."""
     model_config = ConfigDict(frozen=True)
-    domain: str  # e.g. "kubernetes"
+    schema_name: str = Field(..., alias="schema")  # e.g. "kubernetes"
     name: str  # e.g. "pods"
 
     @classmethod
     def parse(cls, ref: str):
         """Parse a table reference of the form "pods" or "kubernetes.pods".
-        SQLite doesn't actually support schemas, so the domain is just a hint.
+        SQLite doesn't actually support schemas, so the schema is just a hint.
         We replace the dot with an underscore to make it a valid table name."""
         parts = ref.split(".")
         if len(parts) == 1:
-            return cls(domain="kubernetes", name=parts[0])
+            return cls(schema="kubernetes", name=parts[0])
         if len(parts) == 2:
             if parts[0] == "k8s":
                 parts[0] = "kubernetes"
-            return cls(domain=parts[0], name=parts[1])
+            return cls(schema=parts[0], name=parts[1])
         fail(f"Invalid table reference: {ref}")
 
 
 class Engine:
 
-    def __init__(self, domain: Domain, config: Config, context_name: str):
+    def __init__(self, schema: Schema, config: Config, context_name: str):
         """
         :param config: the parsed user configuration file
         :param context_name: the Kubernetes context to use, e.g. "minikube", "research-cluster"
         """
-        self.domain = domain
+        self.schema = schema
         self.config = config
         self.context_name = context_name
         self.cache = DataCache(self.config, kugel_home() / "cache" / self.context_name)
@@ -97,8 +97,8 @@ class Engine:
         :return: a tuple of (rows, column names)
         """
 
-        # Load built-ins for the target domain
-        builtins_yaml = ConfigPath(__file__).parent.parent / "builtins" / f"{self.domain.name}.yaml"
+        # Load built-ins for the target schema
+        builtins_yaml = ConfigPath(__file__).parent.parent / "builtins" / f"{self.schema.name}.yaml"
         if builtins_yaml.exists():
             builtins = UserConfig(**builtins_yaml.parse_yaml())
             self.config.resources.update({r.name: r for r in builtins.resources})
@@ -113,7 +113,7 @@ class Engine:
         # generate the table builders.
         tables = {}
         for name in {t.name for t in query.table_refs}:
-            code_creator = self.domain.tables.get(name)
+            code_creator = self.schema.tables.get(name)
             config_creator = self.config.create.get(name)
             extender = self.config.extend.get(name)
             if code_creator and config_creator:
@@ -144,7 +144,7 @@ class Engine:
         def fetch(kind):
             try:
                 if kind in refreshable:
-                    self.data[kind] = self.domain.impl.get_objects(kind, self.config)
+                    self.data[kind] = self.schema.impl.get_objects(kind, self.config)
                     self.cache.dump(query.namespace, kind, self.data[kind])
                 else:
                     self.data[kind] = self.cache.load(query.namespace, kind)

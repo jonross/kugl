@@ -10,10 +10,10 @@ from argparse import ArgumentParser
 
 import yaml
 
-from kugel.api import domain, table, fail
+from kugel.api import schema, table, fail
 
 
-@domain("stdin")
+@schema("stdin")
 class Stdin:
 
     def add_cli_options(self, ap: ArgumentParser):

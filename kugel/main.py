@@ -10,7 +10,7 @@ from typing import List, Optional, Union
 
 import yaml
 
-from kugel.impl.registry import get_domain
+from kugel.impl.registry import get_schema
 from kugel.impl.engine import Engine, Query, CHECK, NEVER_UPDATE, ALWAYS_UPDATE
 from kugel.impl.config import Config, UserConfig, UserInit, parse_file
 from kugel.util import Age, fail, debug, debugging, kugel_home, kube_home, ConfigPath, dprint, KugelError
@@ -63,19 +63,19 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
             fail(f"No shortcut named '{argv[-1]}'")
         return main1(argv[:-1] + new_argv)
 
-    # Need the query domains for command line parsing.
+    # Need the query schema for command line parsing.
     # FIXME: Move the namespace & cache flag out of the query
     query = Query(sql=argv[-1])
-    domain_refs = {ref.domain for ref in query.table_refs}
-    if len(domain_refs) == 0:
-        domain = get_domain("empty")
-    elif len(domain_refs) == 1:
-        domain = get_domain(next(iter(domain_refs)))
+    schema_refs = {ref.schema_name for ref in query.table_refs}
+    if len(schema_refs) == 0:
+        schema = get_schema("empty")
+    elif len(schema_refs) == 1:
+        schema = get_schema(next(iter(schema_refs)))
     else:
-        fail("Cross-domain query not implemented yet")
+        fail("Cross-schema query not implemented yet")
 
     ap = ArgumentParser()
-    domain.impl.add_cli_options(ap)
+    schema.impl.add_cli_options(ap)
     ap.add_argument("-D", "--debug", type=str)
     ap.add_argument("-c", "--cache", default=False, action="store_true")
     ap.add_argument("-r", "--reckless", default=False, action="store_true")
@@ -84,7 +84,7 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
     ap.add_argument("sql")
     args = ap.parse_args(argv)
 
-    domain.impl.handle_cli_options(args)
+    schema.impl.handle_cli_options(args)
     if args.cache and args.update:
         fail("Cannot use both -c/--cache and -u/--update")
 
@@ -98,7 +98,7 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
     dprint("init", f"Settings: {init.settings}")
 
     # Load config file
-    config_file = ConfigPath(kugel_home() / f"{domain.name}.yaml")
+    config_file = ConfigPath(kugel_home() / f"{schema.name}.yaml")
     if config_file.exists():
         config, errors = parse_file(UserConfig, config_file)
         if errors:
@@ -119,11 +119,11 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
     if not current_context:
         fail("No current context, please run kubectl config use-context ...")
 
-    engine = Engine(domain, config, current_context)
+    engine = Engine(schema, config, current_context)
     # FIXME bad reference to namespace
     # FIXME temporary awful hack, rewrite table names properly
     sql = args.sql.replace("stdin.", "")
-    print(engine.query_and_format(Query(sql=sql, namespace=domain.impl.ns, cache_flag=cache_flag)))
+    print(engine.query_and_format(Query(sql=sql, namespace=schema.impl.ns, cache_flag=cache_flag)))
 
 
 if __name__ == "__main__":

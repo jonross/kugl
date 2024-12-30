@@ -8,10 +8,10 @@ FIXME: Don't use ArgumentParser in the API.
 
 from argparse import ArgumentParser
 
-from kugel.api import domain
+from kugel.api import schema
 
 
-@domain("empty")
+@schema("empty")
 class Empty:
 
     def add_cli_options(self, ap: ArgumentParser):

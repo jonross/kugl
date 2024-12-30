@@ -13,7 +13,7 @@ from pydantic import Field, BaseModel, ConfigDict
 
 from kugel.impl.config import Config, UserConfig, UserInit
 from kugel.impl.engine import Engine, Query, ALWAYS_UPDATE
-from kugel.impl.registry import get_domain
+from kugel.impl.registry import get_schema
 from kugel.util import to_utc, UNIT_TEST_TIMEBASE
 
 
@@ -165,10 +165,10 @@ def assert_query(sql: str, expected: Union[str, list],
         caller can indent for neatness.  Or, if a list, each item will be checked in order.
     :param all_ns: FIXME temporary hack until we get namespaces out of engine.py
     """
-    domain = get_domain("kubernetes")
-    domain.impl.set_namespace(all_ns, "__all" if all_ns else "default")
+    schema = get_schema("kubernetes")
+    schema.impl.set_namespace(all_ns, "__all" if all_ns else "default")
     config = Config.collate(UserInit(), user_config or UserConfig())
-    engine = Engine(domain, config, "nocontext")
+    engine = Engine(schema, config, "nocontext")
     if isinstance(expected, str):
         actual = engine.query_and_format(Query(sql=sql))
         assert actual.strip() == textwrap.dedent(expected).strip()

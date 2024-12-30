@@ -9,12 +9,12 @@ import json
 from argparse import ArgumentParser
 
 from .helpers import Limits, ItemHelper, PodHelper, JobHelper
-from kugel.api import domain, table, fail
+from kugel.api import schema, table, fail
 from kugel.impl.config import Config
 from kugel.util import parse_utc, run, WHITESPACE
 
 
-@domain("kubernetes")
+@schema("kubernetes")
 class KubernetesData:
 
     def add_cli_options(self, ap: ArgumentParser):
@@ -73,7 +73,7 @@ class KubernetesData:
             return {f"{self.ns}/{row[name_index]}": row[status_index] for row in rows}
 
 
-@table(domain="kubernetes", name="nodes", resource="nodes")
+@table(schema="kubernetes", name="nodes", resource="nodes")
 class NodesTable:
 
     @property
@@ -100,7 +100,7 @@ class NodesTable:
             )
 
 
-@table(domain="kubernetes", name="pods", resource="pods")
+@table(schema="kubernetes", name="pods", resource="pods")
 class PodsTable:
 
     @property
@@ -141,7 +141,7 @@ class PodsTable:
             )
 
 
-@table(domain="kubernetes", name="jobs", resource="jobs")
+@table(schema="kubernetes", name="jobs", resource="jobs")
 class JobsTable:
 
     @property
@@ -190,16 +190,16 @@ class LabelsTable:
                 yield item, (thing.metadata.get("uid"), key, value)
 
 
-@table(domain="kubernetes", name="node_labels", resource="nodes")
+@table(schema="kubernetes", name="node_labels", resource="nodes")
 class NodeLabelsTable(LabelsTable):
     UID_FIELD = "node_uid"
 
 
-@table(domain="kubernetes", name="pod_labels", resource="pods")
+@table(schema="kubernetes", name="pod_labels", resource="pods")
 class PodLabelsTable(LabelsTable):
     UID_FIELD = "pod_uid"
 
 
-@table(domain="kubernetes", name="job_labels", resource="jobs")
+@table(schema="kubernetes", name="job_labels", resource="jobs")
 class JobLabelsTable(LabelsTable):
     UID_FIELD = "job_uid"
