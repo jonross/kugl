@@ -1,6 +1,6 @@
 # Kugl
 
-Stop noodling with `jq`.  Explore Kubernetes resources using SQLite.
+Explore Kubernetes resources using SQLite.
 
 ## Example
 
@@ -51,7 +51,7 @@ If you don't mind Kugl cluttering your Python with its [dependencies](./reqs_pub
 pip install kugl
 ```
 
-To use via Docker instead, `mkdir ~/.kugl` and use this Bash alias.  (Sorry, this is an x86 image,
+If you do mind, there's a Docker image; `mkdir ~/.kugl` and use this Bash alias.  (Sorry, this is an x86 image,
 I don't have multiarch working yet.)
 
 ```shell
@@ -118,11 +118,20 @@ In any case, please be mindful of stale data and server load.
 * [Troubleshooting and feedback](./docs-tmp/trouble.md)
 * [License](./LICENSE)
 
+### Pronunciation
+
+Like "cudgel", so, a blunt instrument for convincing data to be row-shaped.
+
+Or "koo-jull", if you prefer something less combative.
+
+"Kugel" is a casserole with varying degrees of cultural significance; use at own risk.
+
 ## Rationale
 
 `jq` is awesome, but... can you join and group without looking at the manual? Can you do math on non-numeric
 data like "500Mi" of memory or "200m" CPUs or "2024-11-01T12:34:56Z"?  Can you determine the STATUS of a pod
-the way `kubectl get pods` does?
+[the way](https://github.com/kubernetes/kubernetes/blob/release-1.32/pkg/printers/internalversion/printers.go#L865)
+`kubectl get pods` does?
 
 Me neither.
 
