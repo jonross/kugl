@@ -10,7 +10,7 @@ from .misc import (
     KPath,
     kube_home,
     kugel_home,
-    KugelError,
+    KuglError,
     parent,
     parse_utc,
     run,

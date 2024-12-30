@@ -11,7 +11,7 @@ Example
 ```yaml
 extend:
   
-  # Add the "owner" column to the pods table as shown in the Kugel README
+  # Add the "owner" column to the pods table as shown in the Kugl README
   
 - table: pods
   columns:
@@ -89,10 +89,10 @@ create:
 ## Parsing data into numeric columns
 
 `kubectl` response values like `50Mi` (of memory) are pretty useless in queries, since you can't treat 
-them numerically.  Kugel fixes this, offering additional data types that can be used in the `type` field 
+them numerically.  Kugl fixes this, offering additional data types that can be used in the `type` field 
 of a column definition and automatically convert response values.
 
-| Kugel type | SQLite type  | Description                                                                 |
+| Kugl type | SQLite type  | Description                                                                 |
 |------------|--------------|-----------------------------------------------------------------------------|
 | `size`     | `INTEGER`    | Memory size in bytes; accepts values like `50Mi`                            |
 | `age`      | `INTEGER`    | Time delta in seconds; accepts values like `5d` or `4h30m`                  |
@@ -102,7 +102,7 @@ of a column definition and automatically convert response values.
 ## Generating multiple rows per respone item
 
 It's rare for a `kubectl get` response item to map directly to a single row in a table.  For example,
-a node can have multiple taints, and a pod can have multiple containers.  Kugel handles this using
+a node can have multiple taints, and a pod can have multiple containers.  Kugl handles this using
 the `row_source` field in a column definition.  Here's how the `node_taints` built-in table is defined.
 
 ```yaml

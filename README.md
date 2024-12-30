@@ -1,4 +1,4 @@
-# Kugel
+# Kugl
 
 Stop noodling with `jq`.  Explore Kubernetes resources using SQLite.
 
@@ -6,7 +6,7 @@ Stop noodling with `jq`.  Explore Kubernetes resources using SQLite.
 
 Find the top users of a GPU pool, based on instance type and a team-specific pod label.
 
-With Kugel (and a little configuration)
+With Kugl (and a little configuration)
 
 ```shell
 kugel -a "select owner, sum(gpu_req), sum(cpu_req)
@@ -15,7 +15,7 @@ kugel -a "select owner, sum(gpu_req), sum(cpu_req)
           group by 1 order by 2 desc limit 10"
 ```
 
-Without Kugel
+Without Kugl
 
 ```shell
 nodes=$(kubectl get nodes -o json | jq '[.items[] 
@@ -41,7 +41,7 @@ kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
 
 ## Installing
 
-Kugel requires Python 3.9 or later, and kubectl.
+Kugl requires Python 3.9 or later, and kubectl.
 
 **This is an alpha release.**  Please expect bugs, lackluster performance, and backward-incompatible changes.
 
@@ -86,13 +86,13 @@ If this query is helpful, [save it](./docs-tmp/shortcuts.md), then you can run `
 
 ## How it works (important)
 
-Kugel is just a thin wrapper on Kubectl and SQLite.  It turns `SELECT ... FROM pods` into 
+Kugl is just a thin wrapper on Kubectl and SQLite.  It turns `SELECT ... FROM pods` into 
 `kubectl get pods -o json`, then maps fields from the response to columns
 in SQLite.  If you `JOIN` to other resource tables like `nodes` it calls `kubectl get`
 for those too.  If you need more columns or tables than are built in as of this release,
 there's a config file for that.
 
-Because Kugel always fetches all resources from a namespace (or everything, if 
+Because Kugl always fetches all resources from a namespace (or everything, if 
 `-a/--all-namespaces` is used), it tries
 to ease Kubernetes API Server load by **caching responses for 
 two minutes**.  This is why it often prints "Data delayed up to ..." messages.

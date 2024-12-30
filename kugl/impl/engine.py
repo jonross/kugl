@@ -1,6 +1,6 @@
 """
-Process Kugel queries.
-If you're looking for Kugel's "brain", you've found it.
+Process Kugl queries.
+If you're looking for Kugl's "brain", you've found it.
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -86,12 +86,12 @@ class Engine:
         add_custom_functions(self.db.conn)
 
     def query_and_format(self, query: Query) -> str:
-        """Execute a Kugel query and format the rsults for stdout."""
+        """Execute a Kugl query and format the rsults for stdout."""
         rows, headers = self.query(query)
         return tabulate(rows, tablefmt="plain", floatfmt=".1f", headers=headers)
 
     def query(self, query: Query) -> Tuple[list[Tuple], list[str]]:
-        """Execute a Kugel query but don't format the results.
+        """Execute a Kugl query but don't format the results.
         :return: a tuple of (rows, column names)
         """
 
