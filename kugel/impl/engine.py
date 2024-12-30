@@ -47,6 +47,12 @@ class Query(BaseModel):
         refs = set(re.findall(r"(?<=from|join)\s+([.\w]+)", sql, re.IGNORECASE))
         return {TableRef.parse(ref) for ref in refs}
 
+    @property
+    def sql_schemaless(self) -> str:
+        """Return the SQL query with schema hints removed."""
+        sql = self.sql.replace("\n", " ")
+        return re.sub(r"((from|join)\s+)[^.\s]+\.", r"\1", sql, flags=re.IGNORECASE)
+
 
 class TableRef(BaseModel):
     """A reference to a table in a query."""

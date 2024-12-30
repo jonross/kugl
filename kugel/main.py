@@ -121,8 +121,7 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
 
     engine = Engine(schema, config, current_context)
     # FIXME bad reference to namespace
-    # FIXME temporary awful hack, rewrite table names properly
-    sql = args.sql.replace(f"{schema.name}.", "")
+    sql = query.sql_schemaless
     print(engine.query_and_format(Query(sql=sql, namespace=schema.impl.ns, cache_flag=cache_flag)))
 
 
