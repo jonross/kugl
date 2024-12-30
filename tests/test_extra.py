@@ -1,11 +1,16 @@
 """
 Assorted query tests not covered elsewhere.
 """
+import io
+import json
+import sys
+import textwrap
 
 import pytest
 import yaml
 
 from kugel.impl.config import UserConfig, parse_model
+from kugel.main import main1
 from kugel.util import fail, to_age, parse_age, KugelError
 from .testing import make_job, kubectl_response, assert_query
 
@@ -84,4 +89,31 @@ def test_config_with_missing_resource():
     assert errors is None
     with pytest.raises(KugelError, match="Table 'stuff' needs unknown resource 'stuff'"):
         assert_query("SELECT * FROM stuff", "", user_config=config)
+
+
+def test_select_from_stdin(test_home, monkeypatch, capsys):
+    (test_home / "any.yaml").write_text("""
+        create:
+          - table: people
+            resource: stdin
+            row_source:
+              - people
+            columns:
+              - name: name
+                path: name
+              - name: age
+                path: age
+                type: integer
+    """)
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps({"people": [
+        {"name": "Jim", "age": 42},
+        {"name": "Jill", "age": 43},
+    ]})))
+    main1(["SELECT name, age FROM any.people"])
+    out, _ = capsys.readouterr()
+    assert out.strip() == textwrap.dedent("""
+        name      age
+        Jim        42
+        Jill       43
+    """).strip()
 

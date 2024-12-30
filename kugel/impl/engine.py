@@ -20,9 +20,7 @@ from .tables import TableFromCode, TableFromConfig
 from kugel.util import fail, SqliteDb, to_size, to_utc, kugel_home, clock, ConfigPath, debugging, to_age
 
 # Needed to locate the built-in table builders by class name.
-import kugel.builtins.empty
 import kugel.builtins.kubernetes
-import kugel.builtins.stdin
 
 # Cache behaviors
 # TODO consider an enum

@@ -163,6 +163,8 @@ class Config(BaseModel):
             create={c.table: c for c in user_config.create},
             shortcuts=user_init.shortcuts,
         )
+        # FIXME: also prevent the user from defining stdin
+        config.resources["stdin"] = ResourceDef(name="stdin", namespaced=False)
         return config
 
 

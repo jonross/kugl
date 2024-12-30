@@ -2,9 +2,12 @@
 Registry of resources and tables, independent of configuration file format.
 This is Kugel's global state outside the SQLite database.
 """
-
+import json
+import sys
+from argparse import ArgumentParser
 from typing import Type
 
+import yaml
 from pydantic import BaseModel, Field
 
 from kugel.util import fail, dprint
@@ -55,7 +58,7 @@ def add_schema(name: str, cls: Type):
 
 def get_schema(name: str) -> Schema:
     if name not in _SCHEMAS:
-        fail(f"Schema {name} is not defined")
+        add_schema(name, GenericSchema)
     return _SCHEMAS[name]
 
 
@@ -66,3 +69,23 @@ def add_table(cls, **kwargs):
     if t.schema_name not in _SCHEMAS:
         fail(f"Must create schema {t.schema_name} before table {t.schema_name}.{t.name}")
     _SCHEMAS[t.schema_name].tables[t.name] = t
+
+
+class GenericSchema:
+    """get_schema auto-generates one of these when an undefined schema is referenced."""
+
+    def add_cli_options(self, ap: ArgumentParser):
+        # FIXME, artifact of assuming kubernetes
+        self.ns = "default"
+        pass
+
+    def handle_cli_options(self, args):
+        pass
+
+    def get_objects(self, *_):
+        text = sys.stdin.read()
+        if not text:
+            return {}
+        if text[0] in "{[":
+            return json.loads(text)
+        return yaml.safe_load(text)
