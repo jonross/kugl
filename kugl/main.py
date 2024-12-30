@@ -21,7 +21,7 @@ def main() -> None:
 
 def main1(argv: List[str], return_config: bool = False) -> Optional[Union[UserInit, UserConfig]]:
 
-    if "KUGL_UNIT_TESTING" in os.environ and "KUGL_MOCKDIR" not in os.environ:
+    if "KUGEL_UNIT_TESTING" in os.environ and "KUGEL_MOCKDIR" not in os.environ:
         # Never enter main in tests unless test_home fixture is in use, else we could read
         # the user's init file.
         sys.exit("Unit test state error")
@@ -29,7 +29,7 @@ def main1(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
     try:
         return main2(argv, return_config=return_config)
     except Exception as e:
-        if debugging() or "KUGL_UNIT_TESTING" in os.environ:
+        if debugging() or "KUGEL_UNIT_TESTING" in os.environ:
             raise
         print(e, file=sys.stderr)
         sys.exit(1)

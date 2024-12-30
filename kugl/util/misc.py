@@ -106,14 +106,14 @@ class ConfigPath(KPath):
 
 
 def kugel_home() -> KPath:
-    if "KUGL_HOME" in os.environ:
-        return KPath(os.environ["KUGL_HOME"])
+    if "KUGEL_HOME" in os.environ:
+        return KPath(os.environ["KUGEL_HOME"])
     return KPath.home() / ".kugel"
 
 
 def kube_home() -> KPath:
-    if "KUGL_HOME" in os.environ:
-        return KPath(os.environ["KUGL_HOME"]) / ".kube"
+    if "KUGEL_HOME" in os.environ:
+        return KPath(os.environ["KUGEL_HOME"]) / ".kube"
     return KPath.home() / ".kube"
 
 

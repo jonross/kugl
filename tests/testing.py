@@ -28,7 +28,7 @@ def kubectl_response(kind: str, output: Union[str, dict]):
         output = json.dumps(output)
     else:
         output = str(output).strip()
-    folder = Path(os.getenv("KUGL_MOCKDIR"))
+    folder = Path(os.getenv("KUGEL_MOCKDIR"))
     folder.mkdir(exist_ok=True)
     folder.joinpath(kind).write_text(output)
 

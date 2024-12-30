@@ -18,7 +18,7 @@ def test_no_resources():
 
 
 def test_kube_home_missing(test_home, tmp_path):
-    os.environ["KUGL_HOME"] = str(tmp_path / "doesnt_exist")
+    os.environ["KUGEL_HOME"] = str(tmp_path / "doesnt_exist")
     with pytest.raises(KugelError, match="can't determine current context"):
         main1(["select 1"])
 
@@ -30,20 +30,20 @@ def test_no_kube_context(test_home, tmp_path):
 
 
 def test_enforce_mockdir(test_home, monkeypatch):
-    monkeypatch.delenv("KUGL_MOCKDIR")
+    monkeypatch.delenv("KUGEL_MOCKDIR")
     with pytest.raises(SystemExit, match="Unit test state error"):
         main1(["select 1"])
 
 
 def test_kube_home_without_envar(monkeypatch):
-    monkeypatch.setenv("KUGL_HOME", "xxx")  # must exist before deleting
-    monkeypatch.delenv("KUGL_HOME")
+    monkeypatch.setenv("KUGEL_HOME", "xxx")  # must exist before deleting
+    monkeypatch.delenv("KUGEL_HOME")
     assert kube_home() == Path.home() / ".kube"
 
 
 def test_kugel_home_without_envar(monkeypatch):
-    monkeypatch.setenv("KUGL_HOME", "xxx")  # must exist before deleting
-    monkeypatch.delenv("KUGL_HOME")
+    monkeypatch.setenv("KUGEL_HOME", "xxx")  # must exist before deleting
+    monkeypatch.delenv("KUGEL_HOME")
     assert kugel_home() == Path.home() / ".kugel"
 
 
