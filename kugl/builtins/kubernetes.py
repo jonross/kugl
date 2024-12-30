@@ -9,9 +9,9 @@ import json
 from argparse import ArgumentParser
 
 from .helpers import Limits, ItemHelper, PodHelper, JobHelper
-from kugel.api import schema, table, fail
-from kugel.impl.config import Config
-from kugel.util import parse_utc, run, WHITESPACE
+from kugl.api import schema, table, fail
+from kugl.impl.config import Config
+from kugl.util import parse_utc, run, WHITESPACE
 
 
 @schema("kubernetes")

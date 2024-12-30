@@ -4,8 +4,8 @@ Tests for the nodes and taints tables.
 
 import yaml
 
-from kugel.impl.config import parse_model, UserConfig
-from kugel.util import fail
+from kugl.impl.config import parse_model, UserConfig
+from kugl.util import fail
 from .testing import make_node, kubectl_response, assert_query, Taint
 
 

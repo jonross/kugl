@@ -1,4 +1,4 @@
-# Kugel
+# Kugl
 
 Stop noodling with `jq`.  Explore Kubernetes resources using SQLite.
 
@@ -6,16 +6,16 @@ Stop noodling with `jq`.  Explore Kubernetes resources using SQLite.
 
 Find the top users of a GPU pool, based on instance type and a team-specific pod label.
 
-With Kugel (and a little configuration)
+With Kugl (and a little configuration)
 
 ```shell
-kugel -a "select owner, sum(gpu_req), sum(cpu_req)
+kugl -a "select owner, sum(gpu_req), sum(cpu_req)
           from pods join nodes on pods.node_name = nodes.name
           where instance_type like 'g5.%large' and pods.phase in ('Running', 'Pending')
           group by 1 order by 2 desc limit 10"
 ```
 
-Without Kugel
+Without Kugl
 
 ```shell
 nodes=$(kubectl get nodes -o json | jq '[.items[] 
@@ -41,25 +41,25 @@ kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
 
 ## Installing
 
-Kugel requires Python 3.9 or later, and kubectl.
+Kugl requires Python 3.9 or later, and kubectl.
 
 **This is an alpha release.**  Please expect bugs and backward-incompatible changes.
 
-If you don't mind Kugel cluttering your Python with its [dependencies](./reqs_public.txt):
+If you don't mind Kugl cluttering your Python with its [dependencies](./reqs_public.txt):
 
 ```shell
-pip install kugel
+pip install kugl
 ```
 
-To use via Docker instead, `mkdir ~/.kugel` and use this Bash alias.  (Sorry, this is an x86 image,
+To use via Docker instead, `mkdir ~/.kugl` and use this Bash alias.  (Sorry, this is an x86 image,
 I don't have multiarch working yet.)
 
 ```shell
-kugel() {
+kugl() {
     docker run \
         -v ~/.kube:/root/.kube \
-        -v ~/.kugel:/root/.kugel \
-        jonross/kugel:0.3.0 python3 -m kugel.main "$@"
+        -v ~/.kugl:/root/.kugl \
+        jonross/kugl:0.3.0 python3 -m kugl.main "$@"
 }
 ```
 
@@ -67,10 +67,10 @@ If neither of those suits you, it's easy to set up from source.  (This will buil
 directory where you clone it.)
 
 ```shell
-git clone https://github.com/jonross/kugel.git
-cd kugel
+git clone https://github.com/jonross/kugl.git
+cd kugl
 make deps
-# put kugel's bin directory in your PATH
+# put kugl's bin directory in your PATH
 PATH=${PATH}:$(pwd)/bin
 ```
 
@@ -82,19 +82,19 @@ Find the pods using the most memory:
 kg -a "select name, to_size(mem_req) from pods order by mem_req desc limit 15"
 ```
 
-If this query is helpful, [save it](./docs-tmp/shortcuts.md), then you can run `kugel hi-mem`.
+If this query is helpful, [save it](./docs-tmp/shortcuts.md), then you can run `kugl hi-mem`.
 
 Please also see the [recommended configuration](./docs-tmp/recommended.md).
 
 ## How it works (important)
 
-Kugel is just a thin wrapper on Kubectl and SQLite.  It turns `SELECT ... FROM pods` into 
+Kugl is just a thin wrapper on Kubectl and SQLite.  It turns `SELECT ... FROM pods` into 
 `kubectl get pods -o json`, then maps fields from the response to columns
 in SQLite.  If you `JOIN` to other resource tables like `nodes` it calls `kubectl get`
 for those too.  If you need more columns or tables than are built in as of this release,
 there's a config file for that.
 
-Because Kugel always fetches all resources from a namespace (or everything, if 
+Because Kugl always fetches all resources from a namespace (or everything, if 
 `-a/--all-namespaces` is used), it tries
 to ease Kubernetes API Server load by **caching responses for 
 two minutes**.  This is why it often prints "Data delayed up to ..." messages.

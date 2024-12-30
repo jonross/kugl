@@ -1,10 +1,10 @@
 
 ## Saving queries
 
-The `shortcuts` section in `~/.kugel/init.yaml` is a map from query names to lists of command-line arguments.
+The `shortcuts` section in `~/.kugl/init.yaml` is a map from query names to lists of command-line arguments.
 
 Example, to save the queries shown in the [README](../README.md) and in 
-[recommended configuration](./recommended.md), add this to `~/.kugel/init.yaml`:
+[recommended configuration](./recommended.md), add this to `~/.kugl/init.yaml`:
 
 ```yaml
 shortcuts:
@@ -26,7 +26,7 @@ shortcuts:
       GROUP BY 1, 5 ORDER BY 1, 5
 ```
 
-To run, type `kugel hi-mem` or `kugel nodes`.
+To run, type `kugl hi-mem` or `kugl nodes`.
 
 Simple parameter substitution might be offered in the future, but if you
 need more powerful templates, your own wrapper script is the short-term answer.

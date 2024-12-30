@@ -5,7 +5,7 @@ Our entire interface to SQLite features is here.
 import collections as co
 import sqlite3
 
-from kugel.util import dprint
+from kugl.util import dprint
 
 
 class SqliteDb:

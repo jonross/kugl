@@ -10,10 +10,10 @@ from typing import List, Optional, Union
 
 import yaml
 
-from kugel.impl.registry import get_schema
-from kugel.impl.engine import Engine, Query, CHECK, NEVER_UPDATE, ALWAYS_UPDATE
-from kugel.impl.config import Config, UserConfig, UserInit, parse_file
-from kugel.util import Age, fail, debug, debugging, kugel_home, kube_home, ConfigPath, dprint, KugelError
+from kugl.impl.registry import get_schema
+from kugl.impl.engine import Engine, Query, CHECK, NEVER_UPDATE, ALWAYS_UPDATE
+from kugl.impl.config import Config, UserConfig, UserInit, parse_file
+from kugl.util import Age, fail, debug, debugging, kugl_home, kube_home, ConfigPath, dprint, KuglError
 
 
 def main() -> None:
@@ -22,14 +22,14 @@ def main() -> None:
 
 def main1(argv: List[str], return_config: bool = False) -> Optional[Union[UserInit, UserConfig]]:
 
-    if "KUGEL_UNIT_TESTING" in os.environ and "KUGEL_MOCKDIR" not in os.environ:
+    if "KUGL_UNIT_TESTING" in os.environ and "KUGL_MOCKDIR" not in os.environ:
         # Never enter main in tests unless test_home fixture is in use, else we could read
         # the user's init file.
         sys.exit("Unit test state error")
 
     try:
         return main2(argv, return_config=return_config)
-    except KugelError as e:
+    except KuglError as e:
         # These are raised by fail(), we only want the error message.
         severe, exc = False, e
     except DatabaseError as e:
@@ -37,7 +37,7 @@ def main1(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
         severe, exc = False, e
     except Exception as e:
         severe, exc = True, e
-    if severe or debugging() or "KUGEL_UNIT_TESTING" in os.environ:
+    if severe or debugging() or "KUGL_UNIT_TESTING" in os.environ:
         raise exc
     print(exc, file=sys.stderr)
     sys.exit(1)
@@ -45,12 +45,12 @@ def main1(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
 
 def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserInit, UserConfig]]:
 
-    kugel_home().mkdir(exist_ok=True)
+    kugl_home().mkdir(exist_ok=True)
     if not argv:
         fail("missing sql query")
 
     # Load init file.
-    init_file = ConfigPath(kugel_home() / "init.yaml")
+    init_file = ConfigPath(kugl_home() / "init.yaml")
     init, errors = parse_file(UserInit, init_file)
     if errors:
         fail("\n".join(errors))
@@ -98,7 +98,7 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
     dprint("init", f"Settings: {init.settings}")
 
     # Load config file
-    config_file = ConfigPath(kugel_home() / f"{schema.name}.yaml")
+    config_file = ConfigPath(kugl_home() / f"{schema.name}.yaml")
     if config_file.exists():
         config, errors = parse_file(UserConfig, config_file)
         if errors:

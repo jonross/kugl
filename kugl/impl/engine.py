@@ -1,6 +1,6 @@
 """
-Process Kugel queries.
-If you're looking for Kugel's "brain", you've found it.
+Process Kugl queries.
+If you're looking for Kugl's "brain", you've found it.
 See also tables.py
 """
 
@@ -17,10 +17,10 @@ from tabulate import tabulate
 from .config import Config, UserConfig
 from .registry import Schema
 from .tables import TableFromCode, TableFromConfig
-from kugel.util import fail, SqliteDb, to_size, to_utc, kugel_home, clock, ConfigPath, debugging, to_age
+from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, ConfigPath, debugging, to_age
 
 # Needed to locate the built-in table builders by class name.
-import kugel.builtins.kubernetes
+import kugl.builtins.kubernetes
 
 # Cache behaviors
 # TODO consider an enum
@@ -85,19 +85,19 @@ class Engine:
         self.schema = schema
         self.config = config
         self.context_name = context_name
-        self.cache = DataCache(self.config, kugel_home() / "cache" / self.context_name)
+        self.cache = DataCache(self.config, kugl_home() / "cache" / self.context_name)
         # Maps resource name e.g. "pods" to the response from "kubectl get pods -o json"
         self.data = {}
         self.db = SqliteDb()
         add_custom_functions(self.db.conn)
 
     def query_and_format(self, query: Query) -> str:
-        """Execute a Kugel query and format the rsults for stdout."""
+        """Execute a Kugl query and format the rsults for stdout."""
         rows, headers = self.query(query)
         return tabulate(rows, tablefmt="plain", floatfmt=".1f", headers=headers)
 
     def query(self, query: Query) -> Tuple[list[Tuple], list[str]]:
-        """Execute a Kugel query but don't format the results.
+        """Execute a Kugl query but don't format the results.
         :return: a tuple of (rows, column names)
         """
 

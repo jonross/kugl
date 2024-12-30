@@ -1,6 +1,6 @@
 
 VERSION = 0.3.0
-IMAGE = jonross/kugel:$(VERSION)
+IMAGE = jonross/kugl:$(VERSION)
 
 venv:
 	python3 -m venv venv
@@ -33,4 +33,4 @@ shell: docker
 	docker run -it $(IMAGE) /bin/sh
 
 clean:
-	rm -rf build dist venv kugel.egg-info
+	rm -rf build dist venv kugl.egg-info

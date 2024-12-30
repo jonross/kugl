@@ -1,7 +1,7 @@
 
 ## Adding columns to an existing table
 
-To extend a table, use the `extend:` section in `~/.kugel/init.yaml`.  This is a list of table names,
+To extend a table, use the `extend:` section in `~/.kugl/init.yaml`.  This is a list of table names,
 each with a list of new columns.  An extension column specifies the column name, its
 SQLite type (one of `int`, `real`, `text`) and a [JMESPath](https://jmespath.org/)
 expression showing how to extract the column value from the JSON form of the resource.
@@ -11,7 +11,7 @@ Example
 ```yaml
 extend:
   
-  # Add the "owner" column to the pods table as shown in the Kugel README
+  # Add the "owner" column to the pods table as shown in the Kugl README
   
 - table: pods
   columns:
@@ -94,10 +94,10 @@ create:
 ## Parsing data into numeric columns
 
 `kubectl` response values like `50Mi` (of memory) are pretty useless in queries, since you can't treat 
-them numerically.  Kugel fixes this, offering additional data types that can be used in the `type` field 
+them numerically.  Kugl fixes this, offering additional data types that can be used in the `type` field 
 of a column definition and automatically convert response values.
 
-| Kugel type | SQLite type  | Description                                                                 |
+| Kugl type | SQLite type  | Description                                                                 |
 |------------|--------------|-----------------------------------------------------------------------------|
 | `size`     | `INTEGER`    | Memory size in bytes; accepts values like `50Mi`                            |
 | `age`      | `INTEGER`    | Time delta in seconds; accepts values like `5d` or `4h30m`                  |
@@ -107,7 +107,7 @@ of a column definition and automatically convert response values.
 ## Generating multiple rows per respone item
 
 It's rare for a `kubectl get` response item to map directly to a single row in a table.  For example,
-a node can have multiple taints, and a pod can have multiple containers.  Kugel handles this using
+a node can have multiple taints, and a pod can have multiple containers.  Kugl handles this using
 the `row_source` field in a column definition.  Here's how the `node_taints` built-in table is defined.
 
 ```yaml
@@ -145,8 +145,8 @@ as a join key, since this is a guaranteed unique key.
 
 You can define tables against any JSON data, not just Kubernetes resources.  This is useful for
 trying out JMESPath expressions and SQLite queries  If the table is defined in 
-`~/.kugel/stdin.yaml` and references the `stdin` resource, it will be available for queries
-against data piped to Kugel's standard input.  Example, given
+`~/.kugl/stdin.yaml` and references the `stdin` resource, it will be available for queries
+against data piped to Kugl's standard input.  Example, given
 
 ```yaml
 create:
@@ -165,7 +165,7 @@ create:
 you can write
 
 ```shell
-aws iam list-groups | kugel "select arn, to_utc(created) from stdin.awsgroups"
+aws iam list-groups | kugl "select arn, to_utc(created) from stdin.awsgroups"
 ```
 
 ## Coming soon

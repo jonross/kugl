@@ -8,7 +8,7 @@ from typing import Optional
 
 import funcy as fn
 
-from kugel.util import parse_size, parse_cpu
+from kugl.util import parse_size, parse_cpu
 
 # What container name is considered the "main" container, if present
 MAIN_CONTAINERS = ["main", "notebook", "app"]

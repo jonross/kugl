@@ -9,7 +9,7 @@ import jmespath
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
-from kugel.util import Age, parse_utc, parse_size, KPath, ConfigPath, parse_age, parse_cpu, fail
+from kugl.util import Age, parse_utc, parse_size, KPath, ConfigPath, parse_age, parse_cpu, fail
 
 PARENTED_PATH = re.compile(r"^(\^*)(.*)")
 
@@ -69,8 +69,8 @@ class ColumnDef(BaseModel):
             config._extract = config._extract_label
         else:
             raise ValueError("must specify either path or label")
-        config._sqltype = KUGEL_TYPE_TO_SQL_TYPE[config.type]
-        config._convert = KUGEL_TYPE_CONVERTERS[config.type]
+        config._sqltype = KUGL_TYPE_TO_SQL_TYPE[config.type]
+        config._convert = KUGL_TYPE_CONVERTERS[config.type]
         return config
 
     def extract(self, obj: object, context) -> object:
@@ -97,7 +97,7 @@ class ColumnDef(BaseModel):
                     return value
 
 
-KUGEL_TYPE_CONVERTERS = {
+KUGL_TYPE_CONVERTERS = {
     "integer": int,
     "real" : float,
     "text": str,
@@ -107,7 +107,7 @@ KUGEL_TYPE_CONVERTERS = {
     "cpu": parse_cpu,
 }
 
-KUGEL_TYPE_TO_SQL_TYPE = {
+KUGL_TYPE_TO_SQL_TYPE = {
     "integer": "integer",
     "real": "real",
     "text": "text",
@@ -146,7 +146,7 @@ class UserConfig(BaseModel):
 
 
 class Config(BaseModel):
-    """The actual configuration model used by the rest of Kugel."""
+    """The actual configuration model used by the rest of Kugl."""
     settings: Settings
     resources: dict[str, ResourceDef]
     extend: dict[str, ExtendTable]

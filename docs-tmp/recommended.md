@@ -2,7 +2,7 @@
 ## Recommended configuration
 
 Instance type is a useful column to have in the `nodes` table. Unfortunately, there is no standard
-label for it.  You can fix this with configuration.  In `~/.kugel/kubernetes.yaml`, add
+label for it.  You can fix this with configuration.  In `~/.kugl/kubernetes.yaml`, add
 
 ```yaml
 extend:
@@ -15,17 +15,17 @@ extend:
 ```
 
 This will handle common cases.  If your cluster uses a different label, add it to the list.
-You can use Kugel itself to find what's available, for example:
+You can use Kugl itself to find what's available, for example:
 
 ```shell
-kugel "select distinct key from node_labels where key like '%instance-type%'"
+kugl "select distinct key from node_labels where key like '%instance-type%'"
 ```
 
 Once you've set up the correct labels, here's a handy report that reports available capacity,
 partitioning nodes by instance type and `NoSchedule` / `NoExecute` taints:
 
 ```shell
-kugel "
+kugl "
     WITH t AS (
         SELECT node_uid, group_concat(key) AS taints FROM node_taints
         WHERE effect IN ('NoSchedule', 'NoExecute') GROUP BY 1

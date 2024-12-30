@@ -9,9 +9,9 @@ import textwrap
 import pytest
 import yaml
 
-from kugel.impl.config import UserConfig, parse_model
-from kugel.main import main1
-from kugel.util import fail, to_age, parse_age, KugelError
+from kugl.impl.config import UserConfig, parse_model
+from kugl.main import main1
+from kugl.util import fail, to_age, parse_age, KuglError
 from .testing import make_job, kubectl_response, assert_query
 
 @pytest.fixture
@@ -75,7 +75,7 @@ def test_too_many_parents(test_home):
             {"something": "foo"},
         ]
     })
-    with pytest.raises(KugelError, match="Missing parent or too many . while evaluating ...invalid"):
+    with pytest.raises(KuglError, match="Missing parent or too many . while evaluating ...invalid"):
         assert_query("SELECT * FROM things", "", user_config=config)
 
 
@@ -87,7 +87,7 @@ def test_config_with_missing_resource():
             columns: []
     """))
     assert errors is None
-    with pytest.raises(KugelError, match="Table 'stuff' needs unknown resource 'stuff'"):
+    with pytest.raises(KuglError, match="Table 'stuff' needs unknown resource 'stuff'"):
         assert_query("SELECT * FROM stuff", "", user_config=config)
 
 

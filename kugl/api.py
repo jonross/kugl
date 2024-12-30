@@ -2,12 +2,12 @@
 Imports usable by user-defined tables in Python (once we have those.)
 """
 
-from kugel.impl.registry import (
+from kugl.impl.registry import (
     schema,
     table
 )
 
-from kugel.util import (
+from kugl.util import (
     fail,
     parse_age,
     parse_utc,
