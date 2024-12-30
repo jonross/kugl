@@ -1,7 +1,7 @@
 
 ## Adding columns to an existing table
 
-To extend a table, use the `extend:` section in `~/.kugl/init.yaml`.  This is a list of table names,
+To extend a table, use the `extend:` section in `~/.kugel/init.yaml`.  This is a list of table names,
 each with a list of new columns.  An extension column specifies the column name, its
 SQLite type (one of `int`, `real`, `text`) and a [JMESPath](https://jmespath.org/)
 expression showing how to extract the column value from the JSON form of the resource.

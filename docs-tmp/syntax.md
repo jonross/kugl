@@ -2,7 +2,7 @@
 ## Usage
 
 ```shell
-kugl [options] [sql | shortcut]
+kugel [options] [sql | shortcut]
 ```
 
 Kubernetes options (these are given to `kubectl`)

@@ -10,7 +10,7 @@ from argparse import ArgumentParser
 
 import yaml
 
-from kugl.api import domain, table, fail
+from kugel.api import domain, table, fail
 
 
 @domain("stdin")

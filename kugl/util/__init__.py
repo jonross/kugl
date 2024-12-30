@@ -9,7 +9,7 @@ from .misc import (
     fail,
     KPath,
     kube_home,
-    kugl_home,
+    kugel_home,
     KuglError,
     parent,
     parse_utc,
@@ -22,4 +22,4 @@ from .misc import (
 from .size import parse_size, to_size, parse_cpu
 from .sqlite import SqliteDb
 
-import kugl.util.clock as clock
+import kugel.util.clock as clock

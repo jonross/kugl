@@ -9,10 +9,10 @@ from typing import List, Optional, Union
 
 import yaml
 
-from kugl.impl.registry import get_domain
-from kugl.impl.engine import Engine, Query, CHECK, NEVER_UPDATE, ALWAYS_UPDATE
-from kugl.impl.config import Config, UserConfig, UserInit, parse_file
-from kugl.util import Age, fail, debug, debugging, kugl_home, kube_home, ConfigPath, dprint
+from kugel.impl.registry import get_domain
+from kugel.impl.engine import Engine, Query, CHECK, NEVER_UPDATE, ALWAYS_UPDATE
+from kugel.impl.config import Config, UserConfig, UserInit, parse_file
+from kugel.util import Age, fail, debug, debugging, kugel_home, kube_home, ConfigPath, dprint
 
 
 def main() -> None:
@@ -37,12 +37,12 @@ def main1(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
 
 def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserInit, UserConfig]]:
 
-    kugl_home().mkdir(exist_ok=True)
+    kugel_home().mkdir(exist_ok=True)
     if not argv:
         fail("missing sql query")
 
     # Load init file.
-    init_file = ConfigPath(kugl_home() / "init.yaml")
+    init_file = ConfigPath(kugel_home() / "init.yaml")
     init, errors = parse_file(UserInit, init_file)
     if errors:
         fail("\n".join(errors))
@@ -90,7 +90,7 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
     dprint("init", f"Settings: {init.settings}")
 
     # Load config file
-    config_file = ConfigPath(kugl_home() / f"{domain.name}.yaml")
+    config_file = ConfigPath(kugel_home() / f"{domain.name}.yaml")
     if config_file.exists():
         config, errors = parse_file(UserConfig, config_file)
         if errors:

@@ -9,7 +9,7 @@ Find the top users of a GPU pool, based on instance type and a team-specific pod
 With Kugl (and a little configuration)
 
 ```shell
-kugl -a "select owner, sum(gpu_req), sum(cpu_req)
+kugel -a "select owner, sum(gpu_req), sum(cpu_req)
           from pods join nodes on pods.node_name = nodes.name
           where instance_type like 'g5.%large' and pods.status in ('Running', 'Terminating')
           group by 1 order by 2 desc limit 10"
@@ -48,18 +48,18 @@ Kugl requires Python 3.9 or later, and kubectl.
 To install with `pip`:
 
 ```shell
-pip install kugl
+pip install kugel
 ```
 
-To use via docker, `mkdir ~/.kugl` then use this Bash alias.  (Sorry, this is an x86 image, I don't have
+To use via docker, `mkdir ~/.kugel` then use this Bash alias.  (Sorry, this is an x86 image, I don't have
 multiarch working yet.)
 
 ```shell
-kugl() {
+kugel() {
     docker run \
         -v ~/.kube:/root/.kube \
-        -v ~/.kugl:/root/.kugl \
-        jonross/kugl:0.2.0 python3 -m kugl.main "$@"
+        -v ~/.kugel:/root/.kugel \
+        jonross/kugel:0.2.0 python3 -m kugel.main "$@"
 }
 ```
 
@@ -67,10 +67,10 @@ If neither of those suits you, it's easy to set up from source.  (This will buil
 source directory.)
 
 ```shell
-git clone https://github.com/jonross/kugl.git
-cd kugl
+git clone https://github.com/jonross/kugel.git
+cd kugel
 make deps
-# put kugl's bin directory in your PATH
+# put kugel's bin directory in your PATH
 PATH=${PATH}:$(pwd)/bin
 ```
 
@@ -82,7 +82,7 @@ Find the pods using the most memory:
 kg -a "select name, to_size(mem_req) from pods order by mem_req desc limit 15"
 ```
 
-If this query is helpful, [save it](./docs-tmp/shortcuts.md), then you can run `kugl hi-mem`.
+If this query is helpful, [save it](./docs-tmp/shortcuts.md), then you can run `kugel hi-mem`.
 
 ## How it works (important)
 

@@ -5,4 +5,4 @@ venv/
 .coverage
 build/
 dist/
-kugl.egg-info/
+kugel.egg-info/

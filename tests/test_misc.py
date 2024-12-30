@@ -8,9 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from kugl.builtins.helpers import Limits
-from kugl.main import main1
-from kugl.util import Age, KuglError, kube_home, kugl_home
+from kugel.builtins.helpers import Limits
+from kugel.main import main1
+from kugel.util import Age, KuglError, kube_home, kugel_home
 
 
 def test_no_resources():
@@ -41,14 +41,14 @@ def test_kube_home_without_envar(monkeypatch):
     assert kube_home() == Path.home() / ".kube"
 
 
-def test_kugl_home_without_envar(monkeypatch):
+def test_kugel_home_without_envar(monkeypatch):
     monkeypatch.setenv("KUGL_HOME", "xxx")  # must exist before deleting
     monkeypatch.delenv("KUGL_HOME")
-    assert kugl_home() == Path.home() / ".kugl"
+    assert kugel_home() == Path.home() / ".kugel"
 
 
 def test_reject_world_writeable_config(test_home):
-    init_file = kugl_home() / "init.yaml"
+    init_file = kugel_home() / "init.yaml"
     init_file.write_text("foo: bar")
     init_file.chmod(0o777)
     with pytest.raises(KuglError, match="is world writeable"):

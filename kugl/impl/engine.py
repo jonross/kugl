@@ -16,12 +16,12 @@ from tabulate import tabulate
 from .config import Config, UserConfig
 from .registry import get_domain, Domain
 from .tables import TableFromCode, TableFromConfig
-from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, ConfigPath, debugging, to_age
+from kugel.util import fail, SqliteDb, to_size, to_utc, kugel_home, clock, ConfigPath, debugging, to_age
 
 # Needed to locate the built-in table builders by class name.
-import kugl.builtins.empty
-import kugl.builtins.kubernetes
-import kugl.builtins.stdin
+import kugel.builtins.empty
+import kugel.builtins.kubernetes
+import kugel.builtins.stdin
 
 # Cache behaviors
 # TODO consider an enum
@@ -79,7 +79,7 @@ class Engine:
         self.domain = domain
         self.config = config
         self.context_name = context_name
-        self.cache = DataCache(self.config, kugl_home() / "cache" / self.context_name)
+        self.cache = DataCache(self.config, kugel_home() / "cache" / self.context_name)
         # Maps resource name e.g. "pods" to the response from "kubectl get pods -o json"
         self.data = {}
         self.db = SqliteDb()

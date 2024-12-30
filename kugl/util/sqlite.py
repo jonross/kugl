@@ -1,7 +1,7 @@
 import collections as co
 import sqlite3
 
-from kugl.util import dprint
+from kugel.util import dprint
 
 
 class SqliteDb:

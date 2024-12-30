@@ -4,8 +4,8 @@ Assorted query tests not covered elsewhere.
 import pytest
 import yaml
 
-from kugl.impl.config import UserConfig, parse_model
-from kugl.util import fail, to_age, parse_age
+from kugel.impl.config import UserConfig, parse_model
+from kugel.util import fail, to_age, parse_age
 from .testing import make_job, kubectl_response, assert_query
 
 @pytest.fixture

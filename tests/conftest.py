@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from kugl.util import UNIT_TEST_TIMEBASE, kube_home, clock
+from kugel.util import UNIT_TEST_TIMEBASE, kube_home, clock
 
 # Add tests/ folder to $PATH so running 'kubectl ...' invokes our mock, not the real kubectl.
 os.environ["PATH"] = f"{Path(__file__).parent}:{os.environ['PATH']}"

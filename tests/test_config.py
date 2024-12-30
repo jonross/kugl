@@ -2,11 +2,11 @@
 Tests for user configuration file content.
 """
 
-from kugl.impl.config import Settings, UserConfig, parse_model, ExtendTable, CreateTable, Config, UserInit
+from kugel.impl.config import Settings, UserConfig, parse_model, ExtendTable, CreateTable, Config, UserInit
 
 import yaml
 
-from kugl.util import Age
+from kugel.util import Age
 
 
 def test_settings_defaults():

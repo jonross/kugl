@@ -1,12 +1,12 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="kugl",  # Replace with your package name
+    name="kugel",  # Replace with your package name
     version="0.2.0",
     description="Explore Kubernetes resources using SQLite",
     author="Jon Ross",
-    author_email="kugl.devel@gmail.com",
-    url="https://github.com/jonross/kugl",
+    author_email="kugel.devel@gmail.com",
+    url="https://github.com/jonross/kugel",
     packages=find_packages(),  # Automatically finds `your_package_name/`
     include_package_data=True,
     install_requires=[
@@ -19,7 +19,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "kugl = kugl.main:main",
+            "kugel = kugel.main:main",
         ],
     },
     classifiers=[

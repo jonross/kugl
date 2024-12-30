@@ -5,7 +5,7 @@ More assorted tests, should these be combined with test_misc.py?
 import jmespath
 import pytest
 
-from kugl.util import Age, parse_size, to_size, dprint, debug, parse_cpu
+from kugel.util import Age, parse_size, to_size, dprint, debug, parse_cpu
 
 
 @pytest.mark.parametrize("input_args,input_kwargs,expected", [

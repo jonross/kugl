@@ -11,6 +11,6 @@ RUN mkdir -p /app
 COPY requirements.txt /tmp
 RUN pip install -r /tmp/requirements.txt
 
-COPY kugl /app/kugl
+COPY kugel /app/kugel
 
 ENV PYTHONPATH /app

@@ -11,10 +11,10 @@ from typing import Optional, Tuple, Union, List
 import yaml
 from pydantic import Field, BaseModel, ConfigDict
 
-from kugl.impl.config import Config, UserConfig, UserInit
-from kugl.impl.engine import Engine, Query, ALWAYS_UPDATE
-from kugl.impl.registry import get_domain
-from kugl.util import to_utc, UNIT_TEST_TIMEBASE
+from kugel.impl.config import Config, UserConfig, UserInit
+from kugel.impl.engine import Engine, Query, ALWAYS_UPDATE
+from kugel.impl.registry import get_domain
+from kugel.util import to_utc, UNIT_TEST_TIMEBASE
 
 
 def kubectl_response(kind: str, output: Union[str, dict]):

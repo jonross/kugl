@@ -1,7 +1,7 @@
 
 ## Settings
 
-The `settings` section in `~/.kugl/init.yaml` can be used to specify cache behaviors once,
+The `settings` section in `~/.kugel/init.yaml` can be used to specify cache behaviors once,
 rather than on every usage from the command line.  Example:
 
 ```yaml
