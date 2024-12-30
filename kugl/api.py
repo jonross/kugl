@@ -1,9 +1,9 @@
-from kugel.impl.registry import (
+from kugl.impl.registry import (
     domain,
     table
 )
 
-from kugel.util import (
+from kugl.util import (
     fail,
     parse_age,
     parse_utc,

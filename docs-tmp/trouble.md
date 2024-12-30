@@ -12,7 +12,7 @@ a similar service and link to it.
 
 ### Can I give feedback without opening an issue?
 
-Defintely.  You can reach the author at `kugel dot devel at gmail dot com`.
+Defintely.  You can reach the author at `kugl dot devel at gmail dot com`.
 
 ### I didn't receive a response to an issue or email
 
@@ -31,5 +31,5 @@ Matching `row_source` and `path` to your data layout can be tricky.
 * Build up one `row_source` at a time
 * Extend parent references `"^"` and test `select * from` after each step
 * Make sure JMESPath expressions for columns select single objects
-* Don't try to debug `kubectl` and `kugel` at the same time; use the `stdin` resource and a static
+* Don't try to debug `kubectl` and `kugl` at the same time; use the `stdin` resource and a static
 JSON file for testing.

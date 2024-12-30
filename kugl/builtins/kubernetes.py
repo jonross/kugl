@@ -9,9 +9,9 @@ import json
 from argparse import ArgumentParser
 
 from .helpers import Limits, ItemHelper, PodHelper, JobHelper
-from kugel.api import domain, table, fail
-from kugel.impl.config import Config
-from kugel.util import parse_utc, run, WHITESPACE
+from kugl.api import domain, table, fail
+from kugl.impl.config import Config
+from kugl.util import parse_utc, run, WHITESPACE
 
 # Fake namespace if "--all-namespaces" option is used
 ALL_NAMESPACE = "__all"

@@ -8,7 +8,7 @@ FIXME: Don't use ArgumentParser in the API.
 
 from argparse import ArgumentParser
 
-from kugel.api import domain
+from kugl.api import domain
 
 
 @domain("empty")

@@ -105,10 +105,10 @@ class ConfigPath(KPath):
         return super().parse_yaml()
 
 
-def kugel_home() -> KPath:
+def kugl_home() -> KPath:
     if "KUGL_HOME" in os.environ:
         return KPath(os.environ["KUGL_HOME"])
-    return KPath.home() / ".kugel"
+    return KPath.home() / ".kugl"
 
 
 def kube_home() -> KPath:

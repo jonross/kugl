@@ -4,13 +4,13 @@
 
 set -euo pipefail
 
-kugel_home=$(dirname "$0")/..
-. $kugel_home/venv//bin/activate
-PYTHONPATH=$kugel_home
+kugl_home=$(dirname "$0")/..
+. $kugl_home/venv//bin/activate
+PYTHONPATH=$kugl_home
 
 exec python3 -c 'if True:
     import sys
-    from kugel.main import main
+    from kugl.main import main
     main()
 ' "$@"
 

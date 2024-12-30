@@ -10,7 +10,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
-from kugel.util import Age, parse_utc, parse_size, KPath, ConfigPath, parse_age, parse_cpu
+from kugl.util import Age, parse_utc, parse_size, KPath, ConfigPath, parse_age, parse_cpu
 
 PARENTED_PATH = re.compile(r"^(\^*)(.*)")
 
