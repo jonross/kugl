@@ -141,6 +141,12 @@ class ResourceDef(BaseModel):
             raise ValueError("Resource cannot specify both file and exec")
         return config
 
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        return self.name == other.name
+
 
 class CreateTable(ExtendTable):
     """Holds the create: section from a user config file."""

@@ -15,7 +15,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field
 from tabulate import tabulate
 
-from .config import Config, UserConfig
+from .config import Config, UserConfig, ResourceDef
 from .registry import Schema
 from .tables import TableFromCode, TableFromConfig
 from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, ConfigPath, debugging, to_age, run
@@ -132,29 +132,32 @@ class Engine:
                 # them.  If actually missing when we reach the query, let SQLite issue the error.
                 pass
 
-        resources_used = {t.resource for t in tables.values()}
-        if "pods" in resources_used:
+        resources_used = {self.config.resources[t.resource] for t in tables.values()}
+        if any(r.name == "pods" for r in resources_used):
             # This is fake, _get_objects knows to get it via "kubectl get pods" not as JSON.
             # TODO: move this hack to kubernetes.py
-            resources_used.add("pod_statuses")
+            resources_used.add(ResourceDef(name="pod_statuses"))
+        cacheable = {r for r in resources_used if r.cacheable}
+        non_cacheable = {r for r in resources_used if not r.cacheable}
 
         # Identify what to fetch vs what's stale or expired.
-        refreshable, max_staleness = self.cache.advise_refresh(query.namespace, resources_used, query.cache_flag)
+        refreshable, max_staleness = self.cache.advise_refresh(query.namespace, cacheable, query.cache_flag)
         if not self.config.settings.reckless and max_staleness is not None:
             print(f"(Data may be up to {max_staleness} seconds old.)", file=sys.stderr)
             clock.CLOCK.sleep(0.5)
+        refreshable.update(non_cacheable)
 
         # Retrieve resource data in parallel.  If fetching from Kubernetes, update the cache;
         # otherwise just read from the cache.
-        def fetch(kind):
+        def fetch(res: ResourceDef):
             try:
-                if kind in refreshable:
-                    self.data[kind] = self._get_objects(kind)
-                    self.cache.dump(query.namespace, kind, self.data[kind])
+                if res in refreshable:
+                    self.data[res.name] = self._get_objects(res)
+                    self.cache.dump(query.namespace, res.name, self.data[res.name])
                 else:
-                    self.data[kind] = self.cache.load(query.namespace, kind)
+                    self.data[res.name] = self.cache.load(query.namespace, res.name)
             except Exception as e:
-                fail(f"Failed to get {kind} objects: {e}")
+                fail(f"Failed to get {res.name} objects: {e}")
         with ThreadPoolExecutor(max_workers=8) as pool:
             for _ in pool.map(fetch, resources_used):
                 pass
@@ -162,7 +165,7 @@ class Engine:
         # There won't really be a pod_statuses table, just grab the statuses and put them
         # on the pod objects.  Drop the pods where we didn't get status back from kubectl.
         # TODO: move this hack to kubernetes.py
-        if "pods" in resources_used:
+        if any(r.name == "pods" for r in resources_used):
             statuses = self.data.get("pod_statuses")
             def pod_with_updated_status(pod):
                 metadata = pod["metadata"]
@@ -187,13 +190,11 @@ class Engine:
         rows = [[truncate(x) for x in row] for row in rows]
         return rows, column_names
 
-    def _get_objects(self, kind: str):
+    def _get_objects(self, resource: ResourceDef) -> dict:
         """
         Handle built-in resources here, and dispatch to schema implementation for those
         that aren't.
         """
-        resource = self.config.resources[kind]
-
         def parse(text):
             if not text:
                 return {}
@@ -231,32 +232,32 @@ class DataCache:
         self.dir = dir
         dir.mkdir(parents=True, exist_ok=True)
 
-    def advise_refresh(self, namespace: str, kinds: Set[str], flag: CacheFlag) -> Tuple[Set[str], int]:
+    def advise_refresh(self, namespace: str, resources: Set[ResourceDef], flag: CacheFlag) -> Tuple[Set[str], int]:
         """Determine which resources to use from cache or to refresh.
 
         :param namespace: the Kubernetes namespace to query, or ALL_NAMESPACE
-        :param kinds: the resource types to consider
+        :param resources: the resource types to consider
         :param flag: the user-specified cache behavior
         :return: a tuple of (refreshable, max_age) where refreshable is the set of resources types
             to update, and max_age is the maximum age of the resources that won't be updated.
         """
         if flag == ALWAYS_UPDATE:
             # Refresh everything and don't issue a "stale data" warning
-            return kinds, None
+            return resources, None
         # Find what's expired or missing
-        cache_ages = {kind: self.age(self.cache_path(namespace, kind)) for kind in kinds}
-        expired = {kind for kind, age in cache_ages.items() if age is not None and age >= self.config.settings.cache_timeout.value}
-        missing = {kind for kind, age in cache_ages.items() if age is None}
+        cache_ages = {r: self.age(self.cache_path(namespace, r.name)) for r in resources}
+        expired = {r for r, age in cache_ages.items() if age is not None and age >= self.config.settings.cache_timeout.value}
+        missing = {r for r, age in cache_ages.items() if age is None}
         # Always refresh what's missing, and possibly also what's expired
         # Stale data warning for everything else
         refreshable = missing if flag == NEVER_UPDATE else expired | missing
         if debugging("cache"):
-            print("Requested", kinds)
-            print("Ages", cache_ages)
-            print("Expired", expired)
-            print("Missing", missing)
-            print("Refreshable", refreshable)
-        max_age = max((cache_ages[kind] for kind in (kinds - refreshable)), default=None)
+            print("Requested", [r.name for r in resources])
+            print("Ages", " ".join(f"{r.name}={age}" for r, age in cache_ages.items()))
+            print("Expired", [r.name for r in expired])
+            print("Missing", [r.name for r in missing])
+            print("Refreshable", [r.name for r in refreshable])
+        max_age = max((cache_ages[r] for r in (resources - refreshable)), default=None)
         return refreshable, max_age
 
     def cache_path(self, namespace: str, kind: str) -> Path:
