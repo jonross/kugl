@@ -2,13 +2,13 @@
 ## Usage
 
 ```shell
-kugel [options] [sql | shortcut]
+kugl [options] [sql | shortcut]
 ```
 
 ### Kubernetes options
 
-Most invocations of Kugel will need `-a` or `-n namespace`, just like `kubectl`.
-If your cluster is small, you could also (for instance) `alias kg="kugel -a"` and use `where namespace = ...` instead.
+Most invocations of Kugl will need `-a` or `-n namespace`, just like `kubectl`.
+If your cluster is small, you could also (for instance) `alias kg="kugl -a"` and use `where namespace = ...` instead.
 
 * `-a, --all-namespaces` - Look in all namespaces for Kubernetes resources.  May not be combine with `-n`.
 * `-n, --namespace NS` - Look in namespace `NS` for Kubernetes resources.  May not be combined with `-a`.

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Wrapper script to run Kugel test suite against different sets of requirements.
+# Wrapper script to run Kugl test suite against different sets of requirements.
 
 set -euo pipefail
 

@@ -12,13 +12,13 @@ a similar service and link to it.
 
 ### Can I give feedback without opening an issue?
 
-Defintely.  You can reach the author at `kugel dot devel at gmail dot com`.
+Defintely.  You can reach the author at `kugl dot devel at gmail dot com`.
 
 ### I didn't receive a response to an issue or email
 
 Like many open source committers, the author has a family and a day job.  🙂
 
-Please be patient, and thank you for trying Kugel!
+Please be patient, and thank you for trying Kugl!
 
 ### I'm not seeing any output from my queries
 

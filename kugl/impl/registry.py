@@ -1,6 +1,6 @@
 """
 Registry of resources and tables, independent of configuration file format.
-This is Kugel's global state outside the SQLite database.
+This is Kugl's global state outside the SQLite database.
 """
 import json
 import sys
@@ -10,7 +10,7 @@ from typing import Type
 import yaml
 from pydantic import BaseModel, Field
 
-from kugel.util import fail, dprint
+from kugl.util import fail, dprint
 
 _SCHEMAS = {}
 
@@ -81,11 +81,3 @@ class GenericSchema:
 
     def handle_cli_options(self, args):
         pass
-
-    def get_objects(self, *_):
-        text = sys.stdin.read()
-        if not text:
-            return {}
-        if text[0] in "{[":
-            return json.loads(text)
-        return yaml.safe_load(text)

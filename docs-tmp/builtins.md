@@ -92,8 +92,8 @@ Built from `kubectl get nodes`, one row per taint
 
 `now()` - returns the current time as an integer, in epoch seconds
 
-`to_utc(timestamp)` - convert epoch time to string form `YYYY-MM-DD HH:MM:SSZ`
+`to_utc(timestamp)` - convert epoch time to string form e.g. `YYYY-MM-DDTHH:MM:SSZ`
 
-`to_age(timestamp)` - convert epoch time to a more readable age string as seen in the `AGE` column of `kubectl get pods`, e.g. `5d`, `4h30m`.
+`to_age(seconds)` - convert seconds to a more readable age string as seen in the `AGE` column of `kubectl get pods`, e.g. `5d`, `4h30m`.
 
 `to_size(bytes)` - convert a byte count to a more readable string, e.g. `1Gi`, `3.4Mi`

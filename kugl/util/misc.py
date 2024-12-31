@@ -46,11 +46,11 @@ def warn(message: str):
 
 def fail(message: str, e: Optional[Exception] = None):
     if e is not None:
-        raise KugelError(message) from e
-    raise KugelError(message)
+        raise KuglError(message) from e
+    raise KuglError(message)
 
 
-class KugelError(Exception):
+class KuglError(Exception):
     pass
 
 
@@ -105,15 +105,15 @@ class ConfigPath(KPath):
         return super().parse_yaml()
 
 
-def kugel_home() -> KPath:
-    # KUGEL_HOME override is for unit tests, not for users (as least for now)
-    if "KUGEL_HOME" in os.environ:
-        return KPath(os.environ["KUGEL_HOME"])
-    return KPath.home() / ".kugel"
+def kugl_home() -> KPath:
+    # KUGL_HOME override is for unit tests, not for users (as least for now)
+    if "KUGL_HOME" in os.environ:
+        return KPath(os.environ["KUGL_HOME"])
+    return KPath.home() / ".kugl"
 
 
 def kube_home() -> KPath:
-    # KUGEL_HOME override is for unit tests, not for users (as least for now)
-    if "KUGEL_HOME" in os.environ:
-        return KPath(os.environ["KUGEL_HOME"]) / ".kube"
+    # KUGL_HOME override is for unit tests, not for users (as least for now)
+    if "KUGL_HOME" in os.environ:
+        return KPath(os.environ["KUGL_HOME"]) / ".kube"
     return KPath.home() / ".kube"

@@ -11,10 +11,10 @@ from typing import Optional, Tuple, Union, List
 import yaml
 from pydantic import Field, BaseModel, ConfigDict
 
-from kugel.impl.config import Config, UserConfig, UserInit
-from kugel.impl.engine import Engine, Query, ALWAYS_UPDATE
-from kugel.impl.registry import get_schema
-from kugel.util import to_utc, UNIT_TEST_TIMEBASE
+from kugl.impl.config import Config, UserConfig, UserInit
+from kugl.impl.engine import Engine, Query, ALWAYS_UPDATE
+from kugl.impl.registry import get_schema
+from kugl.util import to_utc, UNIT_TEST_TIMEBASE
 
 
 def kubectl_response(kind: str, output: Union[str, dict]):
@@ -28,7 +28,7 @@ def kubectl_response(kind: str, output: Union[str, dict]):
         output = json.dumps(output)
     else:
         output = str(output).strip()
-    folder = Path(os.getenv("KUGEL_MOCKDIR"))
+    folder = Path(os.getenv("KUGL_MOCKDIR"))
     folder.mkdir(exist_ok=True)
     folder.joinpath(kind).write_text(output)
 
