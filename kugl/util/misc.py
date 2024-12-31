@@ -12,6 +12,8 @@ from typing import Optional, Union
 import arrow
 import yaml
 
+from kugl.util import Age, clock
+
 WHITESPACE = re.compile(r"\s+")
 DEBUG_FLAGS = {}
 
@@ -91,6 +93,10 @@ class KPath(type(Path())):
 
     def parse_yaml(self):
         return yaml.safe_load(self.read_text())
+
+    def set_age(self, age: Age):
+        time = clock.CLOCK.now() - age.value
+        os.utime(str(self), times=(time, time))
 
 
 class ConfigPath(KPath):
