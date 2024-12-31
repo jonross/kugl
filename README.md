@@ -10,9 +10,9 @@ With Kugl (and a little configuration)
 
 ```shell
 kugl -a "select owner, sum(gpu_req), sum(cpu_req)
-          from pods join nodes on pods.node_name = nodes.name
-          where instance_type like 'g5.%large' and pods.phase in ('Running', 'Pending')
-          group by 1 order by 2 desc limit 10"
+         from pods join nodes on pods.node_name = nodes.name
+         where instance_type like 'g5.%large' and pods.phase in ('Running', 'Pending')
+         group by 1 order by 2 desc limit 10"
 ```
 
 Without Kugl
@@ -79,7 +79,7 @@ PATH=${PATH}:$(pwd)/bin
 Find the pods using the most memory:
 
 ```shell
-kg -a "select name, to_size(mem_req) from pods order by mem_req desc limit 15"
+kugl -a "select name, to_size(mem_req) from pods order by mem_req desc limit 15"
 ```
 
 If this query is helpful, [save it](./docs-tmp/shortcuts.md), then you can run `kugl hi-mem`.
@@ -124,7 +124,7 @@ Like "cudgel", so, a blunt instrument for convincing data to be row-shaped.
 
 Or "koo-jull", if you prefer something less combative.
 
-"Kugel" is a casserole with varying degrees of cultural significance; use at own risk.
+"Kugel" is a casserole with varying degrees of cultural significance, and sounds too much like "Google".
 
 ## Rationale
 
@@ -135,7 +135,7 @@ data like "500Mi" of memory or "200m" CPUs or "2024-11-01T12:34:56Z"?  Can you d
 
 Me neither.
 
-I looked for prior art.  It seems to be not maintained, not extensible, or lacks SQL support.
+I looked for prior art.  It appears unmaintained, inextensible, or lacking in SQL features.
 
 * [ksql](https://github.com/brendandburns/ksql) is built on Node.js and AlaSQL; last commit November 2016.
 * [kubeql](https://github.com/saracen/kubeql) is a SQL-like query language for Kubernetes; last commit October 2017.

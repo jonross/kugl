@@ -11,8 +11,8 @@ import yaml
 
 from kugl.impl.config import UserConfig, parse_model
 from kugl.main import main1
-from kugl.util import fail, to_age, parse_age, KuglError
-from .testing import make_job, kubectl_response, assert_query
+from kugl.util import to_age, KuglError
+from .testing import kubectl_response, assert_query
 
 @pytest.fixture
 def thing_config():
