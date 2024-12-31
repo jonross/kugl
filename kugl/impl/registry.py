@@ -81,11 +81,3 @@ class GenericSchema:
 
     def handle_cli_options(self, args):
         pass
-
-    def get_objects(self, *_):
-        text = sys.stdin.read()
-        if not text:
-            return {}
-        if text[0] in "{[":
-            return json.loads(text)
-        return yaml.safe_load(text)

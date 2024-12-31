@@ -35,15 +35,14 @@ class KubernetesData:
             self.ns = namespace or "default"
             self.all_ns = False
 
-    def get_objects(self, kind: str, config: Config)-> dict:
+    def get_objects(self, kind: str, namespaced: bool)-> dict:
         """Fetch resources from Kubernetes using kubectl.
 
         :param kind: Kubernetes resource type e.g. "pods"
         :return: JSON as output by "kubectl get {kind} -o json"
         """
         namespace_flag = ["--all-namespaces"] if self.ns else ["-n", self.ns]
-        is_namespaced = config.resources[kind].namespaced
-        if not is_namespaced:
+        if not namespaced:
             _, output, _ = run(["kubectl", "get", kind, "-o", "json"])
             return json.loads(output)
         elif kind == "pod_statuses":

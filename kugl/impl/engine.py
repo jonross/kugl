@@ -11,13 +11,14 @@ import re
 import sys
 from typing import Tuple, Set, Optional, Literal
 
+import yaml
 from pydantic import BaseModel, ConfigDict, Field
 from tabulate import tabulate
 
 from .config import Config, UserConfig
 from .registry import Schema
 from .tables import TableFromCode, TableFromConfig
-from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, ConfigPath, debugging, to_age
+from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, ConfigPath, debugging, to_age, run
 
 # Needed to locate the built-in table builders by class name.
 import kugl.builtins.kubernetes
@@ -148,7 +149,7 @@ class Engine:
         def fetch(kind):
             try:
                 if kind in refreshable:
-                    self.data[kind] = self.schema.impl.get_objects(kind, self.config)
+                    self.data[kind] = self._get_objects(kind)
                     self.cache.dump(query.namespace, kind, self.data[kind])
                 else:
                     self.data[kind] = self.cache.load(query.namespace, kind)
@@ -185,6 +186,34 @@ class Engine:
         truncate = lambda x: int(x) if isinstance(x, float) and x == float(int(x)) else x
         rows = [[truncate(x) for x in row] for row in rows]
         return rows, column_names
+
+    def _get_objects(self, kind: str):
+        """
+        Handle built-in resources here, and dispatch to schema implementation for those
+        that aren't.
+        """
+        resource = self.config.resources[kind]
+
+        def parse(text):
+            if not text:
+                return {}
+            if text[0] in "{[":
+                return json.loads(text)
+            return yaml.safe_load(text)
+
+        if resource.file is not None:
+            if resource.file == "__stdin__":
+                return parse(sys.stdin.read())
+            try:
+                return parse(Path(resource.file).read_text())
+            except OSError as e:
+                fail(f"Failed to read {resource.file}", e)
+
+        if resource.exec is not None:
+            _, out, _ = run(resource.exec)
+            return parse(out)
+
+        return self.schema.impl.get_objects(resource.name, resource.namespaced)
 
 
 class DataCache:

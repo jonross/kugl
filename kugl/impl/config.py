@@ -128,7 +128,18 @@ class ExtendTable(BaseModel):
 class ResourceDef(BaseModel):
     """Holds one entry from the resources: list in a user config file."""
     name: str
+    # FIXME: Don't conflate all resource attributes in one class
     namespaced: bool = True
+    cacheable: bool = True
+    file: Optional[str] = None
+    exec: Optional[Union[str, list[str]]] = None
+
+    @model_validator(mode="after")
+    @classmethod
+    def validate(cls, config: 'ResourceDef') -> 'ResourceDef':
+        if config.file and config.exec:
+            raise ValueError("Resource cannot specify both file and exec")
+        return config
 
 
 class CreateTable(ExtendTable):
@@ -156,15 +167,15 @@ class Config(BaseModel):
     @classmethod
     def collate(cls, user_init: UserInit, user_config: UserConfig) -> 'Config':
         """Combine UserInit and UserConfig into a more convenient form, and perform final validation."""
+        # FIXME: also prevent the user from defining stdin
+        stdin = ResourceDef(name="stdin", file="__stdin__", cacheable=False, namespaced=False)
         config = Config(
             settings=user_init.settings,
-            resources={r.name: r for r in user_config.resources},
+            resources={r.name: r for r in user_config.resources + [stdin]},
             extend={e.table: e for e in user_config.extend},
             create={c.table: c for c in user_config.create},
             shortcuts=user_init.shortcuts,
         )
-        # FIXME: also prevent the user from defining stdin
-        config.resources["stdin"] = ResourceDef(name="stdin", namespaced=False)
         return config
 
 
