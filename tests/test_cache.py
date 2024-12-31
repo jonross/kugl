@@ -33,10 +33,17 @@ def test_cache(test_home):
 
     refresh, max_age = cache.advise_refresh(NS, all, NEVER_UPDATE)
     assert refresh == {jobs, events}
+    assert max_age == 70
 
     refresh, max_age = cache.advise_refresh(NS, all, CHECK)
     assert refresh == {jobs, nodes, events}
+    assert max_age == 50
+
+    refresh, max_age = cache.advise_refresh(NS, {jobs, pods}, CHECK)
+    assert refresh == {jobs}
+    assert max_age == 50
 
     refresh, max_age = cache.advise_refresh(NS, all, ALWAYS_UPDATE)
     assert refresh == all
+    assert max_age is None
 
