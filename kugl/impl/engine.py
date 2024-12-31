@@ -203,7 +203,7 @@ class Engine:
             return yaml.safe_load(text)
 
         if resource.file is not None:
-            if resource.file == "__stdin__":
+            if resource.file == "stdin":
                 return parse(sys.stdin.read())
             try:
                 return parse(Path(resource.file).read_text())

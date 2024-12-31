@@ -93,6 +93,9 @@ def test_config_with_missing_resource():
 
 def test_select_from_stdin(test_home, monkeypatch, capsys):
     (test_home / "any.yaml").write_text("""
+        resources:
+          - name: stdin
+            file: stdin
         create:
           - table: people
             resource: stdin

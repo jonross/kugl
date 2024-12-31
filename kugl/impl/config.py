@@ -175,11 +175,9 @@ class Config(BaseModel):
     @classmethod
     def collate(cls, user_init: UserInit, user_config: UserConfig) -> 'Config':
         """Combine UserInit and UserConfig into a more convenient form, and perform final validation."""
-        # FIXME: also prevent the user from defining stdin
-        stdin = ResourceDef(name="stdin", file="__stdin__", cacheable=False, namespaced=False)
         config = Config(
             settings=user_init.settings,
-            resources={r.name: r for r in user_config.resources + [stdin]},
+            resources={r.name: r for r in user_config.resources},
             extend={e.table: e for e in user_config.extend},
             create={c.table: c for c in user_config.create},
             shortcuts=user_init.shortcuts,
