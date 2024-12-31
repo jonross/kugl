@@ -137,15 +137,12 @@ class Engine:
             # This is fake, _get_objects knows to get it via "kubectl get pods" not as JSON.
             # TODO: move this hack to kubernetes.py
             resources_used.add(ResourceDef(name="pod_statuses"))
-        cacheable = {r for r in resources_used if r.cacheable}
-        non_cacheable = {r for r in resources_used if not r.cacheable}
 
         # Identify what to fetch vs what's stale or expired.
-        refreshable, max_staleness = self.cache.advise_refresh(query.namespace, cacheable, query.cache_flag)
+        refreshable, max_staleness = self.cache.advise_refresh(query.namespace, resources_used, query.cache_flag)
         if not self.config.settings.reckless and max_staleness is not None:
             print(f"(Data may be up to {max_staleness} seconds old.)", file=sys.stderr)
             clock.CLOCK.sleep(0.5)
-        refreshable.update(non_cacheable)
 
         # Retrieve resource data in parallel.  If fetching from Kubernetes, update the cache;
         # otherwise just read from the cache.
@@ -245,19 +242,24 @@ class DataCache:
             # Refresh everything and don't issue a "stale data" warning
             return resources, None
         # Find what's expired or missing
-        cache_ages = {r: self.age(self.cache_path(namespace, r.name)) for r in resources}
+        cacheable = {r for r in resources if r.cacheable}
+        non_cacheable = {r for r in resources if not r.cacheable}
+        cache_ages = {r: self.age(self.cache_path(namespace, r.name)) for r in cacheable}
         expired = {r for r, age in cache_ages.items() if age is not None and age >= self.timeout.value}
         missing = {r for r, age in cache_ages.items() if age is None}
-        # Always refresh what's missing, and possibly also what's expired
+        # Always refresh what's missing or non-cacheable, and possibly also what's expired
         # Stale data warning for everything else
         refreshable = missing if flag == NEVER_UPDATE else expired | missing
+        max_age = max((cache_ages[r] for r in (cacheable - refreshable)), default=None)
+        refreshable.update(non_cacheable)
         if debugging("cache"):
             print("Requested", [r.name for r in resources])
+            print("Cacheable", [r.name for r in cacheable])
+            print("Non-cacheable", [r.name for r in non_cacheable])
             print("Ages", " ".join(f"{r.name}={age}" for r, age in cache_ages.items()))
             print("Expired", [r.name for r in expired])
             print("Missing", [r.name for r in missing])
             print("Refreshable", [r.name for r in refreshable])
-        max_age = max((cache_ages[r] for r in (resources - refreshable)), default=None)
         return refreshable, max_age
 
     def cache_path(self, namespace: str, kind: str) -> Path:
