@@ -13,7 +13,7 @@ from pydantic import Field, BaseModel, ConfigDict
 
 from kugl.impl.config import Config, UserConfig, UserInit
 from kugl.impl.engine import Engine, Query, ALWAYS_UPDATE
-from kugl.impl.registry import get_schema
+from kugl.impl.registry import Registry
 from kugl.util import to_utc, UNIT_TEST_TIMEBASE
 
 
@@ -165,7 +165,7 @@ def assert_query(sql: str, expected: Union[str, list],
         caller can indent for neatness.  Or, if a list, each item will be checked in order.
     :param all_ns: FIXME temporary hack until we get namespaces out of engine.py
     """
-    schema = get_schema("kubernetes")
+    schema = Registry.get().get_schema("kubernetes")
     schema.impl.set_namespace(all_ns, "__all" if all_ns else "default")
     config = Config.collate(UserInit(), user_config or UserConfig())
     engine = Engine(schema, config, "nocontext")

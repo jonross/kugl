@@ -2,31 +2,47 @@
 Registry of resources and tables, independent of configuration file format.
 This is Kugl's global state outside the SQLite database.
 """
-import json
-import sys
 from argparse import ArgumentParser
 from typing import Type
 
-import yaml
 from pydantic import BaseModel, Field
 
 from kugl.util import fail, dprint
 
-_SCHEMAS = {}
+_REGISTRY = None
 
 
-def schema(name: str):
-    def wrap(cls):
-        add_schema(name, cls)
-        return cls
-    return wrap
+class Registry:
+    """All known tables and resources.
+    There is one instance of this in any Kugl process."""
 
+    def __init__(self):
+        self.schemas = {}
 
-def table(**kwargs):
-    def wrap(cls):
-        add_table(cls, **kwargs)
-        return cls
-    return wrap
+    @staticmethod
+    def get():
+        global _REGISTRY
+        if _REGISTRY is None:
+            _REGISTRY = Registry()
+        return _REGISTRY
+
+    def add_schema(self, name: str, cls: Type):
+        """Register a class to implement a schema; this is called by the @schema decorator."""
+        dprint("registry", f"Add schema {name} {cls}")
+        self.schemas[name] = Schema(name=name, impl=cls())
+
+    def get_schema(self, name: str) -> "Schema":
+        if name not in self.schemas:
+            self.add_schema(name, GenericSchema)
+        return self.schemas[name]
+
+    def add_table(self, cls, **kwargs):
+        """Register a class to define a table; this is called by the @table decorator."""
+        dprint("registry", f"Add table {kwargs}")
+        t = TableDef(cls=cls, **kwargs)
+        if t.schema_name not in self.schemas:
+            fail(f"Must create schema {t.schema_name} before table {t.schema_name}.{t.name}")
+        self.schemas[t.schema_name].tables[t.name] = t
 
 
 class TableDef(BaseModel):
@@ -48,27 +64,6 @@ class Schema(BaseModel):
     name: str
     impl: object # FIXME use type vars
     tables: dict[str, TableDef] = {}
-
-
-def add_schema(name: str, cls: Type):
-    """Register a class to implement a schema; this is called by the @schema decorator."""
-    dprint("registry", f"Add schema {name} {cls}")
-    _SCHEMAS[name] = Schema(name=name, impl=cls())
-
-
-def get_schema(name: str) -> Schema:
-    if name not in _SCHEMAS:
-        add_schema(name, GenericSchema)
-    return _SCHEMAS[name]
-
-
-def add_table(cls, **kwargs):
-    """Register a class to define a table; this is called by the @table decorator."""
-    dprint("registry", f"Add table {kwargs}")
-    t = TableDef(cls=cls, **kwargs)
-    if t.schema_name not in _SCHEMAS:
-        fail(f"Must create schema {t.schema_name} before table {t.schema_name}.{t.name}")
-    _SCHEMAS[t.schema_name].tables[t.name] = t
 
 
 class GenericSchema:

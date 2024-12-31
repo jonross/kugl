@@ -10,7 +10,7 @@ from typing import List, Optional, Union
 
 import yaml
 
-from kugl.impl.registry import get_schema
+from kugl.impl.registry import Registry
 from kugl.impl.engine import Engine, Query, CHECK, NEVER_UPDATE, ALWAYS_UPDATE
 from kugl.impl.config import Config, UserConfig, UserInit, parse_file
 from kugl.util import Age, fail, debug, debugging, kugl_home, kube_home, ConfigPath, dprint, KuglError
@@ -65,12 +65,13 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
 
     # Need the query schema for command line parsing.
     # FIXME: Move the namespace & cache flag out of the query
+    rgy = Registry.get()
     query = Query(sql=argv[-1])
     schema_refs = {ref.schema_name for ref in query.table_refs}
     if len(schema_refs) == 0:
-        schema = get_schema("empty")
+        schema = rgy.get_schema("empty")
     elif len(schema_refs) == 1:
-        schema = get_schema(next(iter(schema_refs)))
+        schema = rgy.get_schema(next(iter(schema_refs)))
     else:
         fail("Cross-schema query not implemented yet")
 
