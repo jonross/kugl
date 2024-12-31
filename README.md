@@ -127,16 +127,10 @@ Or "koo-jull", if you prefer something less combative.
 
 "Kugel" is a casserole with varying degrees of cultural significance, and sounds too much like "Google".
 
-## Rationale
+### Prior art
 
-`jq` is awesome, but... can you join and group without looking at the manual? Can you do math on non-numeric
-data like "500Mi" of memory or "200m" CPUs or "2024-11-01T12:34:56Z"?  Can you determine the STATUS of a pod
-[the way](https://github.com/kubernetes/kubernetes/blob/release-1.32/pkg/printers/internalversion/printers.go#L865)
-`kubectl get pods` does?
-
-Me neither.
-
-I looked for prior art.  It appears unmaintained, inextensible, or lacking in SQL features.
+This has been tried before.  Kugl offers a true SQL engine and user-defined tables, so perhaps
+it will have broader appeal.
 
 * [ksql](https://github.com/brendandburns/ksql) is built on Node.js and AlaSQL; last commit November 2016.
 * [kubeql](https://github.com/saracen/kubeql) is a SQL-like query language for Kubernetes; last commit October 2017.

@@ -18,7 +18,7 @@ from tabulate import tabulate
 from .config import Config, UserConfig, ResourceDef
 from .registry import Schema
 from .tables import TableFromCode, TableFromConfig
-from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, ConfigPath, debugging, to_age, run
+from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, ConfigPath, debugging, to_age, run, Age
 
 # Needed to locate the built-in table builders by class name.
 import kugl.builtins.kubernetes
@@ -86,7 +86,7 @@ class Engine:
         self.schema = schema
         self.config = config
         self.context_name = context_name
-        self.cache = DataCache(self.config, kugl_home() / "cache" / self.context_name)
+        self.cache = DataCache(kugl_home() / "cache" / self.context_name, self.config.settings.cache_timeout)
         # Maps resource name e.g. "pods" to the response from "kubectl get pods -o json"
         self.data = {}
         self.db = SqliteDb()
@@ -222,15 +222,15 @@ class DataCache:
     This is a separate class for ease of unit testing.
     """
 
-    def __init__(self, config: Config, dir: Path):
+    def __init__(self, dir: Path, timeout: Age):
         """
-        :param config: the parsed user configuration file
         :param dir: root of the cache folder tree; paths are of the form
             <kubernetes context>/<namespace>.<resource kind>.json
+        :param timeout: age at which cached data is considered stale
         """
-        self.config = config
         self.dir = dir
         dir.mkdir(parents=True, exist_ok=True)
+        self.timeout = timeout
 
     def advise_refresh(self, namespace: str, resources: Set[ResourceDef], flag: CacheFlag) -> Tuple[Set[str], int]:
         """Determine which resources to use from cache or to refresh.
@@ -246,7 +246,7 @@ class DataCache:
             return resources, None
         # Find what's expired or missing
         cache_ages = {r: self.age(self.cache_path(namespace, r.name)) for r in resources}
-        expired = {r for r, age in cache_ages.items() if age is not None and age >= self.config.settings.cache_timeout.value}
+        expired = {r for r, age in cache_ages.items() if age is not None and age >= self.timeout.value}
         missing = {r for r, age in cache_ages.items() if age is None}
         # Always refresh what's missing, and possibly also what's expired
         # Stale data warning for everything else
