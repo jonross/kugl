@@ -116,6 +116,7 @@ In any case, please be mindful of stale data and server load.
 * Adding columns and tables from Python (not ready yet)
 * Adding views (not ready yet)
 * [Troubleshooting and feedback](./docs-tmp/trouble.md)
+* [Beyond Kubernetes](./docs-tmp/beyond.md)
 * [License](./LICENSE)
 
 ### Pronunciation

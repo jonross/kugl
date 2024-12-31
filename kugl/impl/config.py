@@ -139,6 +139,8 @@ class ResourceDef(BaseModel):
     def validate(cls, config: 'ResourceDef') -> 'ResourceDef':
         if config.file and config.exec:
             raise ValueError("Resource cannot specify both file and exec")
+        if config.file:
+            config.cacheable = False
         return config
 
     def __hash__(self):
