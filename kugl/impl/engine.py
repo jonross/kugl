@@ -18,7 +18,7 @@ from tabulate import tabulate
 from .config import Config, UserConfig, ResourceDef
 from .registry import Schema
 from .tables import TableFromCode, TableFromConfig
-from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, ConfigPath, debugging, to_age, run, Age
+from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, ConfigPath, debugging, to_age, run, Age, KPath
 
 # Needed to locate the built-in table builders by class name.
 import kugl.builtins.kubernetes
@@ -222,7 +222,7 @@ class DataCache:
     This is a separate class for ease of unit testing.
     """
 
-    def __init__(self, dir: Path, timeout: Age):
+    def __init__(self, dir: KPath, timeout: Age):
         """
         :param dir: root of the cache folder tree; paths are of the form
             <kubernetes context>/<namespace>.<resource kind>.json
