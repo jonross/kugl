@@ -11,7 +11,7 @@ Debug `row_source` and `path` problems by installing [jp](https://github.com/jme
 it examples of your JSON data.  JMESPath and `jq` don't behave the same.
 
 Run `kugl` with `--debug itemize` to verify that there are rows available for column extraction.
-Run with `--debug itemize,extract` to see each extracted column value and a portion of the data it came
+Run with `--debug extract` to see each extracted column value and a portion of the data it came
 from.
 
 ### I found a bug
@@ -34,4 +34,4 @@ Yes, please post to [this discussion](https://github.com/jonross/kugl/issues/106
 
 Like many open source committers, the author has a family and a day job.  🙂
 
-Please be patient, and thank you for trying Kugl!
+Please be exceedingly patient, and thank you for trying Kugl!
