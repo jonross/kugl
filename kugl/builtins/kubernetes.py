@@ -14,7 +14,7 @@ from kugl.util import parse_utc, run, WHITESPACE
 
 
 @schema("kubernetes")
-class KubernetesData:
+class KubernetesData:  # FIXME: this should be a resource type, not a schema
 
     def add_cli_options(self, ap: ArgumentParser):
         ap.add_argument("-a", "--all-namespaces", default=False, action="store_true")
