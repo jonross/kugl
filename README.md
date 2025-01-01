@@ -112,8 +112,6 @@ In any case, please be mindful of stale data and server load.
 * [Settings](./docs-tmp/settings.md)
 * [Built-in tables and functions](./docs-tmp/builtins.md)
 * [Configuring new columns and tables](./docs-tmp/extending.md)
-* Adding columns and tables from Python (not ready yet)
-* Adding views (not ready yet)
 * [Troubleshooting and feedback](./docs-tmp/trouble.md)
 * [Beyond Kubernetes](./docs-tmp/beyond.md)
 * [License](./LICENSE)

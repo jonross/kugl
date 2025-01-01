@@ -1,7 +1,7 @@
 """
 Pydantic models for configuration files.
 """
-
+import json
 import re
 from typing import Literal, Optional, Tuple, Callable, Union
 
@@ -76,8 +76,14 @@ class ColumnDef(BaseModel):
     def extract(self, obj: object, context) -> object:
         """Extract the column value from an object and convert to the correct type."""
         if obj is None:
+            if context.debug:
+                print(f"No object provided to extractor {self}")
             return None
+        if context.debug:
+            print(f"Extract {self} from {self._abbreviate(obj)}")
         value = self._extract(obj, context)
+        if context.debug:
+            print(f"Extracted {value}")
         return None if value is None else self._convert(value)
 
     def _extract_jmespath(self, obj: object, context) -> object:
@@ -95,6 +101,17 @@ class ColumnDef(BaseModel):
             for label in self.label:
                 if (value := available.get(label)) is not None:
                     return value
+
+    def __str__(self):
+        if self.path:
+            return f"{self.name} path={self.path}"
+        return f"{self.name} label={','.join(self.label)}"
+
+    def _abbreviate(self, obj):
+        text = json.dumps(obj)
+        if len(text) > 100:
+            return text[:100] + "..."
+        return text
 
 
 KUGL_TYPE_CONVERTERS = {

@@ -163,6 +163,7 @@ class RowContext:
 
     def __init__(self, data):
         self.data = data
+        self.debug = debugging("extract")
         self._parents = {}
 
     def set_parent(self, child, parent):
