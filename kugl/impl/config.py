@@ -167,9 +167,6 @@ class UserConfig(BaseModel):
 class Config(BaseModel):
     """The actual configuration model used by the rest of Kugl."""
     settings: Settings
-    resources: dict[str, ResourceDef]
-    extend: dict[str, ExtendTable]
-    create: dict[str, CreateTable]
     shortcuts: dict[str, list[str]]
 
     @classmethod
@@ -177,9 +174,6 @@ class Config(BaseModel):
         """Combine UserInit and UserConfig into a more convenient form, and perform final validation."""
         config = Config(
             settings=user_init.settings,
-            resources={r.name: r for r in user_config.resources},
-            extend={e.table: e for e in user_config.extend},
-            create={c.table: c for c in user_config.create},
             shortcuts=user_init.shortcuts,
         )
         return config

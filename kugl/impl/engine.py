@@ -102,37 +102,16 @@ class Engine:
         :return: a tuple of (rows, column names)
         """
 
-        # Load built-ins for the target schema
-        builtins_yaml = ConfigPath(__file__).parent.parent / "builtins" / f"{self.schema.name}.yaml"
-        if builtins_yaml.exists():
-            builtins = UserConfig(**builtins_yaml.parse_yaml())
-            self.config.resources.update({r.name: r for r in builtins.resources})
-            self.config.create.update({c.table: c for c in builtins.create})
-
-        # Verify user-defined tables have the needed resources
-        for table in self.config.create.values():
-            if table.resource not in self.config.resources:
-                fail(f"Table '{table.table}' needs unknown resource '{table.resource}'")
-
         # Reconcile tables created / extended in the config file with tables defined in code, and
         # generate the table builders.
         tables = {}
         for name in {t.name for t in query.table_refs}:
-            code_creator = self.schema.tables.get(name)
-            config_creator = self.config.create.get(name)
-            extender = self.config.extend.get(name)
-            if code_creator and config_creator:
-                fail(f"Pre-defined table {name} can't be created from init.yaml")
-            if code_creator:
-                tables[name] = TableFromCode(code_creator, extender)
-            elif config_creator:
-                tables[name] = TableFromConfig(name, config_creator, extender)
-            else:
-                # Some of the named tables may be CTEs, so it's not an error if we can't create
-                # them.  If actually missing when we reach the query, let SQLite issue the error.
-                pass
+            # Some of the named tables may be CTEs, so it's not an error if we can't create
+            # them.  If actually missing when we reach the query, let SQLite issue the error.
+            if (table := self.schema.table_builder(name)) is not None:
+                tables[name] = table
 
-        resources_used = {self.config.resources[t.resource] for t in tables.values()}
+        resources_used = self.schema.resources_used(tables.values())
         if any(r.name == "pods" for r in resources_used):
             # This is fake, _get_objects knows to get it via "kubectl get pods" not as JSON.
             # TODO: move this hack to kubernetes.py

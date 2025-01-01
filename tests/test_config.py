@@ -47,8 +47,7 @@ def test_config_with_table_extension():
                 path: metadata.creationTimestamp
     """))
     assert e is None
-    c = Config.collate(UserInit(), c)
-    columns = c.extend["pods"].columns
+    columns = c.extend[0].columns
     assert columns[0].name == "foo"
     assert columns[0].type == "text"
     assert columns[0].path == "metadata.name"
@@ -72,8 +71,7 @@ def test_config_with_table_creation():
                 path: metadata.creationTimestamp
     """))
     assert e is None
-    c = Config.collate(UserInit(), c)
-    pods = c.create["pods"]
+    pods = c.create[0]
     assert pods.resource == "pods"
     columns = pods.columns
     assert columns[0].name == "foo"

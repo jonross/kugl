@@ -10,7 +10,7 @@ from .testing import make_node, kubectl_response, assert_query, Taint
 
 
 def test_node_query(test_home):
-    config, errors = parse_model(UserConfig, yaml.safe_load("""
+    (test_home / "kubernetes.yaml").write_text("""
         extend:
           - table: nodes
             columns:
@@ -19,9 +19,7 @@ def test_node_query(test_home):
                   - node.kubernetes.io/instance-type
                   - beta.kubernetes.io/instance-type
             
-    """))
-    if errors:
-        fail("\n".join(errors))
+    """)
     kubectl_response("nodes", {
         "items": [
             make_node("node-1", labels={"node.kubernetes.io/instance-type": "a40"}),
@@ -32,7 +30,7 @@ def test_node_query(test_home):
         name    uid           cpu_alloc    gpu_alloc     mem_alloc    cpu_cap    gpu_cap       mem_cap  instance_type
         node-1  uid-node-1           93            4  807771639808         96          4  810023981056  a40
         node-2  uid-node-2           93            4  807771639808         96          4  810023981056  a40
-    """, user_config=config)
+    """)
 
 
 def test_taint_query(test_home):

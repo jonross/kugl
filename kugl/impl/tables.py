@@ -3,16 +3,27 @@ This is separate from engine.py for maintainability.
 SQLite tables are defined and populated here.
 """
 
-from typing import Optional
+from typing import Optional, Type
 
 import jmespath
+from pydantic import Field, BaseModel
 
 from .config import ColumnDef, ExtendTable, CreateTable
 
 # TODO: make abstract
 # TODO: completely sever from user configs
-from .registry import TableDef
 from ..util import fail, dprint, debugging
+
+
+class TableDef(BaseModel):
+    """
+    Capture a table definition from the @table decorator, example:
+        @table(schema="kubernetes", name="pods", resource="pods")
+    """
+    cls: Type
+    name: str
+    schema_name: str = Field(..., alias="schema")
+    resource: str
 
 
 class Table:

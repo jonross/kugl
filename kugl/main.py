@@ -98,19 +98,10 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
         init.settings.cache_timeout = Age(args.timeout)
     dprint("init", f"Settings: {init.settings}")
 
-    # Load config file
-    config_file = ConfigPath(kugl_home() / f"{schema.name}.yaml")
-    if config_file.exists():
-        config, errors = parse_file(UserConfig, config_file)
-        if errors:
-            fail("\n".join(errors))
-    else:
-        config = UserConfig()
-
     # FIXME: this is silly, factor out a function to assist config edge case testing.
     if return_config:
-        return init, config
-    config = Config.collate(init, config)
+        return init, UserConfig()  # FIXME HACK
+    config = Config.collate(init, UserConfig())  # FIXME HACK
 
     kube_config = kube_home() / "config"
     if not kube_config.exists():
