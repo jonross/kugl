@@ -16,8 +16,8 @@ from.
 
 ### I found a bug
 
-Please be very sure.  I don't have access to your Kubernetes cluster, 
-so reproducibility without `kubectl` may be essential.
+Please be very sure before opening a Github issue.
+I don't have access to your Kubernetes cluster, so exhaustive detail is essential.
 
 Follow recommendations for debugging queries, above.
 Use a low-activity namespace if possible, so that the output is limited.
