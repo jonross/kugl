@@ -15,14 +15,14 @@ kugl -a "select owner, sum(gpu_req), sum(cpu_req)
          group by 1 order by 2 desc limit 10"
 ```
 
-Without Kugl
+With `kubectl` and `jq`
 
 ```shell
-nodes=$(kubectl get nodes -o json | jq '[.items[] 
+kubectl get pods -o json --all-namespaces | 
+jq -r --argjson nodes "$(kubectl get nodes -o json | jq '[.items[] 
         | select((.metadata.labels["node.kubernetes.io/instance-type"] // "") | test("g5.*large")) 
-        | .metadata.name]')
-kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
-  [ .items[]
+        | .metadata.name]')" \
+  '[ .items[]
     | select(.spec.nodeName as $node | $nodes | index($node))
     | select(.status.phase == "Running" or .status.phase == "Pending")
     | . as $pod | $pod.spec.containers[]
@@ -35,8 +35,7 @@ kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
          gpu: map(.gpu | tonumber) | add, 
          cpu: map(.cpu | if test("m$") then (sub("m$"; "") | tonumber / 1000) else tonumber end) | add})
   | sort_by(-.gpu) | .[:10] | .[]
-  | "\(.gpu) \(.cpu) \(.owner)"'
-
+  | "\(.owner) \(.gpu) \(.cpu)"'
 ```
 
 ## Installing
@@ -127,10 +126,13 @@ Or "koo-jull", if you prefer something less combative.
 
 "Kugel" is a casserole with varying degrees of cultural significance, and sounds too much like "Google".
 
-### Prior art
+### Rationale
 
-This has been tried before.  Kugl offers a true SQL engine and user-defined tables, so perhaps
-it will have broader appeal.
+Kugl won't replace everyday use of `kubectl`; it's more for ad-hoc queries and reports, where the
+cognitive overhead of `kubectl | jq` is an obstacle.  In that context, full SQL support and user-defined
+tables are essential, and it is where Kugl hopes to go a step farther than prior art.
+
+Some other implementations of SQL-on-Kubernetes:
 
 * [ksql](https://github.com/brendandburns/ksql) is built on Node.js and AlaSQL; last commit November 2016.
 * [kubeql](https://github.com/saracen/kubeql) is a SQL-like query language for Kubernetes; last commit October 2017.

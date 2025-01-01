@@ -3,10 +3,9 @@ Registry of resources and tables, independent of configuration file format.
 This is Kugl's global state outside the SQLite database.
 """
 from argparse import ArgumentParser
-from typing import Type, Iterable, Union
+from typing import Type, Iterable
 
-import funcy as fn
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from kugl.impl.config import UserConfig, parse_file, CreateTable, ExtendTable, ResourceDef
 from kugl.impl.tables import TableFromCode, TableFromConfig, TableDef, Table

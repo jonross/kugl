@@ -12,7 +12,7 @@ a similar service and link to it.
 
 ### Can I give feedback without opening an issue?
 
-Defintely.  You can reach the author at `kugl dot devel at gmail dot com`.
+Yes, you can reach the author at `kugl dot devel at gmail dot com`.
 
 ### I didn't receive a response to an issue or email
 

@@ -31,3 +31,6 @@ kugl "select arn, to_utc(created) from iam.groups"
 
 Obviously this has limited utility, since there's no way to filter the data before it's returned.
 For example, you can't add an argument to a resource `exec` command based on the query terms.
+
+As an alternative, you can define a resource to use `file: stdin` instead of `exec: some command`,
+and then pipe the output of any command to Kugl.

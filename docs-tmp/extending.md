@@ -93,7 +93,7 @@ create:
 
 ## Parsing data into numeric columns
 
-`kubectl` response values like `50Mi` (of memory) are pretty useless in queries, since you can't treat 
+`kubectl` response values like `50Mi` (of memory) are unhelpful in queries, since you can't treat 
 them numerically.  Kugl fixes this, offering additional data types that can be used in the `type` field 
 of a column definition and automatically convert response values.
 
