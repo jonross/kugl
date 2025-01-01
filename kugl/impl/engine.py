@@ -110,13 +110,8 @@ class Engine:
             if (table := self.schema.table_builder(name)) is not None:
                 tables[name] = table
 
-        resources_used = self.schema.resources_used(tables.values())
-        if any(r.name == "pods" for r in resources_used):
-            # This is fake, _get_objects knows to get it via "kubectl get pods" not as JSON.
-            # TODO: move this hack to kubernetes.py
-            resources_used.add(ResourceDef(name="pod_statuses"))
-
         # Identify what to fetch vs what's stale or expired.
+        resources_used = self.schema.resources_used(tables.values())
         refreshable, max_staleness = self.cache.advise_refresh(query.namespace, resources_used, query.cache_flag)
         if not self.settings.reckless and max_staleness is not None:
             print(f"(Data may be up to {max_staleness} seconds old.)", file=sys.stderr)
@@ -137,21 +132,6 @@ class Engine:
             for _ in pool.map(fetch, resources_used):
                 pass
 
-        # There won't really be a pod_statuses table, just grab the statuses and put them
-        # on the pod objects.  Drop the pods where we didn't get status back from kubectl.
-        # TODO: move this hack to kubernetes.py
-        if any(r.name == "pods" for r in resources_used):
-            statuses = self.data.get("pod_statuses")
-            def pod_with_updated_status(pod):
-                metadata = pod["metadata"]
-                status = statuses.get(f"{metadata['namespace']}/{metadata['name']}")
-                if status:
-                    pod["kubectl_status"] = status
-                    return pod
-                return None
-            self.data["pods"]["items"] = list(filter(None, map(pod_with_updated_status, self.data["pods"]["items"])))
-            del self.data["pod_statuses"]
-
         # Create tables in SQLite
         for table in tables.values():
             table.build(self.db, self.data[table.resource])
@@ -166,7 +146,7 @@ class Engine:
         return rows, column_names
 
     def _get_objects(self, resource: ResourceDef) -> dict:
-        """
+        """Called for a cache miss, go actually fetch resources.
         Handle built-in resources here, and dispatch to schema implementation for those
         that aren't.
         """

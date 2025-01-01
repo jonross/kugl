@@ -128,7 +128,7 @@ Or "koo-jull", if you prefer something less combative.
 
 Kugl won't replace everyday use of `kubectl`; it's more for ad-hoc queries and reports, where the
 cognitive overhead of `kubectl | jq` is an obstacle.  In that context, full SQL support and user-defined
-tables are essential, and it is where Kugl hopes to go a step farther than prior art.
+tables are essential, and it is where Kugl hopes to go a step further than prior art.
 
 Some other implementations of SQL-on-Kubernetes:
 
