@@ -138,7 +138,3 @@ Each `"^"` at the start of a `path` refers to the part of the response one level
 
 If creating multiple tables from a resource, you should use the `uid` column (sourced from `metadata.uid`)
 as a join key, since this is a guaranteed unique key.
-
-## Coming soon
-
-Write column extractors and table generators in Python.
