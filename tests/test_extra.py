@@ -7,17 +7,14 @@ import sys
 import textwrap
 
 import pytest
-import yaml
 
-from kugl.impl.config import UserConfig, parse_model
 from kugl.main import main1
-from kugl.util import to_age, KuglError
+from kugl.util import KuglError
 from .testing import kubectl_response, assert_query
 
-@pytest.fixture
-def thing_config():
-    """A resource type and table with whatever types we want to test."""
-    config, errors = parse_model(UserConfig, yaml.safe_load("""
+
+def test_non_sql_types(test_home):
+    (test_home / "kubernetes.yaml").write_text("""
       resources:
         - name: things
           namespaced: false
@@ -37,12 +34,7 @@ def thing_config():
             - name: date
               type: date
               path: date
-    """))
-    assert not errors
-    return config
-
-
-def test_non_sql_types(test_home, thing_config):
+    """)
     kubectl_response("things", {
         "items": [
             {"size": "10Ki", "cpu": "2.5", "age": "2d", "date": "2021-01-01"},
@@ -53,22 +45,20 @@ def test_non_sql_types(test_home, thing_config):
         s        cpu  a    d
         10Ki     2.5  2d   2021-01-01T00:00:00Z
         2.0Gi    0.3  4h   2021-12-31T23:59:59Z
-    """, user_config=thing_config)
+    """)
 
 
 def test_too_many_parents(test_home):
-    config, errors = parse_model(UserConfig, yaml.safe_load("""
+    (test_home / "kubernetes.yaml").write_text("""
       resources:
         - name: things
-          namespaced: false
       create:
         - table: things
           resource: things
           columns:
             - name: something
               path: ^^^invalid
-    """))
-    assert not errors
+    """)
     kubectl_response("things", {
         "items": [
             {"something": "foo"},
@@ -76,23 +66,25 @@ def test_too_many_parents(test_home):
         ]
     })
     with pytest.raises(KuglError, match="Missing parent or too many . while evaluating ...invalid"):
-        assert_query("SELECT * FROM things", "", user_config=config)
+        assert_query("SELECT * FROM things", "")
 
 
-def test_config_with_missing_resource():
-    config, errors = parse_model(UserConfig, yaml.safe_load("""
+def test_config_with_missing_resource(test_home):
+    (test_home / "kubernetes.yaml").write_text("""
         create:
           - table: stuff
             resource: stuff
             columns: []
-    """))
-    assert errors is None
+    """)
     with pytest.raises(KuglError, match="Table 'stuff' needs unknown resource 'stuff'"):
-        assert_query("SELECT * FROM stuff", "", user_config=config)
+        assert_query("SELECT * FROM stuff", "")
 
 
 def test_select_from_stdin(test_home, monkeypatch, capsys):
-    (test_home / "any.yaml").write_text("""
+    (test_home / "hr.yaml").write_text("""
+        resources:
+          - name: stdin
+            file: stdin
         create:
           - table: people
             resource: stdin
@@ -109,7 +101,7 @@ def test_select_from_stdin(test_home, monkeypatch, capsys):
         {"name": "Jim", "age": 42},
         {"name": "Jill", "age": 43},
     ]})))
-    main1(["SELECT name, age FROM any.people"])
+    main1(["SELECT name, age FROM hr.people"])
     out, _ = capsys.readouterr()
     assert out.strip() == textwrap.dedent("""
         name      age

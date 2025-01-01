@@ -7,15 +7,15 @@ FIXME: Don't use ArgumentParser in the API.
 """
 import json
 from argparse import ArgumentParser
+from threading import Thread
 
 from .helpers import Limits, ItemHelper, PodHelper, JobHelper
 from kugl.api import schema, table, fail
-from kugl.impl.config import Config
 from kugl.util import parse_utc, run, WHITESPACE
 
 
 @schema("kubernetes")
-class KubernetesData:
+class KubernetesData:  # FIXME: this should be a resource type, not a schema
 
     def add_cli_options(self, ap: ArgumentParser):
         ap.add_argument("-a", "--all-namespaces", default=False, action="store_true")
@@ -42,15 +42,31 @@ class KubernetesData:
         :return: JSON as output by "kubectl get {kind} -o json"
         """
         namespace_flag = ["--all-namespaces"] if self.ns else ["-n", self.ns]
-        if not namespaced:
-            _, output, _ = run(["kubectl", "get", kind, "-o", "json"])
-            return json.loads(output)
-        elif kind == "pod_statuses":
-            _, output, _= run(["kubectl", "get", "pods", *namespace_flag])
-            return self._pod_status_from_pod_list(output)
-        else:
+        if kind == "pods":
+            pod_statuses = {}
+            # Kick off a thread to get pod statuses
+            def _fetch():
+                _, output, _ = run(["kubectl", "get", "pods", *namespace_flag])
+                pod_statuses.update(self._pod_status_from_pod_list(output))
+            status_thread = Thread(target=_fetch, daemon=True)
+            status_thread.start()
+        if namespaced:
             _, output, _= run(["kubectl", "get", kind, *namespace_flag, "-o", "json"])
-            return json.loads(output)
+        else:
+            _, output, _ = run(["kubectl", "get", kind, "-o", "json"])
+        data = json.loads(output)
+        if kind == "pods":
+            # Add pod status to pods
+            status_thread.join()
+            def pod_with_updated_status(pod):
+                metadata = pod["metadata"]
+                status = pod_statuses.get(f"{metadata['namespace']}/{metadata['name']}")
+                if status:
+                    pod["kubectl_status"] = status
+                    return pod
+                return None
+            data["items"] = list(filter(None, map(pod_with_updated_status, data["items"])))
+        return data
 
     def _pod_status_from_pod_list(self, output) -> dict[str, str]:
         """

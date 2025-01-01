@@ -15,10 +15,9 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field
 from tabulate import tabulate
 
-from .config import Config, UserConfig, ResourceDef
+from .config import ResourceDef, Settings
 from .registry import Schema
-from .tables import TableFromCode, TableFromConfig
-from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, ConfigPath, debugging, to_age, run
+from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, debugging, to_age, run, Age, KPath
 
 # Needed to locate the built-in table builders by class name.
 import kugl.builtins.kubernetes
@@ -78,15 +77,15 @@ class TableRef(BaseModel):
 
 class Engine:
 
-    def __init__(self, schema: Schema, config: Config, context_name: str):
+    def __init__(self, schema: Schema, settings: Settings, context_name: str):
         """
-        :param config: the parsed user configuration file
+        :param config: the parsed user settings file
         :param context_name: the Kubernetes context to use, e.g. "minikube", "research-cluster"
         """
         self.schema = schema
-        self.config = config
+        self.settings = settings
         self.context_name = context_name
-        self.cache = DataCache(self.config, kugl_home() / "cache" / self.context_name)
+        self.cache = DataCache(kugl_home() / "cache" / self.context_name, self.settings.cache_timeout)
         # Maps resource name e.g. "pods" to the response from "kubectl get pods -o json"
         self.data = {}
         self.db = SqliteDb()
@@ -102,50 +101,21 @@ class Engine:
         :return: a tuple of (rows, column names)
         """
 
-        # Load built-ins for the target schema
-        builtins_yaml = ConfigPath(__file__).parent.parent / "builtins" / f"{self.schema.name}.yaml"
-        if builtins_yaml.exists():
-            builtins = UserConfig(**builtins_yaml.parse_yaml())
-            self.config.resources.update({r.name: r for r in builtins.resources})
-            self.config.create.update({c.table: c for c in builtins.create})
-
-        # Verify user-defined tables have the needed resources
-        for table in self.config.create.values():
-            if table.resource not in self.config.resources:
-                fail(f"Table '{table.table}' needs unknown resource '{table.resource}'")
-
         # Reconcile tables created / extended in the config file with tables defined in code, and
         # generate the table builders.
         tables = {}
         for name in {t.name for t in query.table_refs}:
-            code_creator = self.schema.tables.get(name)
-            config_creator = self.config.create.get(name)
-            extender = self.config.extend.get(name)
-            if code_creator and config_creator:
-                fail(f"Pre-defined table {name} can't be created from init.yaml")
-            if code_creator:
-                tables[name] = TableFromCode(code_creator, extender)
-            elif config_creator:
-                tables[name] = TableFromConfig(name, config_creator, extender)
-            else:
-                # Some of the named tables may be CTEs, so it's not an error if we can't create
-                # them.  If actually missing when we reach the query, let SQLite issue the error.
-                pass
-
-        resources_used = {self.config.resources[t.resource] for t in tables.values()}
-        if any(r.name == "pods" for r in resources_used):
-            # This is fake, _get_objects knows to get it via "kubectl get pods" not as JSON.
-            # TODO: move this hack to kubernetes.py
-            resources_used.add(ResourceDef(name="pod_statuses"))
-        cacheable = {r for r in resources_used if r.cacheable}
-        non_cacheable = {r for r in resources_used if not r.cacheable}
+            # Some of the named tables may be CTEs, so it's not an error if we can't create
+            # them.  If actually missing when we reach the query, let SQLite issue the error.
+            if (table := self.schema.table_builder(name)) is not None:
+                tables[name] = table
 
         # Identify what to fetch vs what's stale or expired.
-        refreshable, max_staleness = self.cache.advise_refresh(query.namespace, cacheable, query.cache_flag)
-        if not self.config.settings.reckless and max_staleness is not None:
+        resources_used = self.schema.resources_used(tables.values())
+        refreshable, max_staleness = self.cache.advise_refresh(query.namespace, resources_used, query.cache_flag)
+        if not self.settings.reckless and max_staleness is not None:
             print(f"(Data may be up to {max_staleness} seconds old.)", file=sys.stderr)
             clock.CLOCK.sleep(0.5)
-        refreshable.update(non_cacheable)
 
         # Retrieve resource data in parallel.  If fetching from Kubernetes, update the cache;
         # otherwise just read from the cache.
@@ -162,21 +132,6 @@ class Engine:
             for _ in pool.map(fetch, resources_used):
                 pass
 
-        # There won't really be a pod_statuses table, just grab the statuses and put them
-        # on the pod objects.  Drop the pods where we didn't get status back from kubectl.
-        # TODO: move this hack to kubernetes.py
-        if any(r.name == "pods" for r in resources_used):
-            statuses = self.data.get("pod_statuses")
-            def pod_with_updated_status(pod):
-                metadata = pod["metadata"]
-                status = statuses.get(f"{metadata['namespace']}/{metadata['name']}")
-                if status:
-                    pod["kubectl_status"] = status
-                    return pod
-                return None
-            self.data["pods"]["items"] = list(filter(None, map(pod_with_updated_status, self.data["pods"]["items"])))
-            del self.data["pod_statuses"]
-
         # Create tables in SQLite
         for table in tables.values():
             table.build(self.db, self.data[table.resource])
@@ -191,7 +146,7 @@ class Engine:
         return rows, column_names
 
     def _get_objects(self, resource: ResourceDef) -> dict:
-        """
+        """Called for a cache miss, go actually fetch resources.
         Handle built-in resources here, and dispatch to schema implementation for those
         that aren't.
         """
@@ -203,7 +158,7 @@ class Engine:
             return yaml.safe_load(text)
 
         if resource.file is not None:
-            if resource.file == "__stdin__":
+            if resource.file == "stdin":
                 return parse(sys.stdin.read())
             try:
                 return parse(Path(resource.file).read_text())
@@ -222,15 +177,15 @@ class DataCache:
     This is a separate class for ease of unit testing.
     """
 
-    def __init__(self, config: Config, dir: Path):
+    def __init__(self, dir: KPath, timeout: Age):
         """
-        :param config: the parsed user configuration file
         :param dir: root of the cache folder tree; paths are of the form
             <kubernetes context>/<namespace>.<resource kind>.json
+        :param timeout: age at which cached data is considered stale
         """
-        self.config = config
         self.dir = dir
         dir.mkdir(parents=True, exist_ok=True)
+        self.timeout = timeout
 
     def advise_refresh(self, namespace: str, resources: Set[ResourceDef], flag: CacheFlag) -> Tuple[Set[str], int]:
         """Determine which resources to use from cache or to refresh.
@@ -245,19 +200,24 @@ class DataCache:
             # Refresh everything and don't issue a "stale data" warning
             return resources, None
         # Find what's expired or missing
-        cache_ages = {r: self.age(self.cache_path(namespace, r.name)) for r in resources}
-        expired = {r for r, age in cache_ages.items() if age is not None and age >= self.config.settings.cache_timeout.value}
+        cacheable = {r for r in resources if r.cacheable}
+        non_cacheable = {r for r in resources if not r.cacheable}
+        cache_ages = {r: self.age(self.cache_path(namespace, r.name)) for r in cacheable}
+        expired = {r for r, age in cache_ages.items() if age is not None and age >= self.timeout.value}
         missing = {r for r, age in cache_ages.items() if age is None}
-        # Always refresh what's missing, and possibly also what's expired
+        # Always refresh what's missing or non-cacheable, and possibly also what's expired
         # Stale data warning for everything else
         refreshable = missing if flag == NEVER_UPDATE else expired | missing
+        max_age = max((cache_ages[r] for r in (cacheable - refreshable)), default=None)
+        refreshable.update(non_cacheable)
         if debugging("cache"):
             print("Requested", [r.name for r in resources])
+            print("Cacheable", [r.name for r in cacheable])
+            print("Non-cacheable", [r.name for r in non_cacheable])
             print("Ages", " ".join(f"{r.name}={age}" for r, age in cache_ages.items()))
             print("Expired", [r.name for r in expired])
             print("Missing", [r.name for r in missing])
             print("Refreshable", [r.name for r in refreshable])
-        max_age = max((cache_ages[r] for r in (resources - refreshable)), default=None)
         return refreshable, max_age
 
     def cache_path(self, namespace: str, kind: str) -> Path:

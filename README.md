@@ -15,14 +15,14 @@ kugl -a "select owner, sum(gpu_req), sum(cpu_req)
          group by 1 order by 2 desc limit 10"
 ```
 
-Without Kugl
+With `kubectl` and `jq`
 
 ```shell
-nodes=$(kubectl get nodes -o json | jq '[.items[] 
+kubectl get pods -o json --all-namespaces | 
+jq -r --argjson nodes "$(kubectl get nodes -o json | jq '[.items[] 
         | select((.metadata.labels["node.kubernetes.io/instance-type"] // "") | test("g5.*large")) 
-        | .metadata.name]')
-kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
-  [ .items[]
+        | .metadata.name]')" \
+  '[ .items[]
     | select(.spec.nodeName as $node | $nodes | index($node))
     | select(.status.phase == "Running" or .status.phase == "Pending")
     | . as $pod | $pod.spec.containers[]
@@ -35,8 +35,7 @@ kubectl get pods -o json --all-namespaces | jq -r --argjson nodes "$nodes" '
          gpu: map(.gpu | tonumber) | add, 
          cpu: map(.cpu | if test("m$") then (sub("m$"; "") | tonumber / 1000) else tonumber end) | add})
   | sort_by(-.gpu) | .[:10] | .[]
-  | "\(.gpu) \(.cpu) \(.owner)"'
-
+  | "\(.owner) \(.gpu) \(.cpu)"'
 ```
 
 ## Installing
@@ -113,8 +112,6 @@ In any case, please be mindful of stale data and server load.
 * [Settings](./docs-tmp/settings.md)
 * [Built-in tables and functions](./docs-tmp/builtins.md)
 * [Configuring new columns and tables](./docs-tmp/extending.md)
-* Adding columns and tables from Python (not ready yet)
-* Adding views (not ready yet)
 * [Troubleshooting and feedback](./docs-tmp/trouble.md)
 * [Beyond Kubernetes](./docs-tmp/beyond.md)
 * [License](./LICENSE)
@@ -127,16 +124,13 @@ Or "koo-jull", if you prefer something less combative.
 
 "Kugel" is a casserole with varying degrees of cultural significance, and sounds too much like "Google".
 
-## Rationale
+### Rationale
 
-`jq` is awesome, but... can you join and group without looking at the manual? Can you do math on non-numeric
-data like "500Mi" of memory or "200m" CPUs or "2024-11-01T12:34:56Z"?  Can you determine the STATUS of a pod
-[the way](https://github.com/kubernetes/kubernetes/blob/release-1.32/pkg/printers/internalversion/printers.go#L865)
-`kubectl get pods` does?
+Kugl won't replace everyday use of `kubectl`; it's more for ad-hoc queries and reports, where the
+cognitive overhead of `kubectl | jq` is an obstacle.  In that context, full SQL support and user-defined
+tables are essential, and it is where Kugl hopes to go a step further than prior art.
 
-Me neither.
-
-I looked for prior art.  It appears unmaintained, inextensible, or lacking in SQL features.
+Some other implementations of SQL-on-Kubernetes:
 
 * [ksql](https://github.com/brendandburns/ksql) is built on Node.js and AlaSQL; last commit November 2016.
 * [kubeql](https://github.com/saracen/kubeql) is a SQL-like query language for Kubernetes; last commit October 2017.

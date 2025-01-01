@@ -1,7 +1,7 @@
 """
 Pydantic models for configuration files.
 """
-
+import json
 import re
 from typing import Literal, Optional, Tuple, Callable, Union
 
@@ -76,8 +76,14 @@ class ColumnDef(BaseModel):
     def extract(self, obj: object, context) -> object:
         """Extract the column value from an object and convert to the correct type."""
         if obj is None:
+            if context.debug:
+                print(f"No object provided to extractor {self}")
             return None
+        if context.debug:
+            print(f"Extract {self} from {self._abbreviate(obj)}")
         value = self._extract(obj, context)
+        if context.debug:
+            print(f"Extracted {value}")
         return None if value is None else self._convert(value)
 
     def _extract_jmespath(self, obj: object, context) -> object:
@@ -95,6 +101,17 @@ class ColumnDef(BaseModel):
             for label in self.label:
                 if (value := available.get(label)) is not None:
                     return value
+
+    def __str__(self):
+        if self.path:
+            return f"{self.name} path={self.path}"
+        return f"{self.name} label={','.join(self.label)}"
+
+    def _abbreviate(self, obj):
+        text = json.dumps(obj)
+        if len(text) > 100:
+            return text[:100] + "..."
+        return text
 
 
 KUGL_TYPE_CONVERTERS = {
@@ -162,29 +179,6 @@ class UserConfig(BaseModel):
     resources: list[ResourceDef] = []
     extend: list[ExtendTable] = []
     create: list[CreateTable] = []
-
-
-class Config(BaseModel):
-    """The actual configuration model used by the rest of Kugl."""
-    settings: Settings
-    resources: dict[str, ResourceDef]
-    extend: dict[str, ExtendTable]
-    create: dict[str, CreateTable]
-    shortcuts: dict[str, list[str]]
-
-    @classmethod
-    def collate(cls, user_init: UserInit, user_config: UserConfig) -> 'Config':
-        """Combine UserInit and UserConfig into a more convenient form, and perform final validation."""
-        # FIXME: also prevent the user from defining stdin
-        stdin = ResourceDef(name="stdin", file="__stdin__", cacheable=False, namespaced=False)
-        config = Config(
-            settings=user_init.settings,
-            resources={r.name: r for r in user_config.resources + [stdin]},
-            extend={e.table: e for e in user_config.extend},
-            create={c.table: c for c in user_config.create},
-            shortcuts=user_init.shortcuts,
-        )
-        return config
 
 
 # FIXME use typevars

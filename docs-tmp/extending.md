@@ -93,7 +93,7 @@ create:
 
 ## Parsing data into numeric columns
 
-`kubectl` response values like `50Mi` (of memory) are pretty useless in queries, since you can't treat 
+`kubectl` response values like `50Mi` (of memory) are unhelpful in queries, since you can't treat 
 them numerically.  Kugl fixes this, offering additional data types that can be used in the `type` field 
 of a column definition and automatically convert response values.
 
@@ -138,7 +138,3 @@ Each `"^"` at the start of a `path` refers to the part of the response one level
 
 If creating multiple tables from a resource, you should use the `uid` column (sourced from `metadata.uid`)
 as a join key, since this is a guaranteed unique key.
-
-## Coming soon
-
-Write column extractors and table generators in Python.
