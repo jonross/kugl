@@ -164,21 +164,6 @@ class UserConfig(BaseModel):
     create: list[CreateTable] = []
 
 
-class Config(BaseModel):
-    """The actual configuration model used by the rest of Kugl."""
-    settings: Settings
-    shortcuts: dict[str, list[str]]
-
-    @classmethod
-    def collate(cls, user_init: UserInit, user_config: UserConfig) -> 'Config':
-        """Combine UserInit and UserConfig into a more convenient form, and perform final validation."""
-        config = Config(
-            settings=user_init.settings,
-            shortcuts=user_init.shortcuts,
-        )
-        return config
-
-
 # FIXME use typevars
 def parse_model(model_class, root: dict) -> Tuple[object, list[str]]:
     """Parse a dict into a model instance (typically a UserConfig).

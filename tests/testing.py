@@ -11,8 +11,8 @@ from typing import Optional, Tuple, Union, List
 import yaml
 from pydantic import Field, BaseModel, ConfigDict
 
-from kugl.impl.config import Config, UserConfig, UserInit
-from kugl.impl.engine import Engine, Query, ALWAYS_UPDATE
+from kugl.impl.config import Settings
+from kugl.impl.engine import Engine, Query
 from kugl.impl.registry import Registry
 from kugl.util import to_utc, UNIT_TEST_TIMEBASE
 
@@ -155,9 +155,7 @@ def make_job(name: str,
     return obj
 
 
-def assert_query(sql: str, expected: Union[str, list],
-                 user_config: UserConfig = None,
-                 all_ns: bool = False):
+def assert_query(sql: str, expected: Union[str, list], all_ns: bool = False):
     """
     Run a query in the "nocontext" namespace and compare the result with expected output.
     :param sql: SQL query
@@ -167,8 +165,7 @@ def assert_query(sql: str, expected: Union[str, list],
     """
     schema = Registry.get().get_schema("kubernetes")
     schema.impl.set_namespace(all_ns, "__all" if all_ns else "default")
-    config = Config.collate(UserInit(), user_config or UserConfig())
-    engine = Engine(schema, config, "nocontext")
+    engine = Engine(schema, Settings(), "nocontext")
     if isinstance(expected, str):
         actual = engine.query_and_format(Query(sql=sql))
         assert actual.strip() == textwrap.dedent(expected).strip()

@@ -12,7 +12,7 @@ import yaml
 
 from kugl.impl.registry import Registry
 from kugl.impl.engine import Engine, Query, CHECK, NEVER_UPDATE, ALWAYS_UPDATE
-from kugl.impl.config import Config, UserConfig, UserInit, parse_file
+from kugl.impl.config import UserConfig, UserInit, parse_file
 from kugl.util import Age, fail, debug, debugging, kugl_home, kube_home, ConfigPath, dprint, KuglError
 
 
@@ -20,7 +20,7 @@ def main() -> None:
     main1(sys.argv[1:])
 
 
-def main1(argv: List[str], return_config: bool = False) -> Optional[Union[UserInit, UserConfig]]:
+def main1(argv: List[str]):
 
     if "KUGL_UNIT_TESTING" in os.environ and "KUGL_MOCKDIR" not in os.environ:
         # Never enter main in tests unless test_home fixture is in use, else we could read
@@ -28,7 +28,7 @@ def main1(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
         sys.exit("Unit test state error")
 
     try:
-        return main2(argv, return_config=return_config)
+        return main2(argv)
     except KuglError as e:
         # These are raised by fail(), we only want the error message.
         severe, exc = False, e
@@ -43,7 +43,7 @@ def main1(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
     sys.exit(1)
 
 
-def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserInit, UserConfig]]:
+def main2(argv: List[str]):
 
     kugl_home().mkdir(exist_ok=True)
     if not argv:
@@ -98,11 +98,6 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
         init.settings.cache_timeout = Age(args.timeout)
     dprint("init", f"Settings: {init.settings}")
 
-    # FIXME: this is silly, factor out a function to assist config edge case testing.
-    if return_config:
-        return init, UserConfig()  # FIXME HACK
-    config = Config.collate(init, UserConfig())  # FIXME HACK
-
     kube_config = kube_home() / "config"
     if not kube_config.exists():
         fail(f"Missing {kube_config}, can't determine current context")
@@ -111,7 +106,7 @@ def main2(argv: List[str], return_config: bool = False) -> Optional[Union[UserIn
     if not current_context:
         fail("No current context, please run kubectl config use-context ...")
 
-    engine = Engine(schema, config, current_context)
+    engine = Engine(schema, init.settings, current_context)
     # FIXME bad reference to namespace
     sql = query.sql_schemaless
     print(engine.query_and_format(Query(sql=sql, namespace=schema.impl.ns, cache_flag=cache_flag)))

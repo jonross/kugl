@@ -3,7 +3,7 @@ Tests for user configuration file content.
 """
 import pytest
 
-from kugl.impl.config import Settings, UserConfig, parse_model, ExtendTable, CreateTable, Config, UserInit
+from kugl.impl.config import Settings, UserConfig, parse_model, ExtendTable, CreateTable, UserInit
 
 import yaml
 
