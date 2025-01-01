@@ -30,4 +30,5 @@ Kubernetes often has few or no resources.
 Matching `row_source` and `path` to your data layout can be tricky.
 * Build up one `row_source` at a time
 * Extend parent references `"^"` and test `select * from` after each step
-* Make sure JMESPath expressions for columns select single objects
+* Make sure [JMESPath](https://jmespath.org/tutorial.html) expressions for columns select single objects
+* Use [jp](https://github.com/jmespath/jp) to test JMESPath expressions at the command line
