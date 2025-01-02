@@ -20,7 +20,7 @@ hitest:
 pintest:
 	@bin/tester --pin
 
-sdist:
+dist: setup.py MANIFEST.in
 	python3 setup.py sdist bdist_wheel
 
 docker:
