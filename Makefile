@@ -47,7 +47,7 @@ dshell: docker
 
 # Manually test PyPI install
 pyshell:
-	docker run -it -v ~/.kube:/root/.kube python:3.9-alpine
+	docker run -it -v ~/.kube:/root/.kube --entrypoint /bin/sh python:3.9-alpine
 
 clean:
 	rm -rf build dist venv kugl.egg-info
