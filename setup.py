@@ -1,15 +1,16 @@
 from pathlib import Path
 from setuptools import setup, find_packages
+from textwrap import dedent
 
 setup(
     name="kugl",
     version="0.3.1",
     description="Explore Kubernetes resources using SQLite",
-    long_description="""
+    long_description=dedent("""
     PyPI readme goes here.
     
     For documentation please visit the [GitHub repository](https://github.com/jonross/kugl).
-    """,
+    """),
     long_description_content_type="text/markdown",
     author="Jon Ross",
     author_email="kugl.devel@gmail.com",
