@@ -151,8 +151,8 @@ class PodsTable:
                 pod.command,
                 pod["status"]["phase"],
                 pod["kubectl_status"],
-                *pod.resources("requests").as_tuple(),
-                *pod.resources("limits").as_tuple(),
+                *pod.resources("requests", debug=context.debug).as_tuple(),
+                *pod.resources("limits", debug=context.debug).as_tuple(),
             )
 
 
@@ -182,8 +182,8 @@ class JobsTable:
                 job.metadata.get("uid"),
                 job.namespace,
                 job.status,
-                *job.resources("requests").as_tuple(),
-                *job.resources("limits").as_tuple(),
+                *job.resources("requests", debug=context.debug).as_tuple(),
+                *job.resources("limits", debug=context.debug).as_tuple(),
             )
 
 

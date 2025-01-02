@@ -99,8 +99,8 @@ class Containerized:
     def containers(self):
         raise NotImplementedError()
 
-    def resources(self, tag):
-        return sum(Limits.extract(c.get("resources", {}).get(tag)) for c in self.containers)
+    def resources(self, tag, debug=False):
+        return sum(Limits.extract(c.get("resources", {}).get(tag), debug) for c in self.containers)
 
 
 class PodHelper(ItemHelper, Containerized):
