@@ -110,8 +110,8 @@ class NodesTable:
             yield item, (
                 node.name,
                 node.metadata.get("uid"),
-                *Limits.extract(node["status"]["allocatable"]).as_tuple(),
-                *Limits.extract(node["status"]["capacity"]).as_tuple(),
+                *Limits.extract(node["status"]["allocatable"], debug=context.debug).as_tuple(),
+                *Limits.extract(node["status"]["capacity"], debug=context.debug).as_tuple(),
             )
 
 
