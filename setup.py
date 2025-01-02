@@ -2,15 +2,21 @@ from pathlib import Path
 from setuptools import setup, find_packages
 
 setup(
-    name="kugl",  # Replace with your package name
+    name="kugl",
     version="0.3.0",
     description="Explore Kubernetes resources using SQLite",
+    long_description="""
+    PyPI readme goes here.
+    
+    For documentation please visit the [GitHub repository](hgttps://github.com/jonross/kugl).
+    """,
+    long_description_content_type="text/markdown",
     author="Jon Ross",
     author_email="kugl.devel@gmail.com",
     url="https://github.com/jonross/kugl",
-    packages=find_packages(),  # Automatically finds `your_package_name/`
+    packages=find_packages(),
     include_package_data=True,
-    install_requires=(Path(__file__).parent / "reqs_public.txt").read_text().splitlines(),
+    install_requires=(Path(__file__).parent / "reqs_public.txt").read_text().strip()..splitlines(),
     entry_points={
         "console_scripts": [
             "kugl = kugl.main:main",
