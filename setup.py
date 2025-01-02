@@ -16,7 +16,7 @@ setup(
     url="https://github.com/jonross/kugl",
     packages=find_packages(),
     include_package_data=True,
-    install_requires=(Path(__file__).parent / "reqs_public.txt").read_text().strip()..splitlines(),
+    install_requires=(Path(__file__).parent / "reqs_public.txt").read_text().strip().splitlines(),
     entry_points={
         "console_scripts": [
             "kugl = kugl.main:main",
