@@ -3,12 +3,12 @@ from setuptools import setup, find_packages
 
 setup(
     name="kugl",
-    version="0.3.0",
+    version="0.3.1",
     description="Explore Kubernetes resources using SQLite",
     long_description="""
     PyPI readme goes here.
     
-    For documentation please visit the [GitHub repository](hgttps://github.com/jonross/kugl).
+    For documentation please visit the [GitHub repository](https://github.com/jonross/kugl).
     """,
     long_description_content_type="text/markdown",
     author="Jon Ross",

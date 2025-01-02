@@ -1,5 +1,5 @@
 
-VERSION = 0.3.0
+VERSION = 0.3.1
 IMAGE = jonross/kugl:$(VERSION)
 
 venv:
@@ -34,7 +34,7 @@ pypi:
 	twine upload dist/*
 
 # Build Docker image
-docker:
+docker: Makefile setup.py
 	docker build --no-cache -t $(IMAGE) .
 
 # Upload Docker image
@@ -42,8 +42,12 @@ push: docker
 	docker push $(IMAGE)
 
 # Manually test Docker image
-shell: docker
+dshell: docker
 	docker run -it -v ~/.kube:/root/.kube $(IMAGE) /bin/sh
+
+# Manually test PyPI install
+pyshell:
+	docker run -it -v ~/.kube:/root/.kube python:3.9-alpine
 
 clean:
 	rm -rf build dist venv kugl.egg-info
