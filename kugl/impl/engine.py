@@ -232,8 +232,13 @@ class DataCache:
     def age(self, path: Path) -> Optional[int]:
         """The age of a file in seconds, relative to the current time, or None if it doesn't exist."""
         if not path.exists():
+            if debugging("cache"):
+                print("Missing cache file", path)
             return None
-        return int(clock.CLOCK.now() - path.stat().st_mtime)
+        age_secs = int(clock.CLOCK.now() - path.stat().st_mtime)
+        if debugging("cache"):
+            print(f"Found cache file (age = {to_age(age_secs)})", path)
+        return age_secs
 
 
 def add_custom_functions(db):
