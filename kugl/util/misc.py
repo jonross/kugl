@@ -7,7 +7,7 @@ import re
 import subprocess as sp
 import sys
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, Callable
 
 import arrow
 import yaml
@@ -25,7 +25,8 @@ def run(args: Union[str, list[str]], error_ok=False):
     """
     if isinstance(args, str):
         args = ["bash", "-c", args]
-    dprint("fetch", f"Running {' '.join(args)}")
+    if debug := debugging("fetch"):
+        debug("running {' '.join(args)}")
     p = sp.run(args, stdout=sp.PIPE, stderr=sp.PIPE, encoding="utf-8")
     if p.returncode != 0 and not error_ok:
         print(f"Failed to run [{' '.join(args)}]:", file=sys.stderr)
@@ -56,7 +57,7 @@ class KuglError(Exception):
     pass
 
 
-def debug(features: list[str], on: bool = True):
+def debug_features(features: list[str], on: bool = True):
     """Turn debugging on or off for a set of features.
 
     :param features: list of feature names, parsed from the --debug command line option;
@@ -69,17 +70,23 @@ def debug(features: list[str], on: bool = True):
             DEBUG_FLAGS[feature] = on
 
 
-def debugging(feature: str = None) -> bool:
-    """Check if a feature is being debugged."""
+def debugging(feature: str = None) -> Optional[Callable]:
+    """Check if a feature is being debugged.
+
+    :return: A callable to print a message to stderr prefixed by the feature name, or
+        None if the feature isn't being debugged."""
     if feature is None:
-        return len(DEBUG_FLAGS) > 0
-    return DEBUG_FLAGS.get(feature) or DEBUG_FLAGS.get("all")
+        if len(DEBUG_FLAGS) > 0:
+            return lambda *args: _dprint("all", args)
+        return None
+    if DEBUG_FLAGS.get(feature) or DEBUG_FLAGS.get("all"):
+        return lambda *args: _dprint(feature, args)
+    return None
 
 
-def dprint(feature, *args, **kwargs):
-    """Print a debug message if the given feature is being debugged."""
-    if debugging(feature):
-        print(*args, **kwargs)
+def _dprint(feature, args):
+    """Print a debug to stderr tagged with the feature name."""
+    print(feature + ":", *args, file=sys.stderr)
 
 
 class KPath(type(Path())):
@@ -103,11 +110,13 @@ class ConfigPath(KPath):
     """Same as a KPath but adds debug statements"""
 
     def parse_json(self):
-        dprint("config", f"Loading {self}")
+        if debug := debugging("config"):
+            debug(f"loading {self}")
         return super().parse_json()
 
     def parse_yaml(self):
-        dprint("config", f"Loading {self}")
+        if debug := debugging("config"):
+            debug(f"loading {self}")
         return super().parse_yaml()
 
 

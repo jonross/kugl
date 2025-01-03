@@ -77,13 +77,13 @@ class ColumnDef(BaseModel):
         """Extract the column value from an object and convert to the correct type."""
         if obj is None:
             if context.debug:
-                print(f"No object provided to extractor {self}")
+                context.debug(f"no object provided to extractor {self}")
             return None
         if context.debug:
-            print(f"Extract {self} from {self._abbreviate(obj)}")
+            context.debug(f"get {self} from {self._abbreviate(obj)}")
         value = self._extract(obj, context)
         if context.debug:
-            print(f"Extracted {value}")
+            context.debug(f"got {value}")
         return None if value is None else self._convert(value)
 
     def _extract_jmespath(self, obj: object, context) -> object:

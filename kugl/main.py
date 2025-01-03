@@ -6,14 +6,14 @@ import os
 from argparse import ArgumentParser
 import sys
 from sqlite3 import DatabaseError
-from typing import List, Optional, Union
+from typing import List
 
 import yaml
 
 from kugl.impl.registry import Registry
 from kugl.impl.engine import Engine, Query, CHECK, NEVER_UPDATE, ALWAYS_UPDATE
-from kugl.impl.config import UserConfig, UserInit, parse_file
-from kugl.util import Age, fail, debug, debugging, kugl_home, kube_home, ConfigPath, dprint, KuglError
+from kugl.impl.config import UserInit, parse_file
+from kugl.util import Age, fail, debug_features, debugging, kugl_home, kube_home, ConfigPath, debugging, KuglError
 
 
 def main() -> None:
@@ -91,12 +91,13 @@ def main2(argv: List[str]):
 
     cache_flag = ALWAYS_UPDATE if args.update else NEVER_UPDATE if args.cache else CHECK
     if args.debug:
-        debug(args.debug.split(","))
+        debug_features(args.debug.split(","))
     if args.reckless:
         init.settings.reckless = True
     if args.timeout:
         init.settings.cache_timeout = Age(args.timeout)
-    dprint("init", f"Settings: {init.settings}")
+    if debug := debugging("init"):
+        debug(f"settings: {init.settings}")
 
     kube_config = kube_home() / "config"
     if not kube_config.exists():

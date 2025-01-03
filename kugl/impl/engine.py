@@ -210,14 +210,14 @@ class DataCache:
         refreshable = missing if flag == NEVER_UPDATE else expired | missing
         max_age = max((cache_ages[r] for r in (cacheable - refreshable)), default=None)
         refreshable.update(non_cacheable)
-        if debugging("cache"):
-            print("Requested", [r.name for r in resources])
-            print("Cacheable", [r.name for r in cacheable])
-            print("Non-cacheable", [r.name for r in non_cacheable])
-            print("Ages", " ".join(f"{r.name}={age}" for r, age in cache_ages.items()))
-            print("Expired", [r.name for r in expired])
-            print("Missing", [r.name for r in missing])
-            print("Refreshable", [r.name for r in refreshable])
+        if debug := debugging("cache"):
+            debug("requested", [r.name for r in resources])
+            debug("racheable", [r.name for r in cacheable])
+            debug("ron-cacheable", [r.name for r in non_cacheable])
+            debug("rges", " ".join(f"{r.name}={age}" for r, age in cache_ages.items()))
+            debug("rxpired", [r.name for r in expired])
+            debug("rissing", [r.name for r in missing])
+            debug("refreshable", [r.name for r in refreshable])
         return refreshable, max_age
 
     def cache_path(self, namespace: str, kind: str) -> Path:
@@ -231,13 +231,14 @@ class DataCache:
 
     def age(self, path: Path) -> Optional[int]:
         """The age of a file in seconds, relative to the current time, or None if it doesn't exist."""
+        debug = debugging("cache")
         if not path.exists():
-            if debugging("cache"):
-                print("Missing cache file", path)
+            if debug:
+                debug("missing cache file", path)
             return None
         age_secs = int(clock.CLOCK.now() - path.stat().st_mtime)
-        if debugging("cache"):
-            print(f"Found cache file (age = {to_age(age_secs)})", path)
+        if debug:
+            debug(f"found cache file (age = {to_age(age_secs)})", path)
         return age_secs
 
 

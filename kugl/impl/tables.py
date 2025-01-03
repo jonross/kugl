@@ -12,7 +12,7 @@ from .config import ColumnDef, ExtendTable, CreateTable
 
 # TODO: make abstract
 # TODO: completely sever from user configs
-from ..util import fail, dprint, debugging
+from ..util import fail, debugging
 
 
 class TableDef(BaseModel):
@@ -79,7 +79,8 @@ class TableFromCode(Table):
             extras = extender.columns
         else:
             extras = []
-        dprint("schema", f"Table {table_def.name} schema: {schema}")
+        if debug:= debugging("schema"):
+            debug(f"table {table_def.name} schema: {schema}")
         super().__init__(table_def.name, table_def.resource, schema, extras)
         self.impl = impl
 
@@ -140,7 +141,7 @@ class TableFromConfig(Table):
                 fail(f"invalid row_source {source} for {self.name} table", e)
             new_items = []
             if debug:
-                print(f"Itemizing {self.name} at {source} got {len(items)} hits")
+                debug(f"itemizing {self.name} at {source} got {len(items)} hits")
             for item in items:
                 found = finder.search(item)
                 if isinstance(found, list):

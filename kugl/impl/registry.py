@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from kugl.impl.config import UserConfig, parse_file, CreateTable, ExtendTable, ResourceDef
 from kugl.impl.tables import TableFromCode, TableFromConfig, TableDef, Table
-from kugl.util import fail, dprint, ConfigPath, kugl_home
+from kugl.util import fail, debugging, ConfigPath, kugl_home
 
 _REGISTRY = None
 
@@ -30,7 +30,8 @@ class Registry:
 
     def add_schema(self, name: str, cls: Type):
         """Register a class to implement a schema; this is called by the @schema decorator."""
-        dprint("registry", f"Add schema {name} {cls}")
+        if debug := debugging("registry"):
+            debug(f"Add schema {name} {cls}")
         self.schemas[name] = Schema(name=name, impl=cls())
 
     def get_schema(self, name: str) -> "Schema":
@@ -40,7 +41,8 @@ class Registry:
 
     def add_table(self, cls, **kwargs):
         """Register a class to define a table in Python; this is called by the @table decorator."""
-        dprint("registry", f"Add table {kwargs}")
+        if debug := debugging("registry"):
+            debug(f"Add table {kwargs}")
         t = TableDef(cls=cls, **kwargs)
         if t.schema_name not in self.schemas:
             fail(f"Must create schema {t.schema_name} before table {t.schema_name}.{t.name}")
