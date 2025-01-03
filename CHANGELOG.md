@@ -1,5 +1,6 @@
 ## 0.3.2
 
+- Fix severe performance issue, `kubectl` was always called with `--all-namespaces` (#114)
 - Make the troubleshooting guide friendlier + document debug options
 - `--debug cache` prints name and age of cache filenames
 - `--debug extract` logs extraction of requests & limits for containers, and capacity for nodes
