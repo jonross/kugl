@@ -60,7 +60,7 @@ def main2(argv: List[str]):
     # shortcut name, even before we see the options.
     if " " not in argv[-1]:
         if not (new_argv := init.shortcuts.get(argv[-1])):
-            fail(f"No shortcut named '{argv[-1]}'")
+            fail(f"No shortcut named '{argv[-1]}' is defined in ~/.kugl/init.yaml")
         return main1(argv[:-1] + new_argv)
 
     # Need the query schema for command line parsing.

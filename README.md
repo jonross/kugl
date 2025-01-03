@@ -58,7 +58,7 @@ kugl() {
     docker run \
         -v ~/.kube:/root/.kube \
         -v ~/.kugl:/root/.kugl \
-        jonross/kugl:0.3.1 python3 -m kugl.main "$@"
+        jonross/kugl:0.3.2 python3 -m kugl.main "$@"
 }
 ```
 
@@ -135,3 +135,7 @@ Some other implementations of SQL-on-Kubernetes:
 * [ksql](https://github.com/brendandburns/ksql) is built on Node.js and AlaSQL; last commit November 2016.
 * [kubeql](https://github.com/saracen/kubeql) is a SQL-like query language for Kubernetes; last commit October 2017.
 * [kube-query](https://github.com/aquasecurity/kube-query) is an [osquery](https://osquery.io/) extension; last commit July 2020.
+
+## Contributors
+
+* [Elliot Miller](https://github.com/bitoffdev)

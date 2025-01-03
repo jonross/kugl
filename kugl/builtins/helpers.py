@@ -47,16 +47,23 @@ class Limits:
         return (self.cpu, self.gpu, self.mem)
 
     @classmethod
-    def extract(cls, obj):
+    def extract(cls, obj, debug=False):
         """Extract a Limits object from a dictionary, or return an empty one if the dictionary is None.
 
         :param obj: A dictionary with keys "cpu", "nvidia.com/gpu" and "memory" """
         if obj is None:
+            if debug:
+                print("No object provided to Limits extractor")
             return Limits(None, None, None)
+        if debug:
+            print("Extracting limits from", obj)
         cpu = parse_cpu(obj.get("cpu"))
         gpu = parse_cpu(obj.get("nvidia.com/gpu"))
         mem = parse_size(obj.get("memory"))
-        return Limits(cpu, gpu, mem)
+        result = Limits(cpu, gpu, mem)
+        if debug:
+            print("Extracted", result)
+        return result
 
 
 class ItemHelper:
@@ -92,8 +99,8 @@ class Containerized:
     def containers(self):
         raise NotImplementedError()
 
-    def resources(self, tag):
-        return sum(Limits.extract(c.get("resources", {}).get(tag)) for c in self.containers)
+    def resources(self, tag, debug=False):
+        return sum(Limits.extract(c.get("resources", {}).get(tag), debug) for c in self.containers)
 
 
 class PodHelper(ItemHelper, Containerized):

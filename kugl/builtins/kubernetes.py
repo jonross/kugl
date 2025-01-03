@@ -41,7 +41,7 @@ class KubernetesData:  # FIXME: this should be a resource type, not a schema
         :param kind: Kubernetes resource type e.g. "pods"
         :return: JSON as output by "kubectl get {kind} -o json"
         """
-        namespace_flag = ["--all-namespaces"] if self.ns else ["-n", self.ns]
+        namespace_flag = ["--all-namespaces"] if self.all_ns else ["-n", self.ns]
         if kind == "pods":
             pod_statuses = {}
             # Kick off a thread to get pod statuses
@@ -110,8 +110,8 @@ class NodesTable:
             yield item, (
                 node.name,
                 node.metadata.get("uid"),
-                *Limits.extract(node["status"]["allocatable"]).as_tuple(),
-                *Limits.extract(node["status"]["capacity"]).as_tuple(),
+                *Limits.extract(node["status"]["allocatable"], debug=context.debug).as_tuple(),
+                *Limits.extract(node["status"]["capacity"], debug=context.debug).as_tuple(),
             )
 
 
@@ -151,8 +151,8 @@ class PodsTable:
                 pod.command,
                 pod["status"]["phase"],
                 pod["kubectl_status"],
-                *pod.resources("requests").as_tuple(),
-                *pod.resources("limits").as_tuple(),
+                *pod.resources("requests", debug=context.debug).as_tuple(),
+                *pod.resources("limits", debug=context.debug).as_tuple(),
             )
 
 
@@ -182,8 +182,8 @@ class JobsTable:
                 job.metadata.get("uid"),
                 job.namespace,
                 job.status,
-                *job.resources("requests").as_tuple(),
-                *job.resources("limits").as_tuple(),
+                *job.resources("requests", debug=context.debug).as_tuple(),
+                *job.resources("limits", debug=context.debug).as_tuple(),
             )
 
 
