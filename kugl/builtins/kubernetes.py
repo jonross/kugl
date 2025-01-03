@@ -41,7 +41,7 @@ class KubernetesData:  # FIXME: this should be a resource type, not a schema
         :param kind: Kubernetes resource type e.g. "pods"
         :return: JSON as output by "kubectl get {kind} -o json"
         """
-        namespace_flag = ["--all-namespaces"] if self.ns else ["-n", self.ns]
+        namespace_flag = ["--all-namespaces"] if self.all_ns else ["-n", self.ns]
         if kind == "pods":
             pod_statuses = {}
             # Kick off a thread to get pod statuses

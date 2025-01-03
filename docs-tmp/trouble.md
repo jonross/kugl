@@ -10,7 +10,7 @@ and [SQLite documentation](https://www.sqlite.org/docs.html) thoroughly.
 Debug `row_source` and `path` problems by installing [jp](https://github.com/jmespath/jp) and feeding
 it examples of your JSON data.  JMESPath and `jq` don't behave the same.
 
-Several flags are available for the `--debug` option, try the relevant ones:
+Several flags are available for the `--debug` option, try whatever seems relevant:
 * `--debug cache` will print the cache files consulted and what resources will be refreshed
 * `--debug fetch` will print each invocation of `kubectl`
 * `--debug schema` will print the schema of each table used in the query
