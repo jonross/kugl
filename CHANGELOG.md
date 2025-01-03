@@ -1,6 +1,6 @@
 ## 0.3.2
 
-- Make the troubleshooting guide friendlier
+- Make the troubleshooting guide friendlier + document debug options
 - `--debug cache` prints name and age of cache filenames
 - `--debug extract` logs extraction of requests & limits for containers, and capacity for nodes
 - Fix formatting in the PyPI description

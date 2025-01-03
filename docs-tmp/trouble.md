@@ -12,8 +12,11 @@ it examples of your JSON data.  JMESPath and `jq` don't behave the same.
 
 Several flags are available for the `--debug` option, try the relevant ones:
 * `--debug cache` will print the cache files consulted and what resources will be refreshed
+* `--debug fetch` will print each invocation of `kubectl`
+* `--debug schema` will print the schema of each table used in the query
 * `--debug itemize` will print how many items are generated for each step in a `row_source`
 * `--debug extract` will (verbosely) print the source and value of every row, by column
+* `--debug sqlite` will show the SQL for all statements executed
 
 ### I found a bug
 
