@@ -25,5 +25,9 @@ fi
 . venv/bin/activate 
 echo "Testing with versions:"
 pip list installed | egrep -i 'arrow|funcy|jmespath|pydantic|pyyaml|tabulate'
-PYTHONPATH=. pytest --cov --cov-report=html:coverage -vv -s --tb=native tests
+PYTHONPATH=. pytest \
+    --cov --cov-report=html:coverage \
+    -vv -s --tb=native \
+    ${KUGL_TEST_ARGS:+"-k $KUGL_TEST_ARGS"} \
+    tests
 
