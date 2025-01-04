@@ -57,12 +57,14 @@ class KuglError(Exception):
     pass
 
 
-def debug_features(features: list[str], on: bool = True):
+def debug_features(features: Union[str, list[str]], on: bool = True):
     """Turn debugging on or off for a set of features.
 
     :param features: list of feature names, parsed from the --debug command line option;
         "all" means everything.
     """
+    if isinstance(features, str):
+        features = features.split(",")
     for feature in features:
         if feature == "all" and not on:
             DEBUG_FLAGS.clear()

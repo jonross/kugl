@@ -166,6 +166,9 @@ class ResourceDef(BaseModel):
     def __eq__(self, other):
         return self.name == other.name
 
+    def __lt__(self, other):
+        return self.name < other.name
+
 
 class CreateTable(ExtendTable):
     """Holds the create: section from a user config file."""
