@@ -6,6 +6,7 @@ import os
 import re
 import subprocess as sp
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional, Union, Callable
 
@@ -70,6 +71,18 @@ def debug_features(features: Union[str, list[str]], on: bool = True):
             DEBUG_FLAGS.clear()
         else:
             DEBUG_FLAGS[feature] = on
+
+
+@contextmanager
+def features_debugged(features: Union[str, list[str]], on: bool = True):
+    """Like debug_features, but works as a context manager to set them temporarily."""
+    old_flags = dict(DEBUG_FLAGS)
+    debug_features(features, on)
+    try:
+        yield
+    finally:
+        DEBUG_FLAGS.clear()
+        DEBUG_FLAGS.update(old_flags)
 
 
 def debugging(feature: str = None) -> Optional[Callable]:

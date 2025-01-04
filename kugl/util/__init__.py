@@ -6,6 +6,7 @@ from .misc import (
     debug_features,
     debugging,
     fail,
+    features_debugged,
     KPath,
     kube_home,
     kugl_home,
