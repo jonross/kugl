@@ -48,7 +48,7 @@ def test_non_sql_types(test_home, capsys):
             2.0Gi    0.3  4h   2021-12-31T23:59:59Z
         """)
         out, err = capsys.readouterr()
-        assert_by_line(err.splitlines(), """
+        assert_by_line(err, """
             extract: get size path=size from {"size": "10Ki", "cpu": "2.5", "age": "2d", "date": "2021-01-01"}
             extract: got 10240
             extract: get cpu path=cpu from {"size": "10Ki", "cpu": "2.5", "age": "2d", "date": "2021-01-01"}
@@ -121,11 +121,17 @@ def test_select_from_stdin(test_home, monkeypatch, capsys):
         {"name": "Jim", "age": 42},
         {"name": "Jill", "age": 43},
     ]})))
-    main1(["SELECT name, age FROM hr.people"])
-    out, _ = capsys.readouterr()
-    assert out.strip() == textwrap.dedent("""
+    with features_debugged("sqlite"):
+        main1(["SELECT name, age FROM hr.people"])
+    out, err = capsys.readouterr()
+    assert_by_line(out, """
         name      age
         Jim        42
         Jill       43
-    """).strip()
+    """)
+    assert_by_line(err, """
+        sqlite: execute: CREATE TABLE people (name text, age integer)
+        sqlite: execute: INSERT INTO people VALUES(?, ?)
+        sqlite: query: SELECT name, age FROM people
+    """)
 

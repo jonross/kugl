@@ -50,14 +50,16 @@ def test_by_cpu(test_home, capsys):
         pod-3  Init:3
         pod-4  Init:4
     """)
-    with features_debugged("extract"):
+    with features_debugged("extract,fetch"):
         assert_query("SELECT name, status FROM pods WHERE cpu_req > 1 ORDER BY name", """
             name    status
             pod-3   Init:3
             pod-4   Init:4
         """)
         out, err = capsys.readouterr()
-        assert_by_line(err.splitlines(), """
+        assert_by_line(err, """
+            fetch: running kubectl get pods -n default
+            fetch: running kubectl get pods -n default -o json
             extract: get requests / limits from {'cpu': 1, 'memory': '10M'}
             extract: got cpu=1 gpu=None mem=10000000
             extract: get requests / limits from {'cpu': 1, 'memory': '10M'}

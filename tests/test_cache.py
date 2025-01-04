@@ -39,7 +39,7 @@ def test_cache(test_home, capsys):
         assert refresh == {jobs, events}
         assert max_age == 70
         out, err = capsys.readouterr()
-        assert_by_line(err.splitlines(), [
+        assert_by_line(err, [
             re.compile(r"cache: missing cache file.*default\.jobs\.json"),
             re.compile(r"cache: found cache file.*default\.nodes\.json"),
             re.compile(r"cache: found cache file.*default\.pods\.json"),
@@ -56,7 +56,7 @@ def test_cache(test_home, capsys):
         assert refresh == {jobs, nodes, events}
         assert max_age == 50
         out, err = capsys.readouterr()
-        assert_by_line(err.splitlines(), [
+        assert_by_line(err, [
             re.compile(r"cache: missing cache file.*default\.jobs\.json"),
             re.compile(r"cache: found cache file.*default\.nodes\.json"),
             re.compile(r"cache: found cache file.*default\.pods\.json"),

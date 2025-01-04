@@ -27,10 +27,10 @@ def run(args: Union[str, list[str]], error_ok=False):
     if isinstance(args, str):
         args = ["bash", "-c", args]
     if debug := debugging("fetch"):
-        debug("running {' '.join(args)}")
+        debug(f"running {' '.join(args)}")
     p = sp.run(args, stdout=sp.PIPE, stderr=sp.PIPE, encoding="utf-8")
     if p.returncode != 0 and not error_ok:
-        print(f"Failed to run [{' '.join(args)}]:", file=sys.stderr)
+        print(f"failed to run [{' '.join(args)}]:", file=sys.stderr)
         print(p.stderr, file=sys.stderr, end="")
         sys.exit(p.returncode)
     return p.returncode, p.stdout, p.stderr

@@ -10,7 +10,7 @@ import pytest
 
 from kugl.builtins.helpers import Limits
 from kugl.main import main1
-from kugl.util import Age, KuglError, kube_home, kugl_home
+from kugl.util import Age, KuglError, kube_home, kugl_home, features_debugged
 
 
 def test_no_resources():
@@ -56,10 +56,13 @@ def test_reject_world_writeable_config(test_home):
 
 
 @pytest.mark.skip  # FIXME re-enable without return_config hack
-def test_cli_args_override_settings(test_home):
-    init, _ = main1(["select 1"], return_config=True)
+def test_cli_args_override_settings(test_home, capsys):
+    with features_debugged("init"):
+        init, _ = main1(["select 1"], return_config=True)
     assert init.settings.cache_timeout == Age(120)
     assert init.settings.reckless == False
-    init, _ = main1(["-t 5", "-r", "select 1"], return_config=True)
+    out, err = capsys.readouterr()
+    with features_debugged("init"):
+        init, _ = main1(["-t 5", "-r", "select 1"], return_config=True)
     assert init.settings.cache_timeout == Age(5)
     assert init.settings.reckless == True

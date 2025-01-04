@@ -5,8 +5,8 @@ Tests for the nodes and taints tables.
 import yaml
 
 from kugl.impl.config import parse_model, UserConfig
-from kugl.util import fail
-from .testing import make_node, kubectl_response, assert_query, Taint
+from kugl.util import fail, features_debugged
+from .testing import make_node, kubectl_response, assert_query, Taint, assert_by_line
 
 
 def test_node_query(test_home):
@@ -33,7 +33,7 @@ def test_node_query(test_home):
     """)
 
 
-def test_taint_query(test_home):
+def test_taint_query(test_home, capsys):
     kubectl_response("nodes", {
         "items": [
             make_node("node-1"),
@@ -44,16 +44,22 @@ def test_taint_query(test_home):
                                         ]),
         ]
     })
-    assert_query("""
-        SELECT n.name, nt.key, nt.effect
-        FROM nodes n join node_taints nt on nt.node_uid = n.uid
-        ORDER BY 1, 2
-    """, """
-        name    key                               effect
-        node-2  node.kubernetes.io/unreachable    NoExecute
-        node-2  node.kubernetes.io/unschedulable  NoSchedule
-        node-3  mycompany.com/priority            NoSchedule
-    """)
+    with features_debugged("itemize"):
+        assert_query("""
+            SELECT n.name, nt.key, nt.effect
+            FROM nodes n join node_taints nt on nt.node_uid = n.uid
+            ORDER BY 1, 2
+        """, """
+            name    key                               effect
+            node-2  node.kubernetes.io/unreachable    NoExecute
+            node-2  node.kubernetes.io/unschedulable  NoSchedule
+            node-3  mycompany.com/priority            NoSchedule
+        """)
+        out, err = capsys.readouterr()
+        assert_by_line(err, """
+            itemize: itemizing node_taints at items got 1 hits
+            itemize: itemizing node_taints at spec.taints got 3 hits
+        """)
 
 
 def test_node_labels(test_home):
