@@ -175,16 +175,18 @@ def assert_query(sql: str, expected: Union[str, list], all_ns: bool = False):
         assert actual == expected
 
 
-def assert_by_line(lines: list[str], expected: list[Union[str, re.Pattern]]):
+def assert_by_line(lines: list[str], expected: Union[str, list[Union[str, re.Pattern]]]):
     """
     Compare a list of lines with a list of expected lines or regex patterns.
     :param lines: Actual output, as a list of lines
-    :param expected: Expected output, as a list of strings or re.Pattern objects
+    :param expected: Expected output, as a list of strings or re.Pattern objects,
+        or a single string to be dedented and split.
     """
-    assert len(lines) == len(expected)
-    for line, exp in zip(lines, expected):
+    if isinstance(expected, str):
+        expected = textwrap.dedent(expected).strip().splitlines()
+    for line, exp, index in zip(lines, expected, range(len(expected))):
         if isinstance(exp, str):
-            assert line.strip() == exp.strip()
+            assert line.strip() == exp.strip(), f"Line {index}: {line.strip()} != {exp.strip()}"
         else:
             assert exp.match(line.strip()), f"Did not find {exp.pattern} in {line.strip()}"
 

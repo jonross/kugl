@@ -82,9 +82,10 @@ class ColumnDef(BaseModel):
         if context.debug:
             context.debug(f"get {self} from {self._abbreviate(obj)}")
         value = self._extract(obj, context)
+        result = None if value is None else self._convert(value)
         if context.debug:
-            context.debug(f"got {value}")
-        return None if value is None else self._convert(value)
+            context.debug(f"got {result}")
+        return result
 
     def _extract_jmespath(self, obj: object, context) -> object:
         """Extract a value from an object using a JMESPath finder."""
