@@ -15,7 +15,7 @@ kugl -a "select owner, sum(gpu_req), sum(cpu_req)
          group by 1 order by 2 desc limit 10"
 ```
 
-With `kubectl` and `jq`
+Without Kugl
 
 ```shell
 kubectl get pods -o json --all-namespaces | 
