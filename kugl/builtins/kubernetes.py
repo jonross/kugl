@@ -11,13 +11,8 @@ from argparse import ArgumentParser
 from threading import Thread
 
 from .helpers import Limits, ItemHelper, PodHelper, JobHelper
-from kugl.api import schema, table, fail, resource, run, parse_utc, Resource
+from kugl.api import table, fail, resource, run, parse_utc, Resource
 from kugl.util import WHITESPACE
-
-
-@schema("kubernetes")
-class KubernetesData:
-    pass
 
 
 @resource("kubernetes", schema_defaults=["kubernetes"])

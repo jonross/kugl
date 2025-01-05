@@ -30,15 +30,10 @@ class Registry:
             _REGISTRY = Registry()
         return _REGISTRY
 
-    def add_schema(self, name: str, cls: Type):
-        """Register a class to implement a schema; this is called by the @schema decorator."""
-        if debug := debugging("registry"):
-            debug(f"Add schema {name} {cls}")
-        self.schemas[name] = Schema(name=name, impl=cls())
-
     def get_schema(self, name: str) -> "Schema":
+        """Return the schema object for a schema name, creating it if necessary."""
         if name not in self.schemas:
-            self.add_schema(name, GenericSchemaImpl)
+            self.schemas[name] = Schema(name=name)
         return self.schemas[name]
 
     def add_table(self, cls: type, **kwargs):
@@ -46,9 +41,7 @@ class Registry:
         if debug := debugging("registry"):
             debug(f"Add table {kwargs}")
         t = TableDef(cls=cls, **kwargs)
-        if t.schema_name not in self.schemas:
-            fail(f"Must create schema {t.schema_name} before table {t.schema_name}.{t.name}")
-        self.schemas[t.schema_name].builtin[t.name] = t
+        self.get_schema(t.schema_name).builtin[t.name] = t
 
     def add_resource(self, cls: type, family: str, schema_defaults: list[str]):
         """
@@ -125,15 +118,8 @@ class Resource(BaseModel):
 
 
 class Schema(BaseModel):
-    """Collection of tables and resource definitions.
-
-    Capture a schema definition from the @schema decorator, example:
-        @schema("kubernetes")
-    Or, capture a schema definition in a user config file.
-    Or both.
-    """
+    """Collection of tables and resource definitions."""
     name: str
-    impl: object # FIXME use type vars
     builtin: dict[str, TableDef] = {}
     _create: dict[str, CreateTable] = {}
     _extend: dict[str, ExtendTable] = {}
@@ -193,7 +179,3 @@ class Schema(BaseModel):
     def resources_used(self, tables: Iterable[Table]) -> set[ResourceDef]:
         """Return the ResourceDefs used by the listed tables."""
         return {self._resources[t.resource] for t in tables}
-
-
-class GenericSchemaImpl:
-    pass
