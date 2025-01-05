@@ -1,7 +1,7 @@
-## 0.3.2
+## 0.3.3
 
 - Add security warning for configuration files
-- Improve debug output
+- Improve (and unit test) debug output
 
 ## 0.3.2
 

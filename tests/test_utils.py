@@ -135,16 +135,11 @@ def test_jmespath_performance():
     assert result == ["pod-1", "pod-2"]
 
 
-def test_dprint(capsys):
+def test_debug(capsys):
     FEATURE = "afeature"
-    if debug := debugging(FEATURE):
-        debug("hello", "there")
-    assert capsys.readouterr().err == ""
+    assert debugging(FEATURE) is None
     debug_features([FEATURE])
-    if debug := debugging(FEATURE):
-        debug("hello", "there")
+    debugging(FEATURE)("hello", "there")
     assert capsys.readouterr().err == "afeature: hello there\n"
     debug_features([FEATURE], False)
-    if debug := debugging(FEATURE):
-        debug("hello", "there")
-    assert capsys.readouterr().err == ""
+    assert debugging(FEATURE) is None

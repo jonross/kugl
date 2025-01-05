@@ -56,7 +56,7 @@ class Limits:
         :param obj: A dictionary with keys "cpu", "nvidia.com/gpu" and "memory" """
         if obj is None:
             if debug:
-                debug("no object provided to Limits extractor")
+                debug("no object provided to requests / limits extractor")
             return Limits(None, None, None)
         if debug:
             debug("get requests / limits from", obj)

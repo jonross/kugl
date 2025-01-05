@@ -47,7 +47,7 @@ def main2(argv: List[str]):
 
     kugl_home().mkdir(exist_ok=True)
     if not argv:
-        fail("missing sql query")
+        fail("Missing sql query")
 
     # Load init file.
     init_file = ConfigPath(kugl_home() / "init.yaml")
