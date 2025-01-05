@@ -89,7 +89,6 @@ def main2(argv: List[str]):
     ap.add_argument("sql")
     args = ap.parse_args(argv)
 
-    schema.impl.handle_cli_options(args)
     if args.cache and args.update:
         fail("Cannot use both -c/--cache and -u/--update")
 
@@ -103,10 +102,10 @@ def main2(argv: List[str]):
     if debug := debugging("init"):
         debug(f"settings: {init.settings}")
 
-    engine = Engine(schema, init.settings)
+    engine = Engine(schema, args, init.settings)
     # FIXME bad reference to namespace
     sql = query.sql_schemaless
-    print(engine.query_and_format(Query(sql=sql, namespace=schema.impl.ns, cache_flag=cache_flag)))
+    print(engine.query_and_format(Query(sql=sql, cache_flag=cache_flag)))
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@ Tests for data cache timeout behavior.
 """
 import re
 
+from kugl.builtins.kubernetes import KubernetesResource
 from kugl.impl.config import ResourceDef
 from kugl.impl.engine import DataCache, CHECK, NEVER_UPDATE, ALWAYS_UPDATE
 from kugl.util import Age, features_debugged
@@ -13,10 +14,10 @@ def test_cache(test_home, capsys):
     NS = "default"
     cache = DataCache(test_home, Age("1m"))
 
-    pods = ResourceDef(name="pods")
-    jobs = ResourceDef(name="jobs")
-    nodes = ResourceDef(name="nodes", namespaced=False)
-    events = ResourceDef(name="events", cacheable=False)
+    pods = KubernetesResource(name="pods")
+    jobs = KubernetesResource(name="jobs")
+    nodes = KubernetesResource(name="nodes", namespaced=False)
+    events = KubernetesResource(name="events", cacheable=False)
     all_res = {pods, jobs, nodes, events}
 
     pods_file = cache.cache_path(NS, "pods")

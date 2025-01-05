@@ -20,7 +20,7 @@ class Registry:
 
     def __init__(self):
         self.schemas: dict[str, Schema] = {}
-        self.resources_by_type: dict[str, type] = {}
+        self.resources_by_family: dict[str, type] = {}
         self.resources_by_schema: dict[str, type] = {}
 
     @staticmethod
@@ -66,7 +66,7 @@ class Registry:
         """
         if hasattr(cls, "add_cli_options") and not hasattr(cls, "handle_cli_options"):
             fail(f"Resource type {family} has add_cli_options method but not handle_cli_options")
-        existing = self.resources_by_type.get(family)
+        existing = self.resources_by_family.get(family)
         if existing:
             fail(f"Resource type {family} already registered as {existing.__name__}")
         for schema_name in schema_defaults:
@@ -74,13 +74,22 @@ class Registry:
             if existing:
                 fail(f"Resource type {family} already registered as the default for schema {schema_name}")
         cls.__family = family
-        self.resources_by_type[family] = cls
+        self.resources_by_family[family] = cls
         for schema_name in schema_defaults:
             self.resources_by_schema[schema_name] = cls
 
+    def get_resource_by_family(self, family: str, error_ok: bool = False) -> Type:
+        impl = self.resources_by_family.get(family)
+        if not impl and not error_ok:
+            fail(f"Resource family {family} is not registered")
+        return impl
+
+    def get_resource_by_schema(self, schema_name: str) -> Type:
+        return self.resources_by_schema.get(schema_name)
+
     def augment_cli(self, ap: ArgumentParser):
         """Extend CLI argument parser with custom options per resource type."""
-        for resource_class in set(self.resources_by_type.values()):
+        for resource_class in set(self.resources_by_family.values()):
             if hasattr(resource_class, "add_cli_options"):
                 resource_class.add_cli_options(ap)
 
@@ -103,6 +112,15 @@ class Resource(BaseModel):
     def cache_path(self):
         # FIXME not quite unique
         return f"{self.__family}/{self.name}.json"
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __lt__(self, other):
+        return self.name < other.name
 
 
 
@@ -130,7 +148,7 @@ class Schema(BaseModel):
                     fail("\n".join(errors))
                 self._create.update({c.table: c for c in config.create})
                 self._extend.update({e.table: e for e in config.extend})
-                self._resources.update({r.name: r for r in config.resources})
+                self._resources.update({r.name: self._find_resource(r) for r in config.resources})
 
         # Reset the non-builtin tables, since these can change during unit tests.
         for mapping in [self._create, self._extend, self._resources]:
@@ -146,6 +164,19 @@ class Schema(BaseModel):
                 fail(f"Table '{table.table}' needs unknown resource '{table.resource}'")
 
         return self
+
+    def _find_resource(self, r: ResourceDef) -> ResourceDef:
+        """Return the resource definition for a table's resource name."""
+        rgy = Registry.get()
+        fields = r.model_dump()
+        if "file" in fields:
+            return rgy.get_resource_by_family("file")(**fields)
+        if "exec" in fields:
+            return rgy.get_resource_by_family("exec")(**fields)
+        impl = rgy.get_resource_by_schema(self.name)
+        if impl is None:
+            fail(f"Schema {self.name} has no default resource family")
+        return impl(**fields)
 
     def table_builder(self, name):
         """Return the Table builder subclass (see tables.py) for a table name."""
@@ -165,8 +196,4 @@ class Schema(BaseModel):
 
 
 class GenericSchemaImpl:
-    """get_schema auto-generates one of these when an undefined schema is referenced."""
-    ns: str = "default"  # FIXME
-
-    def handle_cli_options(self, args):
-        pass
+    pass

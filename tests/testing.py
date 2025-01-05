@@ -167,8 +167,7 @@ def assert_query(sql: str, expected: Union[str, list], all_ns: bool = False):
     """
     schema = Registry.get().get_schema("kubernetes")
     args = SimpleNamespace(all_namespaces=all_ns, namespace=None)
-    schema.impl.handle_cli_options(args)
-    engine = Engine(schema, Settings())
+    engine = Engine(schema, args, Settings())
     if isinstance(expected, str):
         actual = engine.query_and_format(Query(sql=sql))
         assert actual.strip() == textwrap.dedent(expected).strip()

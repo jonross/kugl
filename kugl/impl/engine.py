@@ -11,12 +11,12 @@ import re
 import sys
 from typing import Tuple, Set, Optional, Literal
 
-import yaml
+import funcy as fn
 from pydantic import BaseModel, ConfigDict, Field
 from tabulate import tabulate
 
 from .config import ResourceDef, Settings
-from .registry import Schema
+from .registry import Schema, Resource
 from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, debugging, to_age, run, Age, KPath, \
     kube_context
 
@@ -30,8 +30,6 @@ CacheFlag = Literal[ALWAYS_UPDATE, CHECK, NEVER_UPDATE]
 class Query(BaseModel):
     """A SQL query + query-related behaviors"""
     sql: str
-    # TODO: move this elsewhere, it's K8S-specific
-    namespace: str = "default"
     cache_flag: CacheFlag = ALWAYS_UPDATE
 
     @property
@@ -75,11 +73,12 @@ class TableRef(BaseModel):
 
 class Engine:
 
-    def __init__(self, schema: Schema, settings: Settings):
+    def __init__(self, schema: Schema, args, settings: Settings):
         """
         :param config: the parsed user settings file
         """
         self.schema = schema
+        self.args = args
         self.settings = settings
         self.cache = DataCache(kugl_home() / "cache" / kube_context(), self.settings.cache_timeout)
         # Maps resource name e.g. "pods" to the response from "kubectl get pods -o json"
@@ -108,22 +107,26 @@ class Engine:
 
         # Identify what to fetch vs what's stale or expired.
         resources_used = self.schema.resources_used(tables.values())
-        refreshable, max_staleness = self.cache.advise_refresh(query.namespace, resources_used, query.cache_flag)
+        for r in resources_used:
+            r.handle_cli_options(self.args)
+        # FIXME HACK HACK, use cache_path
+        namespace = fn.first(r._ns for r in resources_used if hasattr(r, "_ns"))
+        refreshable, max_staleness = self.cache.advise_refresh(namespace, resources_used, query.cache_flag)
         if not self.settings.reckless and max_staleness is not None:
             print(f"(Data may be up to {max_staleness} seconds old.)", file=sys.stderr)
             clock.CLOCK.sleep(0.5)
 
         # Retrieve resource data in parallel.  If fetching from Kubernetes, update the cache;
         # otherwise just read from the cache.
-        def fetch(res: ResourceDef):
+        def fetch(resource: Resource):
             try:
-                if res in refreshable:
-                    self.data[res.name] = self._get_objects(res)
-                    self.cache.dump(query.namespace, res.name, self.data[res.name])
+                if resource in refreshable:
+                    self.data[resource.name] = resource.get_objects()
+                    self.cache.dump(namespace, resource.name, self.data[resource.name])
                 else:
-                    self.data[res.name] = self.cache.load(query.namespace, res.name)
+                    self.data[resource.name] = self.cache.load(namespace, resource.name)
             except Exception as e:
-                fail(f"Failed to get {res.name} objects: {e}")
+                fail(f"Failed to get {resource.name} objects: {e}")
         with ThreadPoolExecutor(max_workers=8) as pool:
             for _ in pool.map(fetch, resources_used):
                 pass
@@ -140,32 +143,6 @@ class Engine:
         truncate = lambda x: int(x) if isinstance(x, float) and x == float(int(x)) else x
         rows = [[truncate(x) for x in row] for row in rows]
         return rows, column_names
-
-    def _get_objects(self, resource: ResourceDef) -> dict:
-        """Called for a cache miss, go actually fetch resources.
-        Handle built-in resources here, and dispatch to schema implementation for those
-        that aren't.
-        """
-        def parse(text):
-            if not text:
-                return {}
-            if text[0] in "{[":
-                return json.loads(text)
-            return yaml.safe_load(text)
-
-        if resource.file is not None:
-            if resource.file == "stdin":
-                return parse(sys.stdin.read())
-            try:
-                return parse(Path(resource.file).read_text())
-            except OSError as e:
-                fail(f"Failed to read {resource.file}", e)
-
-        if resource.exec is not None:
-            _, out, _ = run(resource.exec)
-            return parse(out)
-
-        return self.schema.impl.get_objects(resource.name, resource.namespaced)
 
 
 class DataCache:
