@@ -17,7 +17,8 @@ from tabulate import tabulate
 
 from .config import ResourceDef, Settings
 from .registry import Schema
-from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, debugging, to_age, run, Age, KPath
+from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, debugging, to_age, run, Age, KPath, \
+    kube_context
 
 # Cache behaviors
 # TODO consider an enum
@@ -74,15 +75,13 @@ class TableRef(BaseModel):
 
 class Engine:
 
-    def __init__(self, schema: Schema, settings: Settings, context_name: str):
+    def __init__(self, schema: Schema, settings: Settings):
         """
         :param config: the parsed user settings file
-        :param context_name: the Kubernetes context to use, e.g. "minikube", "research-cluster"
         """
         self.schema = schema
         self.settings = settings
-        self.context_name = context_name
-        self.cache = DataCache(kugl_home() / "cache" / self.context_name, self.settings.cache_timeout)
+        self.cache = DataCache(kugl_home() / "cache" / kube_context(), self.settings.cache_timeout)
         # Maps resource name e.g. "pods" to the response from "kubectl get pods -o json"
         self.data = {}
         self.db = SqliteDb()

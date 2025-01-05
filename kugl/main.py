@@ -103,7 +103,7 @@ def main2(argv: List[str]):
     if debug := debugging("init"):
         debug(f"settings: {init.settings}")
 
-    engine = Engine(schema, init.settings, kube_context())
+    engine = Engine(schema, init.settings)
     # FIXME bad reference to namespace
     sql = query.sql_schemaless
     print(engine.query_and_format(Query(sql=sql, namespace=schema.impl.ns, cache_flag=cache_flag)))
