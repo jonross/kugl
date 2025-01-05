@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Optional, Union, Callable
 
 import arrow
+import funcy as fn
 import yaml
 
 from kugl.util import Age, clock
@@ -147,3 +148,15 @@ def kube_home() -> KPath:
     if "KUGL_HOME" in os.environ:
         return KPath(os.environ["KUGL_HOME"]) / ".kube"
     return KPath.home() / ".kube"
+
+
+@fn.memoize
+def kube_context() -> str:
+    """Return the current kubernetes context."""
+    kube_config = kube_home() / "config"
+    if not kube_config.exists():
+        fail(f"Missing {kube_config}, can't determine current context")
+    current_context = (yaml.safe_load(kube_config.read_text()) or {}).get("current-context")
+    if not current_context:
+        fail("No current context, please run kubectl config use-context ...")
+    return current_context

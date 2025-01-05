@@ -13,7 +13,7 @@ import yaml
 from kugl.impl.registry import Registry
 from kugl.impl.engine import Engine, Query, CHECK, NEVER_UPDATE, ALWAYS_UPDATE
 from kugl.impl.config import UserInit, parse_file
-from kugl.util import Age, fail, debug_features, kugl_home, kube_home, ConfigPath, debugging, KuglError
+from kugl.util import Age, fail, debug_features, kugl_home, kube_home, ConfigPath, debugging, KuglError, kube_context
 
 # Register built-ins immediately because they're needed for command-line parsing
 import kugl.builtins.resources
@@ -103,15 +103,7 @@ def main2(argv: List[str]):
     if debug := debugging("init"):
         debug(f"settings: {init.settings}")
 
-    kube_config = kube_home() / "config"
-    if not kube_config.exists():
-        fail(f"Missing {kube_config}, can't determine current context")
-
-    current_context = (yaml.safe_load(kube_config.read_text()) or {}).get("current-context")
-    if not current_context:
-        fail("No current context, please run kubectl config use-context ...")
-
-    engine = Engine(schema, init.settings, current_context)
+    engine = Engine(schema, init.settings, kube_context())
     # FIXME bad reference to namespace
     sql = query.sql_schemaless
     print(engine.query_and_format(Query(sql=sql, namespace=schema.impl.ns, cache_flag=cache_flag)))
