@@ -2,6 +2,7 @@
 
 - Add security warning for configuration files
 - Improve (and unit test) debug output
+- Improve test coverage
 
 ## 0.3.2
 
