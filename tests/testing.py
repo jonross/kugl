@@ -165,7 +165,7 @@ def assert_query(sql: str, expected: Union[str, list], all_ns: bool = False):
         caller can indent for neatness.  Or, if a list, each item will be checked in order.
     :param all_ns: FIXME temporary hack until we get namespaces out of engine.py
     """
-    schema = Registry.get().get_schema("kubernetes")
+    schema = Registry.get().get_schema("kubernetes").read_configs()
     args = SimpleNamespace(all_namespaces=all_ns, namespace=None)
     engine = Engine(schema, args, Settings())
     if isinstance(expected, str):

@@ -8,8 +8,6 @@ import sys
 from sqlite3 import DatabaseError
 from typing import List
 
-import yaml
-
 from kugl.impl.registry import Registry
 from kugl.impl.engine import Engine, Query, CHECK, NEVER_UPDATE, ALWAYS_UPDATE
 from kugl.impl.config import UserInit, parse_file
@@ -78,6 +76,7 @@ def main2(argv: List[str]):
         schema = rgy.get_schema(next(iter(schema_refs)))
     else:
         fail("Cross-schema query not implemented yet")
+    schema.read_configs()
 
     ap = ArgumentParser()
     ap.add_argument("-D", "--debug", type=str)

@@ -39,7 +39,7 @@ class Registry:
     def get_schema(self, name: str) -> "Schema":
         if name not in self.schemas:
             self.add_schema(name, GenericSchemaImpl)
-        return self.schemas[name].augment()
+        return self.schemas[name]
 
     def add_table(self, cls: type, **kwargs):
         """Register a class to define a table in Python; this is called by the @table decorator."""
@@ -139,7 +139,7 @@ class Schema(BaseModel):
     _extend: dict[str, ExtendTable] = {}
     _resources: dict[str, ResourceDef] = {}
 
-    def augment(self):
+    def read_configs(self):
         """Apply the built-in and user configuration files for the schema, if present."""
         def _apply(path: ConfigPath):
             if path.exists():
