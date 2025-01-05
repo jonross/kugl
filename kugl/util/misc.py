@@ -8,7 +8,7 @@ import subprocess as sp
 import sys
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Optional, Union, Callable
+from typing import Optional, Union, Callable, Tuple
 
 import arrow
 import funcy as fn
@@ -20,7 +20,7 @@ WHITESPACE = re.compile(r"\s+")
 DEBUG_FLAGS = {}
 
 
-def run(args: Union[str, list[str]], error_ok=False):
+def run(args: Union[str, list[str]], error_ok: bool = False) -> Tuple[int, str, str]:
     """
     Invoke an external command, which may be a list or a string; in the latter case it will be
     interpreted using bash -c.  Returns exit status, stdout and stderr.

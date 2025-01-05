@@ -90,7 +90,8 @@ class Resource(BaseModel):
     name: str
     cacheable: bool = True
 
-    def add_cli_options(self, ap: ArgumentParser):
+    @classmethod
+    def add_cli_options(cls, ap: ArgumentParser):
         pass
 
     def handle_cli_options(self, args):
