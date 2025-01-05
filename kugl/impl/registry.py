@@ -20,6 +20,8 @@ class Registry:
 
     def __init__(self):
         self.schemas: dict[str, Schema] = {}
+        self.resources_by_type: dict[str, type] = {}
+        self.resources_by_schema: dict[str, type] = {}
 
     @staticmethod
     def get():
@@ -39,7 +41,7 @@ class Registry:
             self.add_schema(name, GenericSchemaImpl)
         return self.schemas[name].augment()
 
-    def add_table(self, cls, **kwargs):
+    def add_table(self, cls: type, **kwargs):
         """Register a class to define a table in Python; this is called by the @table decorator."""
         if debug := debugging("registry"):
             debug(f"Add table {kwargs}")
@@ -48,6 +50,30 @@ class Registry:
             fail(f"Must create schema {t.schema_name} before table {t.schema_name}.{t.name}")
         self.schemas[t.schema_name].builtin[t.name] = t
 
+    def add_resource(self, cls: type, name: str, schema_defaults: list[str]):
+        """
+        Register a resource type.  This is called by the @resource decorator.
+
+        :param cls: The class to register
+        :param name: e.g. "file", "kubernetes", "aws"
+        :param schema_defaults: The schema names for which this is the default resource type.
+            For type "file" this is an empty list because any schema can use a file resource,
+                it's never the default.
+            For type "kubernetes" this any schema that will use 'kubectl get' so e.g.
+                ["kubernetes", "argo", "kueue", "karpenter"] et cetera
+            It's TBD whether we will have a single common resource type for AWS resources, or
+                if there will be one per AWS service.
+        """
+        existing = self.resources_by_type.get(name)
+        if existing:
+            fail(f"Resource type {name} already registered as {existing.__name__}")
+        for schema_name in schema_defaults:
+            existing = self.resources_by_schema.get(schema_name)
+            if existing:
+                fail(f"Resource type {name} already registered as the default for schema {schema_name}")
+        self.resources_by_type[name] = cls
+        for schema_name in schema_defaults:
+            self.resources_by_schema[schema_name] = cls
 
 class Schema(BaseModel):
     """Collection of tables and resource definitions.
