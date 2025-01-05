@@ -202,22 +202,25 @@ class DataCache:
         # Find what's expired or missing
         cacheable = {r for r in resources if r.cacheable}
         non_cacheable = {r for r in resources if not r.cacheable}
-        cache_ages = {r: self.age(self.cache_path(namespace, r.name)) for r in cacheable}
+        # Sort here for deterministic behavior in unit tests
+        cache_ages = {r: self.age(self.cache_path(namespace, r.name)) for r in sorted(cacheable)}
         expired = {r for r, age in cache_ages.items() if age is not None and age >= self.timeout.value}
         missing = {r for r, age in cache_ages.items() if age is None}
         # Always refresh what's missing or non-cacheable, and possibly also what's expired
         # Stale data warning for everything else
-        refreshable = missing if flag == NEVER_UPDATE else expired | missing
+        refreshable = set(missing) if flag == NEVER_UPDATE else expired | missing
         max_age = max((cache_ages[r] for r in (cacheable - refreshable)), default=None)
         refreshable.update(non_cacheable)
-        if debugging("cache"):
-            print("Requested", [r.name for r in resources])
-            print("Cacheable", [r.name for r in cacheable])
-            print("Non-cacheable", [r.name for r in non_cacheable])
-            print("Ages", " ".join(f"{r.name}={age}" for r, age in cache_ages.items()))
-            print("Expired", [r.name for r in expired])
-            print("Missing", [r.name for r in missing])
-            print("Refreshable", [r.name for r in refreshable])
+        if debug := debugging("cache"):
+            # Sort here for deterministic output in unit tests
+            names = lambda res_list: "[" + " ".join(sorted(r.name for r in res_list)) + "]"
+            debug("requested", names(resources))
+            debug("cacheable", names(cacheable))
+            debug("non-cacheable", names(non_cacheable))
+            debug("ages", " ".join(f"{r.name}={age}" for r, age in sorted(cache_ages.items())))
+            debug("expired", names(expired))
+            debug("missing", names(missing))
+            debug("refreshable", names(refreshable))
         return refreshable, max_age
 
     def cache_path(self, namespace: str, kind: str) -> Path:
@@ -231,13 +234,14 @@ class DataCache:
 
     def age(self, path: Path) -> Optional[int]:
         """The age of a file in seconds, relative to the current time, or None if it doesn't exist."""
+        debug = debugging("cache")
         if not path.exists():
-            if debugging("cache"):
-                print("Missing cache file", path)
+            if debug:
+                debug("missing cache file", path)
             return None
         age_secs = int(clock.CLOCK.now() - path.stat().st_mtime)
-        if debugging("cache"):
-            print(f"Found cache file (age = {to_age(age_secs)})", path)
+        if debug:
+            debug(f"found cache file (age = {to_age(age_secs)})", path)
         return age_secs
 
 

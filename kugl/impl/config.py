@@ -77,14 +77,15 @@ class ColumnDef(BaseModel):
         """Extract the column value from an object and convert to the correct type."""
         if obj is None:
             if context.debug:
-                print(f"No object provided to extractor {self}")
+                context.debug(f"no object provided to extractor {self}")
             return None
         if context.debug:
-            print(f"Extract {self} from {self._abbreviate(obj)}")
+            context.debug(f"get {self} from {self._abbreviate(obj)}")
         value = self._extract(obj, context)
+        result = None if value is None else self._convert(value)
         if context.debug:
-            print(f"Extracted {value}")
-        return None if value is None else self._convert(value)
+            context.debug(f"got {result}")
+        return result
 
     def _extract_jmespath(self, obj: object, context) -> object:
         """Extract a value from an object using a JMESPath finder."""
@@ -165,6 +166,9 @@ class ResourceDef(BaseModel):
 
     def __eq__(self, other):
         return self.name == other.name
+
+    def __lt__(self, other):
+        return self.name < other.name
 
 
 class CreateTable(ExtendTable):

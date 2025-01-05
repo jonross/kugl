@@ -1,4 +1,9 @@
 
+## Note
+
+Configuration files should be protected to the same degree as your shell scripts and anything
+on your `PYTHONPATH.`  Kugl will refuse to read a configuration file that is world-writable.
+
 ## Recommended configuration
 
 Instance type is a useful column to have in the `nodes` table. Unfortunately, there is no standard

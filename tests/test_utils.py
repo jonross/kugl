@@ -5,7 +5,7 @@ More assorted tests, should these be combined with test_misc.py?
 import jmespath
 import pytest
 
-from kugl.util import Age, parse_size, to_size, dprint, debug, parse_cpu
+from kugl.util import Age, parse_size, to_size, debugging, debug_features, parse_cpu
 
 
 @pytest.mark.parametrize("input_args,input_kwargs,expected", [
@@ -135,13 +135,11 @@ def test_jmespath_performance():
     assert result == ["pod-1", "pod-2"]
 
 
-def test_dprint(capsys):
+def test_debug(capsys):
     FEATURE = "afeature"
-    dprint(FEATURE, "hello")
-    assert capsys.readouterr().out == ""
-    debug([FEATURE])
-    dprint(FEATURE, "hello")
-    assert capsys.readouterr().out == "hello\n"
-    debug([FEATURE], False)
-    dprint(FEATURE, "hello")
-    assert capsys.readouterr().out == ""
+    assert debugging(FEATURE) is None
+    debug_features([FEATURE])
+    debugging(FEATURE)("hello", "there")
+    assert capsys.readouterr().err == "afeature: hello there\n"
+    debug_features([FEATURE], False)
+    assert debugging(FEATURE) is None

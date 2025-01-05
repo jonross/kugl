@@ -7,7 +7,7 @@ import sqlite3
 import pytest
 
 from kugl.main import main1
-from kugl.util import KuglError
+from kugl.util import KuglError, features_debugged
 
 
 def test_enforce_one_cache_option(test_home):
@@ -28,6 +28,11 @@ def test_no_such_table(test_home):
 def test_unknown_shortcut(test_home):
     with pytest.raises(KuglError, match="No shortcut named 'foo'"):
         main1(["foo"])
+
+
+def test_missing_query(test_home):
+    with pytest.raises(KuglError, match="Missing sql query"):
+        main1([])
 
 
 def test_shortcut_with_invalid_option(test_home, capsys):
@@ -67,3 +72,17 @@ def test_simple_shortcut(test_home, capsys):
     main1(["foo"])
     out, _ = capsys.readouterr()
     assert out == "  1    2\n" * 2
+
+
+@pytest.mark.skip  # FIXME re-enable without return_config hack
+def test_cli_args_override_settings(test_home, capsys):
+    with features_debugged("init"):
+        init, _ = main1(["select 1"], return_config=True)
+    assert init.settings.cache_timeout == Age(120)
+    assert init.settings.reckless == False
+    out, err = capsys.readouterr()
+    with features_debugged("init"):
+        init, _ = main1(["-t 5", "-r", "select 1"], return_config=True)
+    assert init.settings.cache_timeout == Age(5)
+    assert init.settings.reckless == True
+

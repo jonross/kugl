@@ -15,7 +15,7 @@ kugl -a "select owner, sum(gpu_req), sum(cpu_req)
          group by 1 order by 2 desc limit 10"
 ```
 
-With `kubectl` and `jq`
+Without Kugl
 
 ```shell
 kubectl get pods -o json --all-namespaces | 
@@ -58,7 +58,7 @@ kugl() {
     docker run \
         -v ~/.kube:/root/.kube \
         -v ~/.kugl:/root/.kugl \
-        jonross/kugl:0.3.2 python3 -m kugl.main "$@"
+        jonross/kugl:0.3.3 python3 -m kugl.main "$@"
 }
 ```
 

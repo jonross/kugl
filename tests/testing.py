@@ -4,6 +4,7 @@ Common utilities for unit testing.
 
 import json
 import os
+import re
 import textwrap
 from pathlib import Path
 from typing import Optional, Tuple, Union, List
@@ -172,6 +173,25 @@ def assert_query(sql: str, expected: Union[str, list], all_ns: bool = False):
     else:
         actual, _ = engine.query(Query(sql=sql))
         assert actual == expected
+
+
+def assert_by_line(lines: Union[str, list[str]], expected: Union[str, list[Union[str, re.Pattern]]]):
+    """
+    Compare a list of lines with a list of expected lines or regex patterns.
+    :param lines: Actual output, as a list of lines
+    :param expected: Expected output, as a list of strings or re.Pattern objects,
+        or a single string to be dedented and split.
+    """
+    if isinstance(lines, str):
+        lines = lines.strip().splitlines()
+    if isinstance(expected, str):
+        # Must be dedented because assertions are written with indent
+        expected = textwrap.dedent(expected).strip().splitlines()
+    for line, exp, index in zip(lines, expected, range(len(expected))):
+        if isinstance(exp, str):
+            assert line.strip() == exp.strip(), f"Line {index}: {line.strip()} != {exp.strip()}"
+        else:
+            assert exp.match(line.strip()), f"Did not find {exp.pattern} in {line.strip()}"
 
 
 def _resource(filename: str):

@@ -46,23 +46,26 @@ class Limits:
     def as_tuple(self):
         return (self.cpu, self.gpu, self.mem)
 
+    def __str__(self):
+        return f"cpu={self.cpu} gpu={self.gpu} mem={self.mem}"
+
     @classmethod
-    def extract(cls, obj, debug=False):
+    def extract(cls, obj, debug=None):
         """Extract a Limits object from a dictionary, or return an empty one if the dictionary is None.
 
         :param obj: A dictionary with keys "cpu", "nvidia.com/gpu" and "memory" """
         if obj is None:
             if debug:
-                print("No object provided to Limits extractor")
+                debug("no object provided to requests / limits extractor")
             return Limits(None, None, None)
         if debug:
-            print("Extracting limits from", obj)
+            debug("get requests / limits from", obj)
         cpu = parse_cpu(obj.get("cpu"))
         gpu = parse_cpu(obj.get("nvidia.com/gpu"))
         mem = parse_size(obj.get("memory"))
         result = Limits(cpu, gpu, mem)
         if debug:
-            print("Extracted", result)
+            debug("got", result)
         return result
 
 
@@ -99,7 +102,7 @@ class Containerized:
     def containers(self):
         raise NotImplementedError()
 
-    def resources(self, tag, debug=False):
+    def resources(self, tag, debug=None):
         return sum(Limits.extract(c.get("resources", {}).get(tag), debug) for c in self.containers)
 
 

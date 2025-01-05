@@ -3,10 +3,10 @@ from .age import Age, parse_age, to_age
 from .clock import UNIT_TEST_TIMEBASE
 from .misc import (
     ConfigPath,
-    debug,
+    debug_features,
     debugging,
-    dprint,
     fail,
+    features_debugged,
     KPath,
     kube_home,
     kugl_home,

@@ -7,14 +7,24 @@ import os
 from pathlib import Path
 
 import pytest
+from kugl.util.clock import RealClock, Clock
 
-from kugl.builtins.helpers import Limits
+from kugl.builtins.helpers import Limits, Containerized
 from kugl.main import main1
-from kugl.util import Age, KuglError, kube_home, kugl_home
+from kugl.util import Age, KuglError, kube_home, kugl_home, features_debugged, debugging, run
 
 
-def test_no_resources():
-    assert Limits.extract(None) == Limits(None, None, None)
+def test_limits_misc(capsys):
+    """Achieve 100% coverage for Limits class."""
+    with features_debugged("extract"):
+        assert Limits.extract(None, debugging("extract")) == Limits(None, None, None)
+    out, err = capsys.readouterr()
+    assert err.strip() == "extract: no object provided to requests / limits extractor"
+    empty = Limits.extract(None) + Limits.extract(None)
+    assert empty.cpu is None
+    assert empty.gpu is None
+    assert empty.mem is None
+    assert Limits(1, 2, 10) + Limits(2, 3, 100) == Limits(3, 5, 110)
 
 
 def test_kube_home_missing(test_home, tmp_path):
@@ -55,11 +65,51 @@ def test_reject_world_writeable_config(test_home):
         main1(["select 1"])
 
 
-@pytest.mark.skip  # FIXME re-enable without return_config hack
-def test_cli_args_override_settings(test_home):
-    init, _ = main1(["select 1"], return_config=True)
-    assert init.settings.cache_timeout == Age(120)
-    assert init.settings.reckless == False
-    init, _ = main1(["-t 5", "-r", "select 1"], return_config=True)
-    assert init.settings.cache_timeout == Age(5)
-    assert init.settings.reckless == True
+def test_containerized():
+    "For 100% coverage"
+    with pytest.raises(NotImplementedError):
+        Containerized().containers()
+
+
+def test_run_single_string_command():
+    rc, out, err = run("echo hello world")
+    assert (rc, out, err) == (0, "hello world\n", "")
+    rc, out, err = run("echo hello world >&2")
+    assert (rc, out, err) == (0, "", "hello world\n")
+
+
+def test_run_nonzero_returncode(capsys):
+    rc, out, err = run("echo foo; false", error_ok=True)
+    assert (rc, out, err) == (1, "foo\n", "")
+    out, err = capsys.readouterr()
+    assert (out, err) == ("", "")
+    with pytest.raises(SystemExit):
+        rc, out, err = run("echo foo >&2; false", error_ok=False)
+    assert (rc, out, err) == (1, "", "")
+    out, err = capsys.readouterr()
+    assert (out, err) == ("", "failed to run [bash -c echo foo >&2; false]:\nfoo\n")
+
+
+def test_real_clock():
+    """For 100% coverage"""
+    import time
+    clock = RealClock()
+    clock.set(0)
+    assert abs(int(time.time()) - clock.now()) < 5
+    now = clock.now()
+    clock.sleep(1)
+    assert (clock.now() - now) > 0
+    assert not clock.is_simulated
+
+
+def test_base_clock():
+    """For 100% coverage"""
+    clock = Clock()
+    with pytest.raises(NotImplementedError):
+        clock.set(0)
+    with pytest.raises(NotImplementedError):
+        clock.now()
+    with pytest.raises(NotImplementedError):
+        clock.sleep(0)
+    with pytest.raises(NotImplementedError):
+        clock.is_simulated

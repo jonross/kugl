@@ -6,6 +6,7 @@ FIXME: Remove references to non-API imports.
 FIXME: Don't use ArgumentParser in the API.
 """
 import json
+import os
 from argparse import ArgumentParser
 from threading import Thread
 
@@ -41,6 +42,7 @@ class KubernetesData:  # FIXME: this should be a resource type, not a schema
         :param kind: Kubernetes resource type e.g. "pods"
         :return: JSON as output by "kubectl get {kind} -o json"
         """
+        unit_testing = "KUGL_UNIT_TESTING" in os.environ
         namespace_flag = ["--all-namespaces"] if self.all_ns else ["-n", self.ns]
         if kind == "pods":
             pod_statuses = {}
@@ -50,6 +52,9 @@ class KubernetesData:  # FIXME: this should be a resource type, not a schema
                 pod_statuses.update(self._pod_status_from_pod_list(output))
             status_thread = Thread(target=_fetch, daemon=True)
             status_thread.start()
+            # In unit tests, wait for pod status here so the log order is deterministic.
+            if unit_testing:
+                status_thread.join()
         if namespaced:
             _, output, _= run(["kubectl", "get", kind, *namespace_flag, "-o", "json"])
         else:
@@ -57,7 +62,8 @@ class KubernetesData:  # FIXME: this should be a resource type, not a schema
         data = json.loads(output)
         if kind == "pods":
             # Add pod status to pods
-            status_thread.join()
+            if not unit_testing:
+                status_thread.join()
             def pod_with_updated_status(pod):
                 metadata = pod["metadata"]
                 status = pod_statuses.get(f"{metadata['namespace']}/{metadata['name']}")

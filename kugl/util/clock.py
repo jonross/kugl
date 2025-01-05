@@ -14,20 +14,20 @@ class Clock:
 
     @abstractmethod
     def set(self, epoch: int):
-        ...
+        raise NotImplementedError()
 
     @abstractmethod
     def now(self) -> int:
-        ...
+        raise NotImplementedError()
 
     @abstractmethod
     def sleep(self, seconds: int):
-        ...
+        raise NotImplementedError()
 
     @property
     @abstractmethod
     def is_simulated(self) -> bool:
-        ...
+        raise NotImplementedError()
 
 
 class RealClock(Clock):
