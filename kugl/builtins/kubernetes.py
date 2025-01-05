@@ -20,10 +20,6 @@ from kugl.util import WHITESPACE
 @schema("kubernetes")
 class KubernetesData:
 
-    def add_cli_options(self, ap: ArgumentParser):
-        ap.add_argument("-a", "--all-namespaces", default=False, action="store_true")
-        ap.add_argument("-n", "--namespace", type=str)
-
     def handle_cli_options(self, args):
         if args.all_namespaces and args.namespace:
             fail("Cannot use both -a/--all-namespaces and -n/--namespace")

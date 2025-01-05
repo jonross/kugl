@@ -75,6 +75,13 @@ class Registry:
         for schema_name in schema_defaults:
             self.resources_by_schema[schema_name] = cls
 
+    def augment_cli(self, ap: ArgumentParser):
+        """Extend CLI argument parser with custom options per resource type."""
+        for resource_class in set(self.resources_by_type.values()):
+            if hasattr(resource_class, "add_cli_options"):
+                resource_class.add_cli_options(ap)
+
+
 class Schema(BaseModel):
     """Collection of tables and resource definitions.
 
@@ -135,11 +142,7 @@ class Schema(BaseModel):
 
 class GenericSchemaImpl:
     """get_schema auto-generates one of these when an undefined schema is referenced."""
-
-    def add_cli_options(self, ap: ArgumentParser):
-        # FIXME, artifact of assuming kubernetes
-        self.ns = "default"
-        pass
+    ns: str = "default"  # FIXME
 
     def handle_cli_options(self, args):
         pass

@@ -80,12 +80,12 @@ def main2(argv: List[str]):
         fail("Cross-schema query not implemented yet")
 
     ap = ArgumentParser()
-    schema.impl.add_cli_options(ap)
     ap.add_argument("-D", "--debug", type=str)
     ap.add_argument("-c", "--cache", default=False, action="store_true")
     ap.add_argument("-r", "--reckless", default=False, action="store_true")
     ap.add_argument("-t", "--timeout", type=str)
     ap.add_argument("-u", "--update", default=False, action="store_true")
+    rgy.augment_cli(ap)
     ap.add_argument("sql")
     args = ap.parse_args(argv)
 
