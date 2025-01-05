@@ -7,6 +7,7 @@ import os
 import re
 import textwrap
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Optional, Tuple, Union, List
 
 import yaml
@@ -165,7 +166,8 @@ def assert_query(sql: str, expected: Union[str, list], all_ns: bool = False):
     :param all_ns: FIXME temporary hack until we get namespaces out of engine.py
     """
     schema = Registry.get().get_schema("kubernetes")
-    schema.impl.set_namespace(all_ns, "__all" if all_ns else "default")
+    args = SimpleNamespace(all_namespaces=all_ns, namespace=None)
+    schema.impl.handle_cli_options(args)
     engine = Engine(schema, Settings(), "nocontext")
     if isinstance(expected, str):
         actual = engine.query_and_format(Query(sql=sql))

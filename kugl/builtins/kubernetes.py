@@ -25,21 +25,19 @@ class KubernetesData:  # FIXME: this should be a resource type, not a schema
     def handle_cli_options(self, args):
         if args.all_namespaces and args.namespace:
             fail("Cannot use both -a/--all-namespaces and -n/--namespace")
-        self.set_namespace(args.all_namespaces, args.namespace)
-
-    def set_namespace(self, all_namespaces: bool, namespace: str):
-        if all_namespaces:
+        if args.all_namespaces:
             # FIXME: engine.py and testing.py still use this
             self.ns = "__all"
             self.all_ns = True
         else:
-            self.ns = namespace or "default"
+            self.ns = args.namespace or "default"
             self.all_ns = False
 
     def get_objects(self, kind: str, namespaced: bool)-> dict:
         """Fetch resources from Kubernetes using kubectl.
 
         :param kind: Kubernetes resource type e.g. "pods"
+        :param namespaced: True if the resource is namespaced (regardless of command line option)
         :return: JSON as output by "kubectl get {kind} -o json"
         """
         unit_testing = "KUGL_UNIT_TESTING" in os.environ
@@ -56,7 +54,7 @@ class KubernetesData:  # FIXME: this should be a resource type, not a schema
             if unit_testing:
                 status_thread.join()
         if namespaced:
-            _, output, _= run(["kubectl", "get", kind, *namespace_flag, "-o", "json"])
+            _, output, _ = run(["kubectl", "get", kind, *namespace_flag, "-o", "json"])
         else:
             _, output, _ = run(["kubectl", "get", kind, "-o", "json"])
         data = json.loads(output)
