@@ -13,8 +13,8 @@ from threading import Thread
 from pydantic import BaseModel
 
 from .helpers import Limits, ItemHelper, PodHelper, JobHelper
-from kugl.api import schema, table, fail, resource
-from kugl.util import parse_utc, run, WHITESPACE
+from kugl.api import schema, table, fail, resource, run, parse_utc
+from kugl.util import WHITESPACE
 
 
 @schema("kubernetes")
@@ -99,7 +99,8 @@ class KubernetesResource(BaseModel):
     name: str
     namespaced: bool = True
 
-    def add_cli_options(self, ap: ArgumentParser):
+    @classmethod
+    def add_cli_options(cls, ap: ArgumentParser):
         ap.add_argument("-a", "--all-namespaces", default=False, action="store_true")
         ap.add_argument("-n", "--namespace", type=str)
 

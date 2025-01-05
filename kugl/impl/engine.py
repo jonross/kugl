@@ -19,9 +19,6 @@ from .config import ResourceDef, Settings
 from .registry import Schema
 from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, debugging, to_age, run, Age, KPath
 
-# Needed to locate the built-in table builders by class name.
-import kugl.builtins.kubernetes
-
 # Cache behaviors
 # TODO consider an enum
 

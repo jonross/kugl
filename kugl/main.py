@@ -13,7 +13,11 @@ import yaml
 from kugl.impl.registry import Registry
 from kugl.impl.engine import Engine, Query, CHECK, NEVER_UPDATE, ALWAYS_UPDATE
 from kugl.impl.config import UserInit, parse_file
-from kugl.util import Age, fail, debug_features, debugging, kugl_home, kube_home, ConfigPath, debugging, KuglError
+from kugl.util import Age, fail, debug_features, kugl_home, kube_home, ConfigPath, debugging, KuglError
+
+# Register built-ins immediately because they're needed for command-line parsing
+import kugl.builtins.resources
+import kugl.builtins.kubernetes
 
 
 def main() -> None:
