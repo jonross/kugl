@@ -3,6 +3,7 @@ Imports usable by user-defined tables in Python (once we have those.)
 """
 
 from kugl.impl.registry import Registry
+from kugl.impl.resource import Resource
 
 from kugl.util import (
     fail,
@@ -16,6 +17,13 @@ from kugl.util import (
 def schema(name: str):
     def wrap(cls):
         Registry.get().add_schema(name, cls)
+        return cls
+    return wrap
+
+
+def resource(type: str, schema_defaults: list[str] = []):
+    def wrap(cls):
+        Resource.add_type(cls, type, schema_defaults)
         return cls
     return wrap
 
