@@ -2,7 +2,7 @@
 Imports usable by user-defined tables in Python (once we have those.)
 """
 
-from kugl.impl.registry import Registry
+from kugl.impl.registry import Registry, Resource
 
 from kugl.util import (
     fail,

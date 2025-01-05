@@ -10,10 +10,8 @@ import os
 from argparse import ArgumentParser
 from threading import Thread
 
-from pydantic import BaseModel
-
 from .helpers import Limits, ItemHelper, PodHelper, JobHelper
-from kugl.api import schema, table, fail, resource, run, parse_utc
+from kugl.api import schema, table, fail, resource, run, parse_utc, Resource
 from kugl.util import WHITESPACE
 
 
@@ -91,8 +89,8 @@ class KubernetesData:
 
 
 @resource("kubernetes", schema_defaults=["kubernetes"])
-class KubernetesResource(BaseModel):
-    name: str
+class KubernetesResource(Resource):
+
     namespaced: bool = True
 
     @classmethod

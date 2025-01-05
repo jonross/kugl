@@ -50,13 +50,13 @@ class Registry:
             fail(f"Must create schema {t.schema_name} before table {t.schema_name}.{t.name}")
         self.schemas[t.schema_name].builtin[t.name] = t
 
-    def add_resource(self, cls: type, name: str, schema_defaults: list[str]):
+    def add_resource(self, cls: type, family: str, schema_defaults: list[str]):
         """
         Register a resource type.  This is called by the @resource decorator.
 
         :param cls: The class to register
-        :param name: e.g. "file", "kubernetes", "aws"
-        :param schema_defaults: The schema names for which this is the default resource type.
+        :param family: e.g. "file", "kubernetes", "aws"
+        :param schema_defaults: The schema names for which this is the default resource family.
             For type "file" this is an empty list because any schema can use a file resource,
                 it's never the default.
             For type "kubernetes" this any schema that will use 'kubectl get' so e.g.
@@ -64,14 +64,17 @@ class Registry:
             It's TBD whether we will have a single common resource type for AWS resources, or
                 if there will be one per AWS service.
         """
-        existing = self.resources_by_type.get(name)
+        if hasattr(cls, "add_cli_options") and not hasattr(cls, "handle_cli_options"):
+            fail(f"Resource type {family} has add_cli_options method but not handle_cli_options")
+        existing = self.resources_by_type.get(family)
         if existing:
-            fail(f"Resource type {name} already registered as {existing.__name__}")
+            fail(f"Resource type {family} already registered as {existing.__name__}")
         for schema_name in schema_defaults:
             existing = self.resources_by_schema.get(schema_name)
             if existing:
-                fail(f"Resource type {name} already registered as the default for schema {schema_name}")
-        self.resources_by_type[name] = cls
+                fail(f"Resource type {family} already registered as the default for schema {schema_name}")
+        cls.__family = family
+        self.resources_by_type[family] = cls
         for schema_name in schema_defaults:
             self.resources_by_schema[schema_name] = cls
 
@@ -80,6 +83,26 @@ class Registry:
         for resource_class in set(self.resources_by_type.values()):
             if hasattr(resource_class, "add_cli_options"):
                 resource_class.add_cli_options(ap)
+
+
+class Resource(BaseModel):
+    """Common attributes of all resource types."""
+    name: str
+    cacheable: bool = True
+
+    def add_cli_options(self, ap: ArgumentParser):
+        pass
+
+    def handle_cli_options(self, args):
+        pass
+
+    def get_objects(self):
+        raise NotImplementedError()
+
+    def cache_path(self):
+        # FIXME not quite unique
+        return f"{self.__family}/{self.name}.json"
+
 
 
 class Schema(BaseModel):
