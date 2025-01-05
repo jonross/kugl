@@ -50,4 +50,7 @@ pyshell:
 	docker run -it -v ~/.kube:/root/.kube --entrypoint /bin/sh python:3.9-alpine
 
 clean:
-	rm -rf build dist venv kugl.egg-info
+	rm -rf build dist kugl.egg-info
+
+pristine: clean
+	rm -rf venv
