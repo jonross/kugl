@@ -141,7 +141,7 @@ class Schema(BaseModel):
             mapping.clear()
 
         # Apply builtin config and user config
-        _apply(ConfigPath(__file__).parent.parent / "builtins" / f"{self.name}.yaml")
+        _apply(ConfigPath(__file__).parent.parent / "builtins" / "schemas" / f"{self.name}.yaml")
         _apply(ConfigPath(kugl_home() / f"{self.name}.yaml"))
 
         # Verify user-defined tables have the needed resources

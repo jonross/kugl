@@ -3,8 +3,7 @@ Tests for data cache timeout behavior.
 """
 import re
 
-from kugl.builtins.kubernetes import KubernetesResource
-from kugl.impl.config import ResourceDef
+from kugl.builtins.schemas.kubernetes import KubernetesResource
 from kugl.impl.engine import DataCache, CHECK, NEVER_UPDATE, ALWAYS_UPDATE
 from kugl.util import Age, features_debugged
 from tests.testing import assert_by_line

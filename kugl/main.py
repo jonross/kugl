@@ -15,7 +15,7 @@ from kugl.util import Age, fail, debug_features, kugl_home, kube_home, ConfigPat
 
 # Register built-ins immediately because they're needed for command-line parsing
 import kugl.builtins.resources
-import kugl.builtins.kubernetes
+import kugl.builtins.schemas.kubernetes
 
 
 def main() -> None:

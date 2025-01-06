@@ -10,7 +10,7 @@ import os
 from argparse import ArgumentParser
 from threading import Thread
 
-from .helpers import Limits, ItemHelper, PodHelper, JobHelper
+from ..helpers import Limits, ItemHelper, PodHelper, JobHelper
 from kugl.api import table, fail, resource, run, parse_utc, Resource
 from kugl.util import WHITESPACE
 
