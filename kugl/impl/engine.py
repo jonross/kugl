@@ -11,16 +11,14 @@ import re
 import sys
 from typing import Tuple, Set, Optional, Literal
 
-import yaml
+import funcy as fn
 from pydantic import BaseModel, ConfigDict, Field
 from tabulate import tabulate
 
 from .config import ResourceDef, Settings
-from .registry import Schema
-from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, debugging, to_age, run, Age, KPath
-
-# Needed to locate the built-in table builders by class name.
-import kugl.builtins.kubernetes
+from .registry import Schema, Resource
+from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, debugging, to_age, run, Age, KPath, \
+    kube_context
 
 # Cache behaviors
 # TODO consider an enum
@@ -32,8 +30,6 @@ CacheFlag = Literal[ALWAYS_UPDATE, CHECK, NEVER_UPDATE]
 class Query(BaseModel):
     """A SQL query + query-related behaviors"""
     sql: str
-    # TODO: move this elsewhere, it's K8S-specific
-    namespace: str = "default"
     cache_flag: CacheFlag = ALWAYS_UPDATE
 
     @property
@@ -77,15 +73,14 @@ class TableRef(BaseModel):
 
 class Engine:
 
-    def __init__(self, schema: Schema, settings: Settings, context_name: str):
+    def __init__(self, schema: Schema, args, settings: Settings):
         """
         :param config: the parsed user settings file
-        :param context_name: the Kubernetes context to use, e.g. "minikube", "research-cluster"
         """
         self.schema = schema
+        self.args = args
         self.settings = settings
-        self.context_name = context_name
-        self.cache = DataCache(kugl_home() / "cache" / self.context_name, self.settings.cache_timeout)
+        self.cache = DataCache(kugl_home() / "cache", self.settings.cache_timeout)
         # Maps resource name e.g. "pods" to the response from "kubectl get pods -o json"
         self.data = {}
         self.db = SqliteDb()
@@ -112,22 +107,25 @@ class Engine:
 
         # Identify what to fetch vs what's stale or expired.
         resources_used = self.schema.resources_used(tables.values())
-        refreshable, max_staleness = self.cache.advise_refresh(query.namespace, resources_used, query.cache_flag)
+        for r in resources_used:
+            r.handle_cli_options(self.args)
+        refreshable, max_staleness = self.cache.advise_refresh(resources_used, query.cache_flag)
         if not self.settings.reckless and max_staleness is not None:
             print(f"(Data may be up to {max_staleness} seconds old.)", file=sys.stderr)
             clock.CLOCK.sleep(0.5)
 
         # Retrieve resource data in parallel.  If fetching from Kubernetes, update the cache;
         # otherwise just read from the cache.
-        def fetch(res: ResourceDef):
+        def fetch(resource: Resource):
             try:
-                if res in refreshable:
-                    self.data[res.name] = self._get_objects(res)
-                    self.cache.dump(query.namespace, res.name, self.data[res.name])
+                if resource in refreshable:
+                    self.data[resource.name] = resource.get_objects()
+                    if resource.cacheable:
+                        self.cache.dump(resource, self.data[resource.name])
                 else:
-                    self.data[res.name] = self.cache.load(query.namespace, res.name)
+                    self.data[resource.name] = self.cache.load(resource)
             except Exception as e:
-                fail(f"Failed to get {res.name} objects: {e}")
+                fail(f"Failed to get {resource.name} objects: {e}")
         with ThreadPoolExecutor(max_workers=8) as pool:
             for _ in pool.map(fetch, resources_used):
                 pass
@@ -145,32 +143,6 @@ class Engine:
         rows = [[truncate(x) for x in row] for row in rows]
         return rows, column_names
 
-    def _get_objects(self, resource: ResourceDef) -> dict:
-        """Called for a cache miss, go actually fetch resources.
-        Handle built-in resources here, and dispatch to schema implementation for those
-        that aren't.
-        """
-        def parse(text):
-            if not text:
-                return {}
-            if text[0] in "{[":
-                return json.loads(text)
-            return yaml.safe_load(text)
-
-        if resource.file is not None:
-            if resource.file == "stdin":
-                return parse(sys.stdin.read())
-            try:
-                return parse(Path(resource.file).read_text())
-            except OSError as e:
-                fail(f"Failed to read {resource.file}", e)
-
-        if resource.exec is not None:
-            _, out, _ = run(resource.exec)
-            return parse(out)
-
-        return self.schema.impl.get_objects(resource.name, resource.namespaced)
-
 
 class DataCache:
     """Manage the cached JSON data from Kubectl.
@@ -187,10 +159,9 @@ class DataCache:
         dir.mkdir(parents=True, exist_ok=True)
         self.timeout = timeout
 
-    def advise_refresh(self, namespace: str, resources: Set[ResourceDef], flag: CacheFlag) -> Tuple[Set[str], int]:
+    def advise_refresh(self, resources: Set[ResourceDef], flag: CacheFlag) -> Tuple[Set[str], int]:
         """Determine which resources to use from cache or to refresh.
 
-        :param namespace: the Kubernetes namespace to query, or ALL_NAMESPACE
         :param resources: the resource types to consider
         :param flag: the user-specified cache behavior
         :return: a tuple of (refreshable, max_age) where refreshable is the set of resources types
@@ -203,7 +174,7 @@ class DataCache:
         cacheable = {r for r in resources if r.cacheable}
         non_cacheable = {r for r in resources if not r.cacheable}
         # Sort here for deterministic behavior in unit tests
-        cache_ages = {r: self.age(self.cache_path(namespace, r.name)) for r in sorted(cacheable)}
+        cache_ages = {r: self.age(self.cache_path(r)) for r in sorted(cacheable)}
         expired = {r for r, age in cache_ages.items() if age is not None and age >= self.timeout.value}
         missing = {r for r, age in cache_ages.items() if age is None}
         # Always refresh what's missing or non-cacheable, and possibly also what's expired
@@ -223,14 +194,16 @@ class DataCache:
             debug("refreshable", names(refreshable))
         return refreshable, max_age
 
-    def cache_path(self, namespace: str, kind: str) -> Path:
-        return self.dir / f"{namespace}.{kind}.json"
+    def dump(self, resource: Resource, data: dict):
+        self.cache_path(resource).write_text(json.dumps(data))
 
-    def dump(self, namespace: str, kind: str, data: dict):
-        self.cache_path(namespace, kind).write_text(json.dumps(data))
+    def load(self, resource: Resource) -> dict:
+        return json.loads(self.cache_path(resource).read_text())
 
-    def load(self, namespace: str, kind: str) -> dict:
-        return json.loads(self.cache_path(namespace, kind).read_text())
+    def cache_path(self, resource) -> Path:
+        path = self.dir / resource.cache_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
 
     def age(self, path: Path) -> Optional[int]:
         """The age of a file in seconds, relative to the current time, or None if it doesn't exist."""

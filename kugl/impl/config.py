@@ -144,31 +144,14 @@ class ExtendTable(BaseModel):
 
 
 class ResourceDef(BaseModel):
-    """Holds one entry from the resources: list in a user config file."""
+    """Holds one entry from the resources: list in a user config file.
+
+    This only ensures the .name and .cacheable attribtes are properly typed.  The remaining
+    validation happens in registry.py when we create a (possibly) schema-specific Resource.
+    """
+    model_config = ConfigDict(extra="allow")
     name: str
-    # FIXME: Don't conflate all resource attributes in one class
-    namespaced: bool = True
     cacheable: bool = True
-    file: Optional[str] = None
-    exec: Optional[Union[str, list[str]]] = None
-
-    @model_validator(mode="after")
-    @classmethod
-    def validate(cls, config: 'ResourceDef') -> 'ResourceDef':
-        if config.file and config.exec:
-            raise ValueError("Resource cannot specify both file and exec")
-        if config.file:
-            config.cacheable = False
-        return config
-
-    def __hash__(self):
-        return hash(self.name)
-
-    def __eq__(self, other):
-        return self.name == other.name
-
-    def __lt__(self, other):
-        return self.name < other.name
 
 
 class CreateTable(ExtendTable):

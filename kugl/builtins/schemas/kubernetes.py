@@ -10,41 +10,45 @@ import os
 from argparse import ArgumentParser
 from threading import Thread
 
-from .helpers import Limits, ItemHelper, PodHelper, JobHelper
-from kugl.api import schema, table, fail
-from kugl.util import parse_utc, run, WHITESPACE
+from ..helpers import Limits, ItemHelper, PodHelper, JobHelper
+from kugl.api import table, fail, resource, run, parse_utc, Resource
+from kugl.util import WHITESPACE, kube_context
 
 
-@schema("kubernetes")
-class KubernetesData:  # FIXME: this should be a resource type, not a schema
+@resource("kubernetes", schema_defaults=["kubernetes"])
+class KubernetesResource(Resource):
 
-    def add_cli_options(self, ap: ArgumentParser):
+    namespaced: bool = True
+    _all_ns: bool
+    _ns: str
+
+    @classmethod
+    def add_cli_options(cls, ap: ArgumentParser):
         ap.add_argument("-a", "--all-namespaces", default=False, action="store_true")
         ap.add_argument("-n", "--namespace", type=str)
 
     def handle_cli_options(self, args):
         if args.all_namespaces and args.namespace:
             fail("Cannot use both -a/--all-namespaces and -n/--namespace")
-        self.set_namespace(args.all_namespaces, args.namespace)
-
-    def set_namespace(self, all_namespaces: bool, namespace: str):
-        if all_namespaces:
+        if args.all_namespaces:
             # FIXME: engine.py and testing.py still use this
-            self.ns = "__all"
-            self.all_ns = True
+            self._ns = "__all"
+            self._all_ns = True
         else:
-            self.ns = namespace or "default"
-            self.all_ns = False
+            self._ns = args.namespace or "default"
+            self._all_ns = False
 
-    def get_objects(self, kind: str, namespaced: bool)-> dict:
+    def cache_path(self) -> str:
+        return f"{kube_context()}/{self._ns}.{self.name}.json"
+
+    def get_objects(self) -> dict:
         """Fetch resources from Kubernetes using kubectl.
 
-        :param kind: Kubernetes resource type e.g. "pods"
-        :return: JSON as output by "kubectl get {kind} -o json"
+        :return: JSON as output by "kubectl get {self.name} -o json"
         """
         unit_testing = "KUGL_UNIT_TESTING" in os.environ
-        namespace_flag = ["--all-namespaces"] if self.all_ns else ["-n", self.ns]
-        if kind == "pods":
+        namespace_flag = ["--all-namespaces"] if self._all_ns else ["-n", self._ns]
+        if self.name == "pods":
             pod_statuses = {}
             # Kick off a thread to get pod statuses
             def _fetch():
@@ -55,12 +59,12 @@ class KubernetesData:  # FIXME: this should be a resource type, not a schema
             # In unit tests, wait for pod status here so the log order is deterministic.
             if unit_testing:
                 status_thread.join()
-        if namespaced:
-            _, output, _= run(["kubectl", "get", kind, *namespace_flag, "-o", "json"])
+        if self.namespaced:
+            _, output, _ = run(["kubectl", "get", self.name, *namespace_flag, "-o", "json"])
         else:
-            _, output, _ = run(["kubectl", "get", kind, "-o", "json"])
+            _, output, _ = run(["kubectl", "get", self.name, "-o", "json"])
         data = json.loads(output)
-        if kind == "pods":
+        if self.name == "pods":
             # Add pod status to pods
             if not unit_testing:
                 status_thread.join()
@@ -87,11 +91,11 @@ class KubernetesData:  # FIXME: this should be a resource type, not a schema
         status_index = header.index("STATUS")
         # It would be nice if 'kubectl get pods' printed the UID, but it doesn't, so use
         # "namespace/name" as the key.  (Can't use a tuple since this has to be JSON-dumped.)
-        if self.all_ns:
+        if self._all_ns:
             namespace_index = header.index("NAMESPACE")
             return {f"{row[namespace_index]}/{row[name_index]}": row[status_index] for row in rows}
         else:
-            return {f"{self.ns}/{row[name_index]}": row[status_index] for row in rows}
+            return {f"{self._ns}/{row[name_index]}": row[status_index] for row in rows}
 
 
 @table(schema="kubernetes", name="nodes", resource="nodes")

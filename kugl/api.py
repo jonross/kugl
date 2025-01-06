@@ -2,20 +2,21 @@
 Imports usable by user-defined tables in Python (once we have those.)
 """
 
-from kugl.impl.registry import Registry
+from kugl.impl.registry import Registry, Resource
 
 from kugl.util import (
     fail,
     parse_age,
     parse_utc,
+    run,
     to_age,
     to_utc,
 )
 
 
-def schema(name: str):
+def resource(type: str, schema_defaults: list[str] = []):
     def wrap(cls):
-        Registry.get().add_schema(name, cls)
+        Registry.get().add_resource(cls, type, schema_defaults)
         return cls
     return wrap
 

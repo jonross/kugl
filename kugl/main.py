@@ -8,12 +8,14 @@ import sys
 from sqlite3 import DatabaseError
 from typing import List
 
-import yaml
-
 from kugl.impl.registry import Registry
 from kugl.impl.engine import Engine, Query, CHECK, NEVER_UPDATE, ALWAYS_UPDATE
 from kugl.impl.config import UserInit, parse_file
-from kugl.util import Age, fail, debug_features, debugging, kugl_home, kube_home, ConfigPath, debugging, KuglError
+from kugl.util import Age, fail, debug_features, kugl_home, kube_home, ConfigPath, debugging, KuglError, kube_context
+
+# Register built-ins immediately because they're needed for command-line parsing
+import kugl.builtins.resources
+import kugl.builtins.schemas.kubernetes
 
 
 def main() -> None:
@@ -74,18 +76,18 @@ def main2(argv: List[str]):
         schema = rgy.get_schema(next(iter(schema_refs)))
     else:
         fail("Cross-schema query not implemented yet")
+    schema.read_configs()
 
     ap = ArgumentParser()
-    schema.impl.add_cli_options(ap)
     ap.add_argument("-D", "--debug", type=str)
     ap.add_argument("-c", "--cache", default=False, action="store_true")
     ap.add_argument("-r", "--reckless", default=False, action="store_true")
     ap.add_argument("-t", "--timeout", type=str)
     ap.add_argument("-u", "--update", default=False, action="store_true")
+    rgy.augment_cli(ap)
     ap.add_argument("sql")
     args = ap.parse_args(argv)
 
-    schema.impl.handle_cli_options(args)
     if args.cache and args.update:
         fail("Cannot use both -c/--cache and -u/--update")
 
@@ -99,18 +101,10 @@ def main2(argv: List[str]):
     if debug := debugging("init"):
         debug(f"settings: {init.settings}")
 
-    kube_config = kube_home() / "config"
-    if not kube_config.exists():
-        fail(f"Missing {kube_config}, can't determine current context")
-
-    current_context = (yaml.safe_load(kube_config.read_text()) or {}).get("current-context")
-    if not current_context:
-        fail("No current context, please run kubectl config use-context ...")
-
-    engine = Engine(schema, init.settings, current_context)
+    engine = Engine(schema, args, init.settings)
     # FIXME bad reference to namespace
     sql = query.sql_schemaless
-    print(engine.query_and_format(Query(sql=sql, namespace=schema.impl.ns, cache_flag=cache_flag)))
+    print(engine.query_and_format(Query(sql=sql, cache_flag=cache_flag)))
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 """
 Registry of resources and tables, independent of configuration file format.
-This is Kugl's global state outside the SQLite database.
 """
+
 from argparse import ArgumentParser
 from typing import Type, Iterable
 
@@ -20,6 +20,8 @@ class Registry:
 
     def __init__(self):
         self.schemas: dict[str, Schema] = {}
+        self.resources_by_family: dict[str, type] = {}
+        self.resources_by_schema: dict[str, type] = {}
 
     @staticmethod
     def get():
@@ -28,43 +30,101 @@ class Registry:
             _REGISTRY = Registry()
         return _REGISTRY
 
-    def add_schema(self, name: str, cls: Type):
-        """Register a class to implement a schema; this is called by the @schema decorator."""
-        if debug := debugging("registry"):
-            debug(f"Add schema {name} {cls}")
-        self.schemas[name] = Schema(name=name, impl=cls())
-
     def get_schema(self, name: str) -> "Schema":
+        """Return the schema object for a schema name, creating it if necessary."""
         if name not in self.schemas:
-            self.add_schema(name, GenericSchemaImpl)
-        return self.schemas[name].augment()
+            self.schemas[name] = Schema(name=name)
+        return self.schemas[name]
 
-    def add_table(self, cls, **kwargs):
+    def add_table(self, cls: type, **kwargs):
         """Register a class to define a table in Python; this is called by the @table decorator."""
         if debug := debugging("registry"):
             debug(f"Add table {kwargs}")
         t = TableDef(cls=cls, **kwargs)
-        if t.schema_name not in self.schemas:
-            fail(f"Must create schema {t.schema_name} before table {t.schema_name}.{t.name}")
-        self.schemas[t.schema_name].builtin[t.name] = t
+        self.get_schema(t.schema_name).builtin[t.name] = t
+
+    def add_resource(self, cls: type, family: str, schema_defaults: list[str]):
+        """
+        Register a resource type.  This is called by the @resource decorator.
+
+        :param cls: The class to register
+        :param family: e.g. "file", "kubernetes", "aws"
+        :param schema_defaults: The schema names for which this is the default resource family.
+            For type "file" this is an empty list because any schema can use a file resource,
+                it's never the default.
+            For type "kubernetes" this any schema that will use 'kubectl get' so e.g.
+                ["kubernetes", "argo", "kueue", "karpenter"] et cetera
+            It's TBD whether we will have a single common resource type for AWS resources, or
+                if there will be one per AWS service.
+        """
+        if hasattr(cls, "add_cli_options") and not hasattr(cls, "handle_cli_options"):
+            fail(f"Resource type {family} has add_cli_options method but not handle_cli_options")
+        existing = self.resources_by_family.get(family)
+        if existing:
+            fail(f"Resource type {family} already registered as {existing.__name__}")
+        for schema_name in schema_defaults:
+            existing = self.resources_by_schema.get(schema_name)
+            if existing:
+                fail(f"Resource type {family} already registered as the default for schema {schema_name}")
+        cls.__family = family
+        self.resources_by_family[family] = cls
+        for schema_name in schema_defaults:
+            self.resources_by_schema[schema_name] = cls
+
+    def get_resource_by_family(self, family: str, error_ok: bool = False) -> Type:
+        impl = self.resources_by_family.get(family)
+        if not impl and not error_ok:
+            fail(f"Resource family {family} is not registered")
+        return impl
+
+    def get_resource_by_schema(self, schema_name: str) -> Type:
+        return self.resources_by_schema.get(schema_name)
+
+    def augment_cli(self, ap: ArgumentParser):
+        """Extend CLI argument parser with custom options per resource type."""
+        for resource_class in set(self.resources_by_family.values()):
+            if hasattr(resource_class, "add_cli_options"):
+                resource_class.add_cli_options(ap)
+
+
+class Resource(BaseModel):
+    """Common attributes of all resource types."""
+    name: str
+    cacheable: bool = True
+
+    @classmethod
+    def add_cli_options(cls, ap: ArgumentParser):
+        pass
+
+    def handle_cli_options(self, args):
+        pass
+
+    def get_objects(self):
+        raise NotImplementedError(f"{self.__class__} must implement get_objects()")
+
+    def cache_path(self):
+        raise NotImplementedError(f"{self.__class__} must implement cache_path()")
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __lt__(self, other):
+        return self.name < other.name
+
 
 
 class Schema(BaseModel):
-    """Collection of tables and resource definitions.
-
-    Capture a schema definition from the @schema decorator, example:
-        @schema("kubernetes")
-    Or, capture a schema definition in a user config file.
-    Or both.
-    """
+    """Collection of tables and resource definitions."""
     name: str
-    impl: object # FIXME use type vars
     builtin: dict[str, TableDef] = {}
     _create: dict[str, CreateTable] = {}
     _extend: dict[str, ExtendTable] = {}
     _resources: dict[str, ResourceDef] = {}
 
-    def augment(self):
+    def read_configs(self):
         """Apply the built-in and user configuration files for the schema, if present."""
         def _apply(path: ConfigPath):
             if path.exists():
@@ -73,14 +133,14 @@ class Schema(BaseModel):
                     fail("\n".join(errors))
                 self._create.update({c.table: c for c in config.create})
                 self._extend.update({e.table: e for e in config.extend})
-                self._resources.update({r.name: r for r in config.resources})
+                self._resources.update({r.name: self._find_resource(r) for r in config.resources})
 
         # Reset the non-builtin tables, since these can change during unit tests.
         for mapping in [self._create, self._extend, self._resources]:
             mapping.clear()
 
         # Apply builtin config and user config
-        _apply(ConfigPath(__file__).parent.parent / "builtins" / f"{self.name}.yaml")
+        _apply(ConfigPath(__file__).parent.parent / "builtins" / "schemas" / f"{self.name}.yaml")
         _apply(ConfigPath(kugl_home() / f"{self.name}.yaml"))
 
         # Verify user-defined tables have the needed resources
@@ -89,6 +149,19 @@ class Schema(BaseModel):
                 fail(f"Table '{table.table}' needs unknown resource '{table.resource}'")
 
         return self
+
+    def _find_resource(self, r: ResourceDef) -> ResourceDef:
+        """Return the resource definition for a table's resource name."""
+        rgy = Registry.get()
+        fields = r.model_dump()
+        if "file" in fields:
+            return rgy.get_resource_by_family("file")(**fields)
+        if "exec" in fields:
+            return rgy.get_resource_by_family("exec")(**fields)
+        impl = rgy.get_resource_by_schema(self.name)
+        if impl is None:
+            fail(f"Schema {self.name} has no default resource family")
+        return impl(**fields)
 
     def table_builder(self, name):
         """Return the Table builder subclass (see tables.py) for a table name."""
@@ -105,15 +178,3 @@ class Schema(BaseModel):
     def resources_used(self, tables: Iterable[Table]) -> set[ResourceDef]:
         """Return the ResourceDefs used by the listed tables."""
         return {self._resources[t.resource] for t in tables}
-
-
-class GenericSchemaImpl:
-    """get_schema auto-generates one of these when an undefined schema is referenced."""
-
-    def add_cli_options(self, ap: ArgumentParser):
-        # FIXME, artifact of assuming kubernetes
-        self.ns = "default"
-        pass
-
-    def handle_cli_options(self, args):
-        pass

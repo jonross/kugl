@@ -5,13 +5,14 @@ Some of these are just to achieve 100% coverage.
 
 import os
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from kugl.util.clock import RealClock, Clock
 
 from kugl.builtins.helpers import Limits, Containerized
 from kugl.main import main1
-from kugl.util import Age, KuglError, kube_home, kugl_home, features_debugged, debugging, run
+from kugl.util import Age, KuglError, kube_home, kugl_home, features_debugged, debugging, run, kube_context
 
 
 def test_limits_misc(capsys):
@@ -27,16 +28,20 @@ def test_limits_misc(capsys):
     assert Limits(1, 2, 10) + Limits(2, 3, 100) == Limits(3, 5, 110)
 
 
+@patch.dict(kube_context.memory, clear=True)  # suppress memoization
 def test_kube_home_missing(test_home, tmp_path):
     os.environ["KUGL_HOME"] = str(tmp_path / "doesnt_exist")
     with pytest.raises(KuglError, match="can't determine current context"):
-        main1(["select 1"])
+        # Must actually query a resource or KubernetesResource won't ask for the context
+        main1(["select * from nodes"])
 
 
+@patch.dict(kube_context.memory, clear=True)  # suppress memoization
 def test_no_kube_context(test_home, tmp_path):
     kube_home().joinpath("config").write_text("")
     with pytest.raises(KuglError, match="No current context"):
-        main1(["select 1"])
+        # Must actually query a resource or KubernetesResource won't ask for the context
+        main1(["select * from nodes"])
 
 
 def test_enforce_mockdir(test_home, monkeypatch):

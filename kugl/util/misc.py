@@ -8,9 +8,10 @@ import subprocess as sp
 import sys
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Optional, Union, Callable
+from typing import Optional, Union, Callable, Tuple
 
 import arrow
+import funcy as fn
 import yaml
 
 from kugl.util import Age, clock
@@ -19,7 +20,7 @@ WHITESPACE = re.compile(r"\s+")
 DEBUG_FLAGS = {}
 
 
-def run(args: Union[str, list[str]], error_ok=False):
+def run(args: Union[str, list[str]], error_ok: bool = False) -> Tuple[int, str, str]:
     """
     Invoke an external command, which may be a list or a string; in the latter case it will be
     interpreted using bash -c.  Returns exit status, stdout and stderr.
@@ -147,3 +148,15 @@ def kube_home() -> KPath:
     if "KUGL_HOME" in os.environ:
         return KPath(os.environ["KUGL_HOME"]) / ".kube"
     return KPath.home() / ".kube"
+
+
+@fn.memoize
+def kube_context() -> str:
+    """Return the current kubernetes context."""
+    kube_config = kube_home() / "config"
+    if not kube_config.exists():
+        fail(f"Missing {kube_config}, can't determine current context")
+    current_context = (yaml.safe_load(kube_config.read_text()) or {}).get("current-context")
+    if not current_context:
+        fail("No current context, please run kubectl config use-context ...")
+    return current_context

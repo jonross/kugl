@@ -79,7 +79,7 @@ def test_by_cpu(test_home, capsys):
         """)
 
 
-def test_other_pod_fields(test_home):
+def test_other_pod_fields(test_home, capsys):
     kubectl_response("pods", {
         "items": [
             make_pod("pod-1", namespace="xyz", is_daemon=True, phase="Pending"),
@@ -94,15 +94,21 @@ def test_other_pod_fields(test_home):
         default    pod-3  Terminating
         default    pod-4  Terminating
     """)
-    assert_query("""
-        SELECT namespace, phase, uid, is_daemon, node_name, command, to_utc(creation_ts) AS created
-        FROM pods ORDER BY name
-    """, """
-        namespace    phase    uid          is_daemon  node_name    command     created
-        xyz          Pending  uid-pod-1            1  worker5      echo hello  2024-12-10T02:49:02Z
-        default      Running  uid-pod-3            0  joe          echo hello  2024-12-10T02:50:02Z
-        default      Running  uid-pod-4            0  worker5      echo bye    2024-12-10T02:49:02Z
-    """, all_ns=True)
+    with features_debugged("fetch"):
+        assert_query("""
+            SELECT namespace, phase, uid, is_daemon, node_name, command, to_utc(creation_ts) AS created
+            FROM pods ORDER BY name
+        """, """
+            namespace    phase    uid          is_daemon  node_name    command     created
+            xyz          Pending  uid-pod-1            1  worker5      echo hello  2024-12-10T02:49:02Z
+            default      Running  uid-pod-3            0  joe          echo hello  2024-12-10T02:50:02Z
+            default      Running  uid-pod-4            0  worker5      echo bye    2024-12-10T02:49:02Z
+        """, all_ns=True)
+    out, err = capsys.readouterr()
+    assert_by_line(err, """
+        fetch: running kubectl get pods --all-namespaces
+        fetch: running kubectl get pods --all-namespaces -o json
+    """)
 
 
 @pytest.mark.parametrize("containers,expected", [

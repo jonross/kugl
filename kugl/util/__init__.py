@@ -8,6 +8,7 @@ from .misc import (
     fail,
     features_debugged,
     KPath,
+    kube_context,
     kube_home,
     kugl_home,
     KuglError,
