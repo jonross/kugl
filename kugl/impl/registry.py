@@ -1,7 +1,7 @@
 """
 Registry of resources and tables, independent of configuration file format.
-This is Kugl's global state outside the SQLite database.
 """
+
 from argparse import ArgumentParser
 from typing import Type, Iterable
 
@@ -100,11 +100,10 @@ class Resource(BaseModel):
         pass
 
     def get_objects(self):
-        raise NotImplementedError()
+        raise NotImplementedError(f"{self.__class__} must implement get_objects()")
 
     def cache_path(self):
-        # FIXME not quite unique
-        return f"{self.__family}/{self.name}.json"
+        raise NotImplementedError(f"{self.__class__} must implement cache_path()")
 
     def __hash__(self):
         return hash(self.name)

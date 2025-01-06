@@ -12,7 +12,7 @@ from threading import Thread
 
 from ..helpers import Limits, ItemHelper, PodHelper, JobHelper
 from kugl.api import table, fail, resource, run, parse_utc, Resource
-from kugl.util import WHITESPACE
+from kugl.util import WHITESPACE, kube_context
 
 
 @resource("kubernetes", schema_defaults=["kubernetes"])
@@ -37,6 +37,9 @@ class KubernetesResource(Resource):
         else:
             self._ns = args.namespace or "default"
             self._all_ns = False
+
+    def cache_path(self) -> str:
+        return f"{kube_context()}/{self._ns}.{self.name}.json"
 
     def get_objects(self) -> dict:
         """Fetch resources from Kubernetes using kubectl.

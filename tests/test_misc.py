@@ -32,14 +32,16 @@ def test_limits_misc(capsys):
 def test_kube_home_missing(test_home, tmp_path):
     os.environ["KUGL_HOME"] = str(tmp_path / "doesnt_exist")
     with pytest.raises(KuglError, match="can't determine current context"):
-        main1(["select 1"])
+        # Must actually query a resource or KubernetesResource won't ask for the context
+        main1(["select * from nodes"])
 
 
 @patch.dict(kube_context.memory, clear=True)  # suppress memoization
 def test_no_kube_context(test_home, tmp_path):
     kube_home().joinpath("config").write_text("")
     with pytest.raises(KuglError, match="No current context"):
-        main1(["select 1"])
+        # Must actually query a resource or KubernetesResource won't ask for the context
+        main1(["select * from nodes"])
 
 
 def test_enforce_mockdir(test_home, monkeypatch):

@@ -33,6 +33,9 @@ class ShellResource(Resource):
         _, out, _ = run(resource.exec)
         return _parse(out)
 
+    def cache_path(self):
+        return f"{self.name}.shell.json"
+
 
 def _parse(text):
     if not text:

@@ -80,7 +80,7 @@ class Engine:
         self.schema = schema
         self.args = args
         self.settings = settings
-        self.cache = DataCache(kugl_home() / "cache" / kube_context(), self.settings.cache_timeout)
+        self.cache = DataCache(kugl_home() / "cache", self.settings.cache_timeout)
         # Maps resource name e.g. "pods" to the response from "kubectl get pods -o json"
         self.data = {}
         self.db = SqliteDb()
@@ -109,9 +109,7 @@ class Engine:
         resources_used = self.schema.resources_used(tables.values())
         for r in resources_used:
             r.handle_cli_options(self.args)
-        # FIXME HACK HACK, use cache_path
-        namespace = fn.first(r._ns for r in resources_used if hasattr(r, "_ns"))
-        refreshable, max_staleness = self.cache.advise_refresh(namespace, resources_used, query.cache_flag)
+        refreshable, max_staleness = self.cache.advise_refresh(resources_used, query.cache_flag)
         if not self.settings.reckless and max_staleness is not None:
             print(f"(Data may be up to {max_staleness} seconds old.)", file=sys.stderr)
             clock.CLOCK.sleep(0.5)
@@ -122,9 +120,10 @@ class Engine:
             try:
                 if resource in refreshable:
                     self.data[resource.name] = resource.get_objects()
-                    self.cache.dump(namespace, resource.name, self.data[resource.name])
+                    if resource.cacheable:
+                        self.cache.dump(resource, self.data[resource.name])
                 else:
-                    self.data[resource.name] = self.cache.load(namespace, resource.name)
+                    self.data[resource.name] = self.cache.load(resource)
             except Exception as e:
                 fail(f"Failed to get {resource.name} objects: {e}")
         with ThreadPoolExecutor(max_workers=8) as pool:
@@ -160,10 +159,9 @@ class DataCache:
         dir.mkdir(parents=True, exist_ok=True)
         self.timeout = timeout
 
-    def advise_refresh(self, namespace: str, resources: Set[ResourceDef], flag: CacheFlag) -> Tuple[Set[str], int]:
+    def advise_refresh(self, resources: Set[ResourceDef], flag: CacheFlag) -> Tuple[Set[str], int]:
         """Determine which resources to use from cache or to refresh.
 
-        :param namespace: the Kubernetes namespace to query, or ALL_NAMESPACE
         :param resources: the resource types to consider
         :param flag: the user-specified cache behavior
         :return: a tuple of (refreshable, max_age) where refreshable is the set of resources types
@@ -176,7 +174,7 @@ class DataCache:
         cacheable = {r for r in resources if r.cacheable}
         non_cacheable = {r for r in resources if not r.cacheable}
         # Sort here for deterministic behavior in unit tests
-        cache_ages = {r: self.age(self.cache_path(namespace, r.name)) for r in sorted(cacheable)}
+        cache_ages = {r: self.age(self.cache_path(r)) for r in sorted(cacheable)}
         expired = {r for r, age in cache_ages.items() if age is not None and age >= self.timeout.value}
         missing = {r for r, age in cache_ages.items() if age is None}
         # Always refresh what's missing or non-cacheable, and possibly also what's expired
@@ -196,14 +194,16 @@ class DataCache:
             debug("refreshable", names(refreshable))
         return refreshable, max_age
 
-    def cache_path(self, namespace: str, kind: str) -> Path:
-        return self.dir / f"{namespace}.{kind}.json"
+    def dump(self, resource: Resource, data: dict):
+        self.cache_path(resource).write_text(json.dumps(data))
 
-    def dump(self, namespace: str, kind: str, data: dict):
-        self.cache_path(namespace, kind).write_text(json.dumps(data))
+    def load(self, resource: Resource) -> dict:
+        return json.loads(self.cache_path(resource).read_text())
 
-    def load(self, namespace: str, kind: str) -> dict:
-        return json.loads(self.cache_path(namespace, kind).read_text())
+    def cache_path(self, resource) -> Path:
+        path = self.dir / resource.cache_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
 
     def age(self, path: Path) -> Optional[int]:
         """The age of a file in seconds, relative to the current time, or None if it doesn't exist."""
