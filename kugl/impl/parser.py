@@ -8,17 +8,17 @@ from sqlparse.tokens import Name, Comment, Punctuation, Keyword
 
 @dataclass
 class TableRef:
-    schema: str
+    schema_name: str
     name: str
 
     def __hash__(self):
-        return hash((self.schema, self.name))
+        return hash((self.name, self.schema_name))
 
     def __eq__(self, other):
-        return self.schema == other.schema and self.name == other.name
+        return self.name == other.name and self.schema_name == other.schema_name
 
     def __str__(self):
-        return f"{self.schema}.{self.name}"
+        return f"{self.schema_name}.{self.name}"
 
 
 class Tokens:
@@ -55,12 +55,15 @@ class Tokens:
         print("got", got)
         raise ValueError(f"expected {expected} after <{self.context}> but got <{got and got.value}>")
 
+    def join(self):
+        return "".join(t.value for t in self._seen)
+
     @property
     def context(self):
         return " ".join(t.value for t in list(self._seen_nowhite)[-6:-1])
 
 
-class KQuery:
+class Query:
 
     """
     See https://www.sqlite.org/lang.html
@@ -73,9 +76,16 @@ class KQuery:
         s = sqlparse.parse(sql.lower())
         if len(s) != 1:
             raise ValueError("SQL must contain exactly one statement")
-        self._scan(Tokens(s[0].flatten()))
+        self._tokens = Tokens(s[0].flatten())
+        self._scan()
 
-    def _scan(self, tl: Tokens):
+    @property
+    def rebuilt(self):
+        return self._tokens.join()
+
+    def _scan(self):
+
+        tl = self._tokens
 
         def scan_statement():
             """Scan tokens at the root of a query string or inside ( ), the latter assuming the caller
@@ -144,7 +154,7 @@ class KQuery:
                 tl.expected("CTE name" if for_cte else "table name", token)
             # Allow table names of the form "kub.pods"
             dot = tl.get(False)
-            if dot.ttype is not Punctuation or dot.value != ".":
+            if not dot or dot.ttype is not Punctuation or dot.value != ".":
                 tl.unget()
                 return token.value
             if for_cte:

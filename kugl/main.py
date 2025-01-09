@@ -8,8 +8,9 @@ import sys
 from sqlite3 import DatabaseError
 from typing import List
 
+from kugl.impl.parser import Query
 from kugl.impl.registry import Registry
-from kugl.impl.engine import Engine, Query, CHECK, NEVER_UPDATE, ALWAYS_UPDATE
+from kugl.impl.engine import Engine, CHECK, NEVER_UPDATE, ALWAYS_UPDATE
 from kugl.impl.config import UserInit, parse_file
 from kugl.util import Age, fail, debug_features, kugl_home, kube_home, ConfigPath, debugging, KuglError, kube_context
 
@@ -68,8 +69,8 @@ def main2(argv: List[str]):
     # Need the query schema for command line parsing.
     # FIXME: Move the namespace & cache flag out of the query
     rgy = Registry.get()
-    query = Query(sql=argv[-1])
-    schema_refs = {ref.schema_name for ref in query.table_refs}
+    query = Query(sql=argv[-1], default_schema="kubernetes")
+    schema_refs = {ref.schema_name for ref in query.tables}
     if len(schema_refs) == 0:
         schema = rgy.get_schema("empty")
     elif len(schema_refs) == 1:
@@ -103,8 +104,7 @@ def main2(argv: List[str]):
 
     engine = Engine(schema, args, cache_flag, init.settings)
     # FIXME bad reference to namespace
-    sql = query.sql_schemaless
-    print(engine.query_and_format(Query(sql=sql)))
+    print(engine.query_and_format(query))
 
 
 if __name__ == "__main__":

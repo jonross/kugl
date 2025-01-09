@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from tabulate import tabulate
 
 from .config import ResourceDef, Settings
+from .parser import Query
 from .registry import Schema, Resource
 from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, debugging, to_age, run, Age, KPath, \
     kube_context
@@ -25,28 +26,6 @@ from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, debuggi
 
 ALWAYS_UPDATE, CHECK, NEVER_UPDATE = 1, 2, 3
 CacheFlag = Literal[ALWAYS_UPDATE, CHECK, NEVER_UPDATE]
-
-
-class Query(BaseModel):
-    """A SQL query + query-related behaviors"""
-    sql: str
-
-    @property
-    def table_refs(self) -> Set["TableRef"]:
-        # Determine which tables are needed for the query by looking for symmbols that follow
-        # FROM and JOIN.  Some of these may be CTEs, so don't assume they're all availabie in
-        # Kubernetes, just pick out the ones we know about and let SQLite take care of
-        # "unknown table" errors.
-        # FIXME: use sqlparse package
-        sql = self.sql.replace("\n", " ")
-        refs = set(re.findall(r"(?<=from|join)\s+([.\w]+)", sql, re.IGNORECASE))
-        return {TableRef.parse(ref) for ref in refs}
-
-    @property
-    def sql_schemaless(self) -> str:
-        """Return the SQL query with schema hints removed."""
-        sql = self.sql.replace("\n", " ")
-        return re.sub(r"((from|join)\s+)[^.\s]+\.", r"\1", sql, flags=re.IGNORECASE)
 
 
 class TableRef(BaseModel):
@@ -99,7 +78,7 @@ class Engine:
         # Reconcile tables created / extended in the config file with tables defined in code, and
         # generate the table builders.
         tables = {}
-        for name in {t.name for t in query.table_refs}:
+        for name in {t.name for t in query.tables}:
             # Some of the named tables may be CTEs, so it's not an error if we can't create
             # them.  If actually missing when we reach the query, let SQLite issue the error.
             if (table := self.schema.table_builder(name)) is not None:
@@ -135,7 +114,7 @@ class Engine:
             table.build(self.db, self.data[table.resource])
 
         column_names = []
-        rows = self.db.query(query.sql, names=column_names)
+        rows = self.db.query(query.rebuilt, names=column_names)
         # %g is susceptible to outputting scientific notation, which we don't want.
         # but %f always outputs trailing zeros, which we also don't want.
         # So turn every value x in each row into an int if x == float(int(x))

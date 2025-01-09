@@ -169,10 +169,10 @@ def assert_query(sql: str, expected: Union[str, list], all_ns: bool = False):
     args = SimpleNamespace(all_namespaces=all_ns, namespace=None)
     engine = Engine(schema, args, ALWAYS_UPDATE, Settings())
     if isinstance(expected, str):
-        actual = engine.query_and_format(Query(sql=sql))
+        actual = engine.query_and_format(Query(sql=sql, default_schema="kubernetes"))
         assert actual.strip() == textwrap.dedent(expected).strip()
     else:
-        actual, _ = engine.query(Query(sql=sql))
+        actual, _ = engine.query(Query(sql=sql, default_schema="kubernetes"))
         assert actual == expected
 
 

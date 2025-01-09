@@ -2,7 +2,7 @@ from typing import Optional
 
 import pytest
 
-from kugl.impl.parser import KQuery
+from kugl.impl.parser import Query
 
 
 @pytest.mark.parametrize("sql,error,ctes,tables", [
@@ -27,8 +27,8 @@ from kugl.impl.parser import KQuery
 def test_parsing(sql, error: Optional[Exception], ctes: list[str], tables: list[str]):
     if error is not None:
         with pytest.raises(ValueError, match=error):
-            KQuery(sql, "kub")
+            Query(sql, "kub")
     else:
-        q = KQuery(sql, "kub")
+        q = Query(sql, "kub")
         assert q.ctes == set(ctes)
         assert {str(t) for t in q.tables} == set(tables)
