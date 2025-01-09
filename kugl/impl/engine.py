@@ -28,27 +28,6 @@ ALWAYS_UPDATE, CHECK, NEVER_UPDATE = 1, 2, 3
 CacheFlag = Literal[ALWAYS_UPDATE, CHECK, NEVER_UPDATE]
 
 
-class TableRef(BaseModel):
-    """A reference to a table in a query."""
-    model_config = ConfigDict(frozen=True)
-    schema_name: str = Field(..., alias="schema")  # e.g. "kubernetes"
-    name: str  # e.g. "pods"
-
-    @classmethod
-    def parse(cls, ref: str):
-        """Parse a table reference of the form "pods" or "kubernetes.pods".
-        SQLite doesn't actually support schemas, so the schema is just a hint.
-        We replace the dot with an underscore to make it a valid table name."""
-        parts = ref.split(".")
-        if len(parts) == 1:
-            return cls(schema="kubernetes", name=parts[0])
-        if len(parts) == 2:
-            if parts[0] == "k8s":
-                parts[0] = "kubernetes"
-            return cls(schema=parts[0], name=parts[1])
-        fail(f"Invalid table reference: {ref}")
-
-
 class Engine:
 
     def __init__(self, schema: Schema, args, cache_flag: CacheFlag, settings: Settings):
