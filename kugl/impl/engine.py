@@ -30,7 +30,6 @@ CacheFlag = Literal[ALWAYS_UPDATE, CHECK, NEVER_UPDATE]
 class Query(BaseModel):
     """A SQL query + query-related behaviors"""
     sql: str
-    cache_flag: CacheFlag = ALWAYS_UPDATE
 
     @property
     def table_refs(self) -> Set["TableRef"]:
@@ -73,12 +72,13 @@ class TableRef(BaseModel):
 
 class Engine:
 
-    def __init__(self, schema: Schema, args, settings: Settings):
+    def __init__(self, schema: Schema, args, cache_flag: CacheFlag, settings: Settings):
         """
         :param config: the parsed user settings file
         """
         self.schema = schema
         self.args = args
+        self.cache_flag = cache_flag
         self.settings = settings
         self.cache = DataCache(kugl_home() / "cache", self.settings.cache_timeout)
         # Maps resource name e.g. "pods" to the response from "kubectl get pods -o json"
@@ -109,7 +109,7 @@ class Engine:
         resources_used = self.schema.resources_used(tables.values())
         for r in resources_used:
             r.handle_cli_options(self.args)
-        refreshable, max_staleness = self.cache.advise_refresh(resources_used, query.cache_flag)
+        refreshable, max_staleness = self.cache.advise_refresh(resources_used, self.cache_flag)
         if not self.settings.reckless and max_staleness is not None:
             print(f"(Data may be up to {max_staleness} seconds old.)", file=sys.stderr)
             clock.CLOCK.sleep(0.5)

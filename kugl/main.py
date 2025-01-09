@@ -101,10 +101,10 @@ def main2(argv: List[str]):
     if debug := debugging("init"):
         debug(f"settings: {init.settings}")
 
-    engine = Engine(schema, args, init.settings)
+    engine = Engine(schema, args, cache_flag, init.settings)
     # FIXME bad reference to namespace
     sql = query.sql_schemaless
-    print(engine.query_and_format(Query(sql=sql, cache_flag=cache_flag)))
+    print(engine.query_and_format(Query(sql=sql)))
 
 
 if __name__ == "__main__":
