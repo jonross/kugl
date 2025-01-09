@@ -1,5 +1,6 @@
 from collections import deque, namedtuple
 from dataclasses import dataclass
+from typing import Optional
 
 import sqlparse
 from sqlparse.sql import Token
@@ -22,8 +23,7 @@ class TableRef:
 
 
 class Tokens:
-    """Hold a list of sqlparse tokens and provide a get/unget interface.
-    This uses two deques so it allows unget of multiple tokens, or insertion of new tokens."""
+    """Hold a list of sqlparse tokens and provide a means to scan with or without skipping whitespace."""
 
     def __init__(self, tokens):
         self._unseen = deque(tokens)
@@ -45,11 +45,6 @@ class Tokens:
                 self._seen_nowhite.append(token)
             return token
         return None
-
-    def unget(self):
-        """Put the last token back."""
-        if self._seen:
-            self._unseen.appendleft(self._seen.pop())
 
     def expected(self, expected: str, got: Token):
         print("got", got)
@@ -99,7 +94,7 @@ class Query:
                 # Look for FROM, JOIN, or e.g. OUTER JOIN which sqlparse represents as one keyword
                 value = token.value.lower()
                 if token.is_keyword and (value in ("from", "join") or value.endswith(" join")):
-                    table_name = get_identifier(tl.get(), False)
+                    table_name = get_identifier(None, False)
                     if table_name in self.ctes:
                         pass  # nothing to do, name is already defined
                     elif "." in table_name:
@@ -121,9 +116,10 @@ class Query:
             #   WITH [RECURSIVE] cte_name AS [NOT [MATERIALIZED]] (select ...)
             if (token := tl.get()) is None:
                 tl.expected("CTE name", token)
-            if token.value.lower() == "recursive":
-                token = tl.get()
-            cte_name = get_identifier(token, True)
+            if token.is_keyword and token.value.lower == "recursive":
+                cte_name = get_identifier(None, True)
+            else:
+                cte_name = get_identifier(token, True)
             self.ctes.add(cte_name)
             token = tl.get()
             if not token or not token.is_keyword or token.value.lower() != "as":
@@ -151,13 +147,17 @@ class Query:
             else:
                 scan_statement()
 
-        def get_identifier(token: Token, for_cte: bool):
-            if token.ttype is not Name:
+        def get_identifier(token: Optional[Token], for_cte: bool):
+            if not token:
+                token = tl.get()
+            if not token or token.ttype is not Name:
                 tl.expected("CTE name" if for_cte else "table name", token)
             # Allow table names of the form "kub.pods"
             dot = tl.get(False)
             if not dot or dot.ttype is not Punctuation or dot.value != ".":
-                tl.unget()
+                # Unqualified name; if not for CTE, qualify it.
+                if not for_cte and token.value not in self.ctes:
+                    token.value = f"{self.default_schema}.{token.value}"
                 return token.value
             if for_cte:
                 raise ValueError("CTE names may not have schema prefixes")

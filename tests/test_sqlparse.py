@@ -11,7 +11,7 @@ from kugl.impl.parser import Query
     ("""with mypods blah""", "expected keyword AS after <with mypods> but got <blah>", [], []),
     ("""with mypods as materialized ()""", None, ["mypods"], []),
     ("""with mypods as not materialized ()""", None, ["mypods"], []),
-    ("""with mypods as not from ()""", "expected keyword MATERIALIZED after <with mypods as not> but got <from>", [], []),
+    ("""with mypods as not group ()""", "expected keyword MATERIALIZED after <with mypods as not> but got <group>", [], []),
     ("""with mypods as (select 1) select 1""", None, ["mypods"], []),
     ("""with mypods as (select 1), myjobs as (()) select 1""", None, ["mypods", "myjobs"], []),
     ("""with my.pods as (select 1) select 1""", "CTE names may not have schema prefixes", [], []),
