@@ -73,7 +73,7 @@ class Query:
         self.ctes = set()
         self.tables = set()
         self.default_schema = default_schema
-        s = sqlparse.parse(sql.lower())
+        s = sqlparse.parse(sql)
         if len(s) != 1:
             raise ValueError("SQL must contain exactly one statement")
         self._tokens = Tokens(s[0].flatten())
@@ -92,12 +92,13 @@ class Query:
             has already read the opening parenthesis."""
             if (token := tl.get()) is None:
                 return
-            if token.is_keyword and token.value == "with":
+            if token.is_keyword and token.value.lower() == "with":
                 scan_cte()
             # Zero or more CTEs have been read, select should follow.
             while (token := tl.get()) is not None:
                 # Look for FROM, JOIN, or e.g. OUTER JOIN which sqlparse represents as one keyword
-                if token.is_keyword and (token.value in ("from", "join") or token.value.endswith(" join")):
+                value = token.value.lower()
+                if token.is_keyword and (value in ("from", "join") or value.endswith(" join")):
                     table_name = get_identifier(tl.get(), False)
                     if table_name in self.ctes:
                         pass  # nothing to do, name is already defined
@@ -120,21 +121,22 @@ class Query:
             #   WITH [RECURSIVE] cte_name AS [NOT [MATERIALIZED]] (select ...)
             if (token := tl.get()) is None:
                 tl.expected("CTE name", token)
-            if token.value == "recursive":
+            if token.value.lower() == "recursive":
                 token = tl.get()
             cte_name = get_identifier(token, True)
             self.ctes.add(cte_name)
             token = tl.get()
-            if not token or not token.is_keyword or token.value != "as":
+            if not token or not token.is_keyword or token.value.lower() != "as":
                 tl.expected("keyword AS", token)
             token = tl.get()
             # This is a bug, sqlparser thinks MATERIALIZED isn't a keyword
             if token and token.ttype in (Name, Keyword):
-                if token.value == "materialized":
+                value = token.value.lower()
+                if value == "materialized":
                     token = tl.get()
-                elif token.value == "not":
+                elif value == "not":
                     token = tl.get()
-                    if not token or token.ttype not in (Name, Keyword) or token.value != "materialized":
+                    if not token or token.ttype not in (Name, Keyword) or token.value.lower() != "materialized":
                         tl.expected("keyword MATERIALIZED", token)
                     token = tl.get()
             if not token or token.ttype is not Punctuation or token.value != "(":
@@ -162,7 +164,7 @@ class Query:
             suffix = tl.get(False)
             if suffix.ttype is not Name:
                 raise ValueError(f"invalid schema.table name: '{token.value}.{suffix.value}'")
-            return f"{token.value}.{suffix.value}"
+            return f"{token.value.lower()}.{suffix.value.lower()}"
 
         scan_statement()
 
