@@ -1,9 +1,24 @@
 from collections import deque, namedtuple
+from dataclasses import dataclass
+
 import sqlparse
 from sqlparse.sql import Token
-from sqlparse.tokens import Name, Comment, Punctuation
+from sqlparse.tokens import Name, Comment, Punctuation, Keyword
 
-TableRef = namedtuple("TableRef", ["schema", "name"])
+
+@dataclass
+class TableRef:
+    schema: str
+    name: str
+
+    def __hash__(self):
+        return hash((self.schema, self.name))
+
+    def __eq__(self, other):
+        return self.schema == other.schema and self.name == other.name
+
+    def __str__(self):
+        return f"{self.schema}.{self.name}"
 
 
 class Tokens:
@@ -36,8 +51,9 @@ class Tokens:
         if self._seen:
             self._unseen.appendleft(self._seen.pop())
 
-    def expected(self, expected: str, but_got: str):
-        raise ValueError(f"expected {expected} after <{self.context}> but got <{but_got}>")
+    def expected(self, expected: str, got: Token):
+        print("got", got)
+        raise ValueError(f"expected {expected} after <{self.context}> but got <{got and got.value}>")
 
     @property
     def context(self):
@@ -64,12 +80,14 @@ class KQuery:
         def scan_statement():
             """Scan tokens at the root of a query string or inside ( ), the latter assuming the caller
             has already read the opening parenthesis."""
-            token = tl.get()
+            if (token := tl.get()) is None:
+                return
             if token.is_keyword and token.value == "with":
                 scan_cte()
             # Zero or more CTEs have been read, select should follow.
             while (token := tl.get()) is not None:
-                if token.is_keyword and token.value in ("from", "join"):
+                # Look for FROM, JOIN, or e.g. OUTER JOIN which sqlparse represents as one keyword
+                if token.is_keyword and (token.value in ("from", "join") or token.value.endswith(" join")):
                     table_name = get_identifier(tl.get(), False)
                     if table_name in self.ctes:
                         pass  # nothing to do, name is already defined
@@ -90,47 +108,51 @@ class KQuery:
             Recursively invokes scan_statement for the body, then scan_ctes for additional CTEs."""
             # Syntax is
             #   WITH [RECURSIVE] cte_name AS [NOT [MATERIALIZED]] (select ...)
-            t = tl.get()
-            if t.value == "recursive":
-                t = tl.get()
-            cte_name = get_identifier(t, True)
+            if (token := tl.get()) is None:
+                tl.expected("CTE name", token)
+            if token.value == "recursive":
+                token = tl.get()
+            cte_name = get_identifier(token, True)
             self.ctes.add(cte_name)
-            t = tl.get()
-            if not t.is_keyword or t.value != "as":
-                tl.expected("keyword AS", t.value)
-            t = tl.get()
-            if t.ttype is Name:
-                if t.value == "materialized":
-                    t = tl.get()
-                elif t.value == "not":
-                    t = tl.get()
-                    if t.ttype is not Name or t.value != "materialized":
-                        tl.expected("keyword MATERIALIZED", t.value)
-                    t = tl.get()
-            if t.ttype is not Punctuation or t.value != "(":
-                tl.expected("CTE body", t.value)
+            token = tl.get()
+            if not token or not token.is_keyword or token.value != "as":
+                tl.expected("keyword AS", token)
+            token = tl.get()
+            # This is a bug, sqlparser thinks MATERIALIZED isn't a keyword
+            if token and token.ttype in (Name, Keyword):
+                if token.value == "materialized":
+                    token = tl.get()
+                elif token.value == "not":
+                    token = tl.get()
+                    if not token or token.ttype not in (Name, Keyword) or token.value != "materialized":
+                        tl.expected("keyword MATERIALIZED", token)
+                    token = tl.get()
+            if not token or token.ttype is not Punctuation or token.value != "(":
+                tl.expected("CTE body", token)
             # Get the select statement inside ( ) then see if there is a comma for another CTE.
             scan_statement()
-            t = tl.get()
-            if t.ttype is Punctuation and t.value == ",":
+            token = tl.get()
+            if not token:
+                return
+            if token.ttype is Punctuation and token.value == ",":
                 scan_cte()
             else:
                 scan_statement()
 
-        def get_identifier(t: Token, for_cte: bool):
-            if t.ttype is not Name:
-                tl.expected("CTE name" if for_cte else "table name", t.value)
+        def get_identifier(token: Token, for_cte: bool):
+            if token.ttype is not Name:
+                tl.expected("CTE name" if for_cte else "table name", token)
             # Allow table names of the form "kub.pods"
             dot = tl.get(False)
             if dot.ttype is not Punctuation or dot.value != ".":
                 tl.unget()
-                return t.value
+                return token.value
             if for_cte:
                 raise ValueError("CTE names may not have schema prefixes")
             suffix = tl.get(False)
             if suffix.ttype is not Name:
-                raise ValueError(f"invalid schema.table name: '{t.value}.{suffix.value}'")
-            return f"{t.value}.{suffix.value}"
+                raise ValueError(f"invalid schema.table name: '{token.value}.{suffix.value}'")
+            return f"{token.value}.{suffix.value}"
 
         scan_statement()
 
