@@ -6,7 +6,7 @@ import sqlparse
 from sqlparse.sql import Token
 from sqlparse.tokens import Name, Comment, Punctuation, Keyword
 
-from kugl.util.sqlite import fqtn
+from kugl.util import fqtn
 
 
 @dataclass

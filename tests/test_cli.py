@@ -10,8 +10,7 @@ import pytest
 from kugl.impl.config import Settings
 from kugl.impl.engine import CHECK, ALWAYS_UPDATE, NEVER_UPDATE
 from kugl.main import main1, parse_args
-from kugl.util import KuglError, Age
-from kugl.util.sqlite import fqtn
+from kugl.util import KuglError, Age, fqtn
 
 
 def test_enforce_one_cache_option(test_home):

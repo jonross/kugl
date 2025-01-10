@@ -9,8 +9,7 @@ import textwrap
 import pytest
 
 from kugl.main import main1
-from kugl.util import KuglError, features_debugged
-from kugl.util.sqlite import fqtn
+from kugl.util import KuglError, features_debugged, fqtn
 from .testing import kubectl_response, assert_query, assert_by_line
 
 

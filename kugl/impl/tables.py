@@ -12,8 +12,7 @@ from .config import ColumnDef, ExtendTable, CreateTable
 
 # TODO: make abstract
 # TODO: completely sever from user configs
-from ..util import fail, debugging
-from ..util.sqlite import fqtn
+from ..util import fail, debugging, fqtn
 
 
 class TableDef(BaseModel):
