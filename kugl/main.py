@@ -1,17 +1,18 @@
 """
 Command-line entry point.
 """
-
+import argparse
 import os
 from argparse import ArgumentParser
 import sys
 from sqlite3 import DatabaseError
-from typing import List
+from types import SimpleNamespace
+from typing import List, Union
 
 from kugl.impl.parser import Query
 from kugl.impl.registry import Registry
-from kugl.impl.engine import Engine, CHECK, NEVER_UPDATE, ALWAYS_UPDATE
-from kugl.impl.config import UserInit, parse_file
+from kugl.impl.engine import Engine, CHECK, NEVER_UPDATE, ALWAYS_UPDATE, CacheFlag
+from kugl.impl.config import UserInit, parse_file, Settings
 from kugl.util import Age, fail, debug_features, kugl_home, kube_home, ConfigPath, debugging, KuglError, kube_context
 
 # Register built-ins immediately because they're needed for command-line parsing
@@ -68,43 +69,46 @@ def main2(argv: List[str]):
 
     # Need the query schema for command line parsing.
     # FIXME: Move the namespace & cache flag out of the query
-    rgy = Registry.get()
+    registry = Registry.get()
     query = Query(sql=argv[-1], default_schema="kubernetes")
     schema_refs = {ref.schema_name for ref in query.tables}
     if len(schema_refs) == 0:
-        schema = rgy.get_schema("empty")
+        schema = registry.get_schema("empty")
     elif len(schema_refs) == 1:
-        schema = rgy.get_schema(next(iter(schema_refs)))
+        schema = registry.get_schema(next(iter(schema_refs)))
     else:
         fail("Cross-schema query not implemented yet")
     schema.read_configs()
 
     ap = ArgumentParser()
+    registry.augment_cli(ap)
+    args, cache_flag = parse_args(argv, ap, init.settings)
+
+    if args.debug:
+        debug_features(args.debug.split(","))
+    if debug := debugging("init"):
+        debug(f"settings: {init.settings}")
+
+    engine = Engine(schema, args, cache_flag, init.settings)
+    print(engine.query_and_format(query))
+
+
+def parse_args(argv: list[str], ap: ArgumentParser, settings: Settings) -> tuple[argparse.Namespace, CacheFlag]:
+    """Add stock arguments to parser, parse the command line, and override settings."""
     ap.add_argument("-D", "--debug", type=str)
     ap.add_argument("-c", "--cache", default=False, action="store_true")
     ap.add_argument("-r", "--reckless", default=False, action="store_true")
     ap.add_argument("-t", "--timeout", type=str)
     ap.add_argument("-u", "--update", default=False, action="store_true")
-    rgy.augment_cli(ap)
     ap.add_argument("sql")
     args = ap.parse_args(argv)
-
     if args.cache and args.update:
         fail("Cannot use both -c/--cache and -u/--update")
-
-    cache_flag = ALWAYS_UPDATE if args.update else NEVER_UPDATE if args.cache else CHECK
-    if args.debug:
-        debug_features(args.debug.split(","))
-    if args.reckless:
-        init.settings.reckless = True
     if args.timeout:
-        init.settings.cache_timeout = Age(args.timeout)
-    if debug := debugging("init"):
-        debug(f"settings: {init.settings}")
-
-    engine = Engine(schema, args, cache_flag, init.settings)
-    # FIXME bad reference to namespace
-    print(engine.query_and_format(query))
+        settings.cache_timeout = Age(args.timeout)
+    if args.reckless:
+        settings.reckless = True
+    return args, (ALWAYS_UPDATE if args.update else NEVER_UPDATE if args.cache else CHECK)
 
 
 if __name__ == "__main__":
