@@ -130,8 +130,8 @@ def test_select_from_stdin(test_home, monkeypatch, capsys):
         Jill       43
     """)
     assert_by_line(err, """
-        sqlite: execute: CREATE TABLE people (name text, age integer)
-        sqlite: execute: INSERT INTO people VALUES(?, ?)
-        sqlite: query: SELECT name, age FROM people
+        sqlite: execute: CREATE TABLE hr__people (name text, age integer)
+        sqlite: execute: INSERT INTO hr__people VALUES(?, ?)
+        sqlite: query: SELECT name, age FROM hr__people
     """)
 

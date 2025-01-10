@@ -173,7 +173,7 @@ class Schema(BaseModel):
         if builtin:
             return TableFromCode(builtin, extender)
         if creator:
-            return TableFromConfig(name, creator, extender)
+            return TableFromConfig(name, self.name, creator, extender)
 
     def resources_used(self, tables: Iterable[Table]) -> set[ResourceDef]:
         """Return the ResourceDefs used by the listed tables."""

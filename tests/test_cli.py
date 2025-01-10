@@ -21,7 +21,7 @@ def test_enforce_one_namespace_option(test_home):
 
 
 def test_no_such_table(test_home):
-    with pytest.raises(sqlite3.OperationalError, match="no such table: foo"):
+    with pytest.raises(sqlite3.OperationalError, match="no such table: kubernetes__foo"):
         main1(["select * from foo"])
 
 
