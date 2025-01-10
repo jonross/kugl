@@ -1,13 +1,14 @@
 """
 Tests for command-line options.
 """
-
+import re
 import sqlite3
 
 import pytest
 
 from kugl.main import main1
 from kugl.util import KuglError, features_debugged
+from kugl.util.sqlite import fqtn
 
 
 def test_enforce_one_cache_option(test_home):
@@ -21,7 +22,7 @@ def test_enforce_one_namespace_option(test_home):
 
 
 def test_no_such_table(test_home):
-    with pytest.raises(sqlite3.OperationalError, match="no such table: kubernetes__foo"):
+    with pytest.raises(sqlite3.OperationalError, match=re.escape(f"no such table: {fqtn('kubernetes', 'foo')}")):
         main1(["select * from foo"])
 
 

@@ -76,4 +76,4 @@ def fqtn(schema: str, table: str):
     Fully qualified table name combining schema name & table name.
     """
     # At the moment, we don't have multiple attached in-memory databases working, so fake it like this.
-    return f"{schema}__{table}"
+    return f"{schema}${table}"

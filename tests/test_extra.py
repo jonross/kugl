@@ -10,6 +10,7 @@ import pytest
 
 from kugl.main import main1
 from kugl.util import KuglError, features_debugged
+from kugl.util.sqlite import fqtn
 from .testing import kubectl_response, assert_query, assert_by_line
 
 
@@ -129,9 +130,9 @@ def test_select_from_stdin(test_home, monkeypatch, capsys):
         Jim        42
         Jill       43
     """)
-    assert_by_line(err, """
-        sqlite: execute: CREATE TABLE hr__people (name text, age integer)
-        sqlite: execute: INSERT INTO hr__people VALUES(?, ?)
-        sqlite: query: SELECT name, age FROM hr__people
+    assert_by_line(err, f"""
+        sqlite: execute: CREATE TABLE {fqtn("hr", "people")} (name text, age integer)
+        sqlite: execute: INSERT INTO {fqtn("hr", "people")} VALUES(?, ?)
+        sqlite: query: SELECT name, age FROM {fqtn("hr", "people")}
     """)
 
