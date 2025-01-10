@@ -14,7 +14,7 @@ import yaml
 from pydantic import Field, BaseModel, ConfigDict
 
 from kugl.impl.config import Settings
-from kugl.impl.engine import Engine, Query
+from kugl.impl.engine import Engine, Query, ALWAYS_UPDATE
 from kugl.impl.registry import Registry
 from kugl.util import to_utc, UNIT_TEST_TIMEBASE
 
@@ -167,12 +167,12 @@ def assert_query(sql: str, expected: Union[str, list], all_ns: bool = False):
     """
     schema = Registry.get().get_schema("kubernetes").read_configs()
     args = SimpleNamespace(all_namespaces=all_ns, namespace=None)
-    engine = Engine(schema, args, Settings())
+    engine = Engine(schema, args, ALWAYS_UPDATE, Settings())
     if isinstance(expected, str):
-        actual = engine.query_and_format(Query(sql=sql))
+        actual = engine.query_and_format(Query(sql=sql, default_schema="kubernetes"))
         assert actual.strip() == textwrap.dedent(expected).strip()
     else:
-        actual, _ = engine.query(Query(sql=sql))
+        actual, _ = engine.query(Query(sql=sql, default_schema="kubernetes"))
         assert actual == expected
 
 

@@ -1,13 +1,17 @@
 """
 Tests for command-line options.
 """
-
+import re
 import sqlite3
+from argparse import ArgumentParser
 
 import pytest
 
-from kugl.main import main1
-from kugl.util import KuglError, features_debugged
+from kugl.impl.config import Settings
+from kugl.impl.engine import CHECK, ALWAYS_UPDATE, NEVER_UPDATE
+from kugl.main import main1, parse_args
+from kugl.util import KuglError, Age
+from kugl.util.sqlite import fqtn
 
 
 def test_enforce_one_cache_option(test_home):
@@ -21,7 +25,7 @@ def test_enforce_one_namespace_option(test_home):
 
 
 def test_no_such_table(test_home):
-    with pytest.raises(sqlite3.OperationalError, match="no such table: foo"):
+    with pytest.raises(sqlite3.OperationalError, match=re.escape(f"no such table: {fqtn('kubernetes', 'foo')}")):
         main1(["select * from foo"])
 
 
@@ -74,15 +78,20 @@ def test_simple_shortcut(test_home, capsys):
     assert out == "  1    2\n" * 2
 
 
-@pytest.mark.skip  # FIXME re-enable without return_config hack
-def test_cli_args_override_settings(test_home, capsys):
-    with features_debugged("init"):
-        init, _ = main1(["select 1"], return_config=True)
-    assert init.settings.cache_timeout == Age(120)
-    assert init.settings.reckless == False
-    out, err = capsys.readouterr()
-    with features_debugged("init"):
-        init, _ = main1(["-t 5", "-r", "select 1"], return_config=True)
-    assert init.settings.cache_timeout == Age(5)
-    assert init.settings.reckless == True
-
+@pytest.mark.parametrize("argv,expected_flag,age,reckless,error", [
+    (["-u", "select 1"], ALWAYS_UPDATE, Age(120), False, None),
+    (["-t", "5", "select 1"], CHECK, Age(5), False, None),
+    (["-c", "-r", "select 1"], NEVER_UPDATE, Age(120), True, None),
+    (["-c", "-u", "select 1"], None, None, None, "Cannot use both -c/--cache and -u/--update"),
+])
+def test_parse_args(test_home, argv, expected_flag, age, reckless, error):
+    ap = ArgumentParser()
+    settings = Settings()
+    if error:
+        with pytest.raises(KuglError, match=error):
+            parse_args(argv, ap, settings)
+    else:
+        args, actual_flag = parse_args(argv, ap, settings)
+        assert actual_flag == expected_flag
+        assert settings.cache_timeout == age
+        assert settings.reckless == reckless

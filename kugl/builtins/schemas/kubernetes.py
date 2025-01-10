@@ -102,7 +102,7 @@ class KubernetesResource(Resource):
 class NodesTable:
 
     @property
-    def schema(self):
+    def ddl(self):
         return """
             name TEXT,
             uid TEXT,
@@ -129,7 +129,7 @@ class NodesTable:
 class PodsTable:
 
     @property
-    def schema(self):
+    def ddl(self):
         return """
             name TEXT,
             uid TEXT,
@@ -170,7 +170,7 @@ class PodsTable:
 class JobsTable:
 
     @property
-    def schema(self):
+    def ddl(self):
         return """
             name TEXT,
             uid TEXT,
@@ -201,7 +201,7 @@ class LabelsTable:
     """Base class for all built-in label tables; subclasses need only define UID_FIELD."""
 
     @property
-    def schema(self):
+    def ddl(self):
         return f"""
             {self.UID_FIELD} TEXT,
             key TEXT,

@@ -13,6 +13,7 @@ from .config import ColumnDef, ExtendTable, CreateTable
 # TODO: make abstract
 # TODO: completely sever from user configs
 from ..util import fail, debugging
+from ..util.sqlite import fqtn
 
 
 class TableDef(BaseModel):
@@ -29,16 +30,18 @@ class TableDef(BaseModel):
 class Table:
     """The engine-level representation of a table, independent of the config file format"""
 
-    def __init__(self, name: str, resource: str, schema: str, extras: list[ColumnDef]):
+    def __init__(self, name: str, schema_name, resource: str, ddl: str, extras: list[ColumnDef]):
         """
         :param name: the table name, e.g. "pods"
+        :param name: the schema name, e.g. "kubernetes"
         :param resource: the Kubernetes resource type, e.g. "pods"
-        :param schema: the SQL schema, e.g. "name TEXT, age INTEGER"
+        :param ddl: SQL for creating the table, e.g. "name TEXT, age INTEGER"
         :param extras: extra column definitions from user configs (not from Python-defined tables)
         """
         self.name = name
+        self.schema_name = schema_name
         self.resource = resource
-        self.schema = schema
+        self.ddl = ddl
         self.extras = extras
 
     def build(self, db, kube_data: dict):
@@ -48,7 +51,7 @@ class Table:
         :param kube_data: the JSON data from 'kubectl get'
         """
         context = RowContext(kube_data)
-        db.execute(f"CREATE TABLE {self.name} ({self.schema})")
+        db.execute(f"CREATE TABLE {fqtn(self.schema_name, self.name)} ({self.ddl})")
         item_rows = list(self.make_rows(context))
         if item_rows:
             if self.extras:
@@ -57,10 +60,10 @@ class Table:
                 extend_row = lambda item, row: row
             rows = [extend_row(item, row) for item, row in item_rows]
             placeholders = ", ".join("?" * len(rows[0]))
-            db.execute(f"INSERT INTO {self.name} VALUES({placeholders})", rows)
+            db.execute(f"INSERT INTO {fqtn(self.schema_name, self.name)} VALUES({placeholders})", rows)
 
     @staticmethod
-    def column_schema(columns: list[ColumnDef]) -> str:
+    def column_ddl(columns: list[ColumnDef]) -> str:
         return ", ".join(f"{c.name} {c._sqltype}" for c in columns)
 
 
@@ -73,15 +76,15 @@ class TableFromCode(Table):
         :param extender: an ExtendTable object from the extend: section of a user config file
         """
         impl = table_def.cls()
-        schema = impl.schema
+        ddl = impl.ddl
         if extender:
-            schema += ", " + Table.column_schema(extender.columns)
+            ddl += ", " + Table.column_ddl(extender.columns)
             extras = extender.columns
         else:
             extras = []
         if debug:= debugging("schema"):
-            debug(f"table {table_def.name} schema: {schema}")
-        super().__init__(table_def.name, table_def.resource, schema, extras)
+            debug(f"table {table_def.name}: {ddl}")
+        super().__init__(table_def.name, table_def.schema_name, table_def.resource, ddl, extras)
         self.impl = impl
 
     def make_rows(self, context: "RowContext") -> list[tuple[dict, tuple]]:
@@ -92,7 +95,7 @@ class TableFromCode(Table):
 class TableFromConfig(Table):
     """A table created from a create: section in a user config file, rather than in Python"""
 
-    def __init__(self, name: str, creator: CreateTable, extender: Optional[ExtendTable]):
+    def __init__(self, name: str, schema_name: str, creator: CreateTable, extender: Optional[ExtendTable]):
         """
         :param name: the table name, e.g. "pods"
         :param creator: a CreateTable object from the create: section of a user config file
@@ -103,12 +106,12 @@ class TableFromConfig(Table):
             self.itemizer = lambda data: data["items"]
         else:
             self.itemizer = lambda data: self._itemize(creator.row_source, data)
-        schema = Table.column_schema(creator.columns)
+        schema = Table.column_ddl(creator.columns)
         extras = creator.columns
         if extender:
-            schema += ", " + Table.column_schema(extender.columns)
+            schema += ", " + Table.column_ddl(extender.columns)
             extras += extender.columns
-        super().__init__(name, creator.resource, schema, extras)
+        super().__init__(name, schema_name, creator.resource, schema, extras)
         self.row_source = creator.row_source
 
     def make_rows(self, context: "RowContext") -> list[tuple[dict, tuple]]:

@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from tabulate import tabulate
 
 from .config import ResourceDef, Settings
+from .parser import Query
 from .registry import Schema, Resource
 from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, debugging, to_age, run, Age, KPath, \
     kube_context
@@ -27,58 +28,15 @@ ALWAYS_UPDATE, CHECK, NEVER_UPDATE = 1, 2, 3
 CacheFlag = Literal[ALWAYS_UPDATE, CHECK, NEVER_UPDATE]
 
 
-class Query(BaseModel):
-    """A SQL query + query-related behaviors"""
-    sql: str
-    cache_flag: CacheFlag = ALWAYS_UPDATE
-
-    @property
-    def table_refs(self) -> Set["TableRef"]:
-        # Determine which tables are needed for the query by looking for symmbols that follow
-        # FROM and JOIN.  Some of these may be CTEs, so don't assume they're all availabie in
-        # Kubernetes, just pick out the ones we know about and let SQLite take care of
-        # "unknown table" errors.
-        # FIXME: use sqlparse package
-        sql = self.sql.replace("\n", " ")
-        refs = set(re.findall(r"(?<=from|join)\s+([.\w]+)", sql, re.IGNORECASE))
-        return {TableRef.parse(ref) for ref in refs}
-
-    @property
-    def sql_schemaless(self) -> str:
-        """Return the SQL query with schema hints removed."""
-        sql = self.sql.replace("\n", " ")
-        return re.sub(r"((from|join)\s+)[^.\s]+\.", r"\1", sql, flags=re.IGNORECASE)
-
-
-class TableRef(BaseModel):
-    """A reference to a table in a query."""
-    model_config = ConfigDict(frozen=True)
-    schema_name: str = Field(..., alias="schema")  # e.g. "kubernetes"
-    name: str  # e.g. "pods"
-
-    @classmethod
-    def parse(cls, ref: str):
-        """Parse a table reference of the form "pods" or "kubernetes.pods".
-        SQLite doesn't actually support schemas, so the schema is just a hint.
-        We replace the dot with an underscore to make it a valid table name."""
-        parts = ref.split(".")
-        if len(parts) == 1:
-            return cls(schema="kubernetes", name=parts[0])
-        if len(parts) == 2:
-            if parts[0] == "k8s":
-                parts[0] = "kubernetes"
-            return cls(schema=parts[0], name=parts[1])
-        fail(f"Invalid table reference: {ref}")
-
-
 class Engine:
 
-    def __init__(self, schema: Schema, args, settings: Settings):
+    def __init__(self, schema: Schema, args, cache_flag: CacheFlag, settings: Settings):
         """
         :param config: the parsed user settings file
         """
         self.schema = schema
         self.args = args
+        self.cache_flag = cache_flag
         self.settings = settings
         self.cache = DataCache(kugl_home() / "cache", self.settings.cache_timeout)
         # Maps resource name e.g. "pods" to the response from "kubectl get pods -o json"
@@ -99,7 +57,7 @@ class Engine:
         # Reconcile tables created / extended in the config file with tables defined in code, and
         # generate the table builders.
         tables = {}
-        for name in {t.name for t in query.table_refs}:
+        for name in {t.name for t in query.tables}:
             # Some of the named tables may be CTEs, so it's not an error if we can't create
             # them.  If actually missing when we reach the query, let SQLite issue the error.
             if (table := self.schema.table_builder(name)) is not None:
@@ -109,7 +67,7 @@ class Engine:
         resources_used = self.schema.resources_used(tables.values())
         for r in resources_used:
             r.handle_cli_options(self.args)
-        refreshable, max_staleness = self.cache.advise_refresh(resources_used, query.cache_flag)
+        refreshable, max_staleness = self.cache.advise_refresh(resources_used, self.cache_flag)
         if not self.settings.reckless and max_staleness is not None:
             print(f"(Data may be up to {max_staleness} seconds old.)", file=sys.stderr)
             clock.CLOCK.sleep(0.5)
@@ -135,7 +93,7 @@ class Engine:
             table.build(self.db, self.data[table.resource])
 
         column_names = []
-        rows = self.db.query(query.sql, names=column_names)
+        rows = self.db.query(query.rebuilt, names=column_names)
         # %g is susceptible to outputting scientific notation, which we don't want.
         # but %f always outputs trailing zeros, which we also don't want.
         # So turn every value x in each row into an int if x == float(int(x))
