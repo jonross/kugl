@@ -6,6 +6,8 @@ import sqlparse
 from sqlparse.sql import Token
 from sqlparse.tokens import Name, Comment, Punctuation, Keyword
 
+from kugl.util.sqlite import fqtn
+
 
 @dataclass
 class TableRef:
@@ -47,7 +49,6 @@ class Tokens:
         return None
 
     def expected(self, expected: str, got: Token):
-        print("got", got)
         raise ValueError(f"expected {expected} after <{self.context}> but got <{got and got.value}>")
 
     def join(self):
@@ -155,16 +156,27 @@ class Query:
             # Allow table names of the form "kub.pods"
             dot = tl.get(False)
             if not dot or dot.ttype is not Punctuation or dot.value != ".":
-                # Unqualified name; if not for CTE, qualify it.
-                if not for_cte and token.value not in self.ctes:
-                    token.value = f"{self.default_schema}.{token.value}"
-                return token.value
+                # Unqualified name
+                if for_cte or token.value in self.ctes:
+                    # It's a CTE, leave it alone
+                    return token.value
+                # It's a table name, modify in the query and qualify it for the caller.
+                result = token.value
+                token.value = fqtn(self.default_schema, token.value)
+                return result
             if for_cte:
                 raise ValueError("CTE names may not have schema prefixes")
             suffix = tl.get(False)
             if suffix.ttype is not Name:
                 raise ValueError(f"invalid schema.table name: '{token.value}.{suffix.value}'")
-            return f"{token.value.lower()}.{suffix.value.lower()}"
+            # Caller wants the dotted form ...
+            result = f"{token.value}.{suffix.value}"
+            # ... but query might not use it, so overwrite the name with the current multi-schema
+            # name convention.
+            token.value = fqtn(token.value, suffix.value)
+            dot.value = ""
+            suffix.value = ""
+            return result
 
         scan_statement()
 
