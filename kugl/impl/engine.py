@@ -6,6 +6,7 @@ See also tables.py
 
 from concurrent.futures import ThreadPoolExecutor
 import json
+from dataclasses import dataclass
 from pathlib import Path
 import re
 import sys
@@ -26,6 +27,22 @@ from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, debuggi
 
 ALWAYS_UPDATE, CHECK, NEVER_UPDATE = 1, 2, 3
 CacheFlag = Literal[ALWAYS_UPDATE, CHECK, NEVER_UPDATE]
+
+
+@dataclass
+class ResourceRef:
+    """The Engine needs to associate a Resource with a Schema in a hashable type, so this captures that."""
+    schema: Schema
+    resource: Resource
+
+    def __eq__(self, other):
+        return self.schema.name == other.schema.name and self.resource.name == other.resource.name
+
+    def __hash__(self):
+        return hash((self.schema.name, self.resource.name))
+
+    def __lt__(self, other):
+        return (self.schema.name, self.resource.name) < (other.schema.name, other.resource.name)
 
 
 class Engine:
@@ -117,7 +134,7 @@ class DataCache:
         dir.mkdir(parents=True, exist_ok=True)
         self.timeout = timeout
 
-    def advise_refresh(self, resources: Set[ResourceDef], flag: CacheFlag) -> Tuple[Set[str], int]:
+    def advise_refresh(self, resources: Set[ResourceRef], flag: CacheFlag) -> Tuple[Set[str], int]:
         """Determine which resources to use from cache or to refresh.
 
         :param resources: the resource types to consider
@@ -129,8 +146,8 @@ class DataCache:
             # Refresh everything and don't issue a "stale data" warning
             return resources, None
         # Find what's expired or missing
-        cacheable = {r for r in resources if r.cacheable}
-        non_cacheable = {r for r in resources if not r.cacheable}
+        cacheable = {r for r in resources if r.resource.cacheable}
+        non_cacheable = {r for r in resources if not r.resource.cacheable}
         # Sort here for deterministic behavior in unit tests
         cache_ages = {r: self.age(self.cache_path(r)) for r in sorted(cacheable)}
         expired = {r for r, age in cache_ages.items() if age is not None and age >= self.timeout.value}
@@ -142,24 +159,24 @@ class DataCache:
         refreshable.update(non_cacheable)
         if debug := debugging("cache"):
             # Sort here for deterministic output in unit tests
-            names = lambda res_list: "[" + " ".join(sorted(r.name for r in res_list)) + "]"
+            names = lambda res_list: "[" + " ".join(sorted(r.resource.name for r in res_list)) + "]"
             debug("requested", names(resources))
             debug("cacheable", names(cacheable))
             debug("non-cacheable", names(non_cacheable))
-            debug("ages", " ".join(f"{r.name}={age}" for r, age in sorted(cache_ages.items())))
+            debug("ages", " ".join(f"{r.resource.name}={age}" for r, age in sorted(cache_ages.items())))
             debug("expired", names(expired))
             debug("missing", names(missing))
             debug("refreshable", names(refreshable))
         return refreshable, max_age
 
-    def dump(self, resource: Resource, data: dict):
-        self.cache_path(resource).write_text(json.dumps(data))
+    def dump(self, ref: ResourceRef, data: dict):
+        self.cache_path(ref).write_text(json.dumps(data))
 
-    def load(self, resource: Resource) -> dict:
-        return json.loads(self.cache_path(resource).read_text())
+    def load(self, ref: ResourceRef) -> dict:
+        return json.loads(self.cache_path(ref).read_text())
 
-    def cache_path(self, resource) -> Path:
-        path = self.dir / resource.cache_path()
+    def cache_path(self, ref: ResourceRef) -> Path:
+        path = self.dir / ref.resource.cache_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
