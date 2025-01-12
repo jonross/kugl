@@ -109,12 +109,17 @@ def test_no_config_for_schema():
         assert_query("SELECT * from my.stuff", "")
 
 
-def test_invalid_table_ref():
-    """Ensure correct error for a bad schema or table name"""
-    with pytest.raises(KuglError, match=r"invalid schema name in 'oh@my.stuff' -- must contain"):
-        assert_query("SELECT * from oh@my.stuff", "")
-    with pytest.raises(KuglError, match=r"invalid table name in 'my.@stuff' -- must contain"):
-        assert_query("SELECT * from my.@stuff", "")
+@pytest.mark.parametrize("query,error", [
+    ("SELECT * FROM my.stuff", "no configurations found for schema 'my'"),
+    ("SELECT * FROM oh@my.stuff", "invalid schema name in 'oh@my.stuff' -- must contain"),
+    ("SELECT * FROM my.@stuff", "invalid table name in 'my.@stuff' -- must contain"),
+    ("SELECT * FROM main.stuff", "invalid schema name, must not be 'main', 'temp', or 'init'"),
+    ("SELECT * FROM temp.stuff", "invalid schema name, must not be 'main', 'temp', or 'init'"),
+    ("SELECT * FROM init.stuff", "invalid schema name, must not be 'main', 'temp', or 'init'"),
+])
+def test_bad_queries(query, error):
+    with pytest.raises(KuglError, match=error):
+        assert_query(query, "")
 
 
 def test_select_from_stdin(test_home, monkeypatch, capsys):

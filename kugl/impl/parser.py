@@ -16,6 +16,8 @@ class NamedTable:
     name: str
 
     def __post_init__(self):
+        if self.schema_name in ["main", "temp", "init"]:
+            fail("invalid schema name, must not be 'main', 'temp', or 'init'")
         if not TABLE_NAME_RE.match(self.name):
             fail(f"invalid table name in '{self}' -- must contain only letters, digits, and underscores")
         if self.schema_name and not TABLE_NAME_RE.match(self.schema_name):
