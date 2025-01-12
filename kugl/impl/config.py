@@ -146,7 +146,7 @@ class ExtendTable(BaseModel):
 class ResourceDef(BaseModel):
     """Holds one entry from the resources: list in a user config file.
 
-    This only ensures the .name and .cacheable attribtes are properly typed.  The remaining
+    This only ensures the .name and .cacheable attributes are properly typed.  The remaining
     validation happens in registry.py when we create a (possibly) schema-specific Resource.
     """
     model_config = ConfigDict(extra="allow")

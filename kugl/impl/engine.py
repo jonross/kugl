@@ -6,35 +6,53 @@ See also tables.py
 
 from concurrent.futures import ThreadPoolExecutor
 import json
+from dataclasses import dataclass
 from pathlib import Path
-import re
 import sys
 from typing import Tuple, Set, Optional, Literal
 
-import funcy as fn
-from pydantic import BaseModel, ConfigDict, Field
 from tabulate import tabulate
 
-from .config import ResourceDef, Settings
+from .config import Settings
 from .parser import Query
-from .registry import Schema, Resource
-from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, debugging, to_age, run, Age, KPath, \
-    kube_context
+from .registry import Schema, Resource, Registry
+from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, debugging, to_age, Age, KPath
+from .tables import Table
+
+DEFAULT_SCHEMA = "kubernetes"
 
 # Cache behaviors
 # TODO consider an enum
-
 ALWAYS_UPDATE, CHECK, NEVER_UPDATE = 1, 2, 3
 CacheFlag = Literal[ALWAYS_UPDATE, CHECK, NEVER_UPDATE]
 
 
+@dataclass
+class ResourceRef:
+    """The Engine needs to associate a Resource with a Schema in a hashable type, so this captures that."""
+    schema: Schema
+    resource: Resource
+
+    @property
+    def name(self):
+        return f"{self.schema.name}.{self.resource.name}"
+
+    def __eq__(self, other):
+        return self.schema.name == other.schema.name and self.resource.name == other.resource.name
+
+    def __hash__(self):
+        return hash((self.schema.name, self.resource.name))
+
+    def __lt__(self, other):
+        return (self.schema.name, self.resource.name) < (other.schema.name, other.resource.name)
+
+
 class Engine:
 
-    def __init__(self, schema: Schema, args, cache_flag: CacheFlag, settings: Settings):
+    def __init__(self, args, cache_flag: CacheFlag, settings: Settings):
         """
         :param config: the parsed user settings file
         """
-        self.schema = schema
         self.args = args
         self.cache_flag = cache_flag
         self.settings = settings
@@ -54,46 +72,63 @@ class Engine:
         :return: a tuple of (rows, column names)
         """
 
-        # Reconcile tables created / extended in the config file with tables defined in code, and
-        # generate the table builders.
-        tables = {}
-        for name in {t.name for t in query.tables}:
-            # Some of the named tables may be CTEs, so it's not an error if we can't create
-            # them.  If actually missing when we reach the query, let SQLite issue the error.
-            if (table := self.schema.table_builder(name)) is not None:
-                tables[name] = table
+        # Identify schemas named in the query and read their configs.
+        # If none named, assume the "kubernetes" schema.
+        schemas_named = query.schemas_named()
+        if schemas_named:
+            multi_schema = True
+            # Make a separate in-memory db per schema
+            for name in schemas_named:
+                self.db.execute(f"ATTACH DATABASE ':memory:' AS '{name}'")
+        else:
+            schemas_named = {"kubernetes"}
+            multi_schema = False
+        registry = Registry.get()
+        schemas = {name: registry.get_schema(name).read_configs() for name in schemas_named}
+
+        # Reconcile tables created / extended in the config file with tables defined in code,
+        # generate the table builders, and identify the required resources. Note: some of the
+        # named tables may be CTEs, so it's not a problem if we can't create them.  SQLite
+        # will say "no such table" when we issue the query.
+        tables: list[tuple[Table, ResourceRef]] = []
+        resource_refs: set[ResourceRef] = set()
+        for named_table in query.named_tables:
+            schema = schemas[named_table.schema_name or DEFAULT_SCHEMA]
+            if table := schema.table_builder(named_table.name):
+                resource_ref = ResourceRef(schema, schema.resource_for(table))
+                tables.append((table, resource_ref))
+                resource_refs.add(resource_ref)
 
         # Identify what to fetch vs what's stale or expired.
-        resources_used = self.schema.resources_used(tables.values())
-        for r in resources_used:
-            r.handle_cli_options(self.args)
-        refreshable, max_staleness = self.cache.advise_refresh(resources_used, self.cache_flag)
+        for r in resource_refs:
+            r.resource.handle_cli_options(self.args)
+        refreshable, max_staleness = self.cache.advise_refresh(resource_refs, self.cache_flag)
         if not self.settings.reckless and max_staleness is not None:
             print(f"(Data may be up to {max_staleness} seconds old.)", file=sys.stderr)
             clock.CLOCK.sleep(0.5)
 
-        # Retrieve resource data in parallel.  If fetching from Kubernetes, update the cache;
+        # Retrieve resource data in parallel.  If actually fetching externally, update the cache;
         # otherwise just read from the cache.
-        def fetch(resource: Resource):
+        def fetch(ref: ResourceRef):
             try:
-                if resource in refreshable:
-                    self.data[resource.name] = resource.get_objects()
-                    if resource.cacheable:
-                        self.cache.dump(resource, self.data[resource.name])
+                if ref in refreshable:
+                    self.data[ref.name] = ref.resource.get_objects()
+                    if ref.resource.cacheable:
+                        self.cache.dump(ref, self.data[ref.name])
                 else:
-                    self.data[resource.name] = self.cache.load(resource)
+                    self.data[ref.name] = self.cache.load(ref)
             except Exception as e:
-                fail(f"Failed to get {resource.name} objects: {e}")
+                fail(f"Failed to fetch resource {ref.name}: {e}")
         with ThreadPoolExecutor(max_workers=8) as pool:
-            for _ in pool.map(fetch, resources_used):
+            for _ in pool.map(fetch, resource_refs):
                 pass
 
         # Create tables in SQLite
-        for table in tables.values():
-            table.build(self.db, self.data[table.resource])
+        for table, resource_ref in tables:
+            table.build(self.db, self.data[resource_ref.name], multi_schema)
 
         column_names = []
-        rows = self.db.query(query.rebuilt, names=column_names)
+        rows = self.db.query(query.sql, names=column_names)
         # %g is susceptible to outputting scientific notation, which we don't want.
         # but %f always outputs trailing zeros, which we also don't want.
         # So turn every value x in each row into an int if x == float(int(x))
@@ -117,7 +152,7 @@ class DataCache:
         dir.mkdir(parents=True, exist_ok=True)
         self.timeout = timeout
 
-    def advise_refresh(self, resources: Set[ResourceDef], flag: CacheFlag) -> Tuple[Set[str], int]:
+    def advise_refresh(self, resources: Set[ResourceRef], flag: CacheFlag) -> Tuple[Set[str], int]:
         """Determine which resources to use from cache or to refresh.
 
         :param resources: the resource types to consider
@@ -129,8 +164,8 @@ class DataCache:
             # Refresh everything and don't issue a "stale data" warning
             return resources, None
         # Find what's expired or missing
-        cacheable = {r for r in resources if r.cacheable}
-        non_cacheable = {r for r in resources if not r.cacheable}
+        cacheable = {r for r in resources if r.resource.cacheable}
+        non_cacheable = {r for r in resources if not r.resource.cacheable}
         # Sort here for deterministic behavior in unit tests
         cache_ages = {r: self.age(self.cache_path(r)) for r in sorted(cacheable)}
         expired = {r for r, age in cache_ages.items() if age is not None and age >= self.timeout.value}
@@ -152,14 +187,14 @@ class DataCache:
             debug("refreshable", names(refreshable))
         return refreshable, max_age
 
-    def dump(self, resource: Resource, data: dict):
-        self.cache_path(resource).write_text(json.dumps(data))
+    def dump(self, ref: ResourceRef, data: dict):
+        self.cache_path(ref).write_text(json.dumps(data))
 
-    def load(self, resource: Resource) -> dict:
-        return json.loads(self.cache_path(resource).read_text())
+    def load(self, ref: ResourceRef) -> dict:
+        return json.loads(self.cache_path(ref).read_text())
 
-    def cache_path(self, resource) -> Path:
-        path = self.dir / resource.cache_path()
+    def cache_path(self, ref: ResourceRef) -> Path:
+        path = self.dir / ref.resource.cache_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
@@ -182,5 +217,3 @@ def add_custom_functions(db):
     db.create_function("now", 0, lambda: clock.CLOCK.now())
     db.create_function("to_age", 1, to_age)
     db.create_function("to_utc", 1, to_utc)
-
-
