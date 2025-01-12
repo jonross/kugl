@@ -12,7 +12,7 @@ from threading import Thread
 
 from ..helpers import Limits, ItemHelper, PodHelper, JobHelper
 from kugl.api import table, fail, resource, run, parse_utc, Resource
-from kugl.util import WHITESPACE, kube_context
+from kugl.util import WHITESPACE_RE, kube_context
 
 
 @resource("kubernetes", schema_defaults=["kubernetes"])
@@ -82,7 +82,7 @@ class KubernetesResource(Resource):
         Convert the tabular output of 'kubectl get pods' to JSON.
         :return: a dict mapping "namespace/name" to status
         """
-        rows = [WHITESPACE.split(line.strip()) for line in output.strip().split("\n")]
+        rows = [WHITESPACE_RE.split(line.strip()) for line in output.strip().split("\n")]
         if len(rows) < 2:
             return {}
         header, rows = rows[0], rows[1:]

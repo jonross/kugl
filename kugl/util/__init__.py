@@ -14,9 +14,10 @@ from .misc import (
     KuglError,
     parse_utc,
     run,
+    TABLE_NAME_RE,
     to_utc,
     warn,
-    WHITESPACE,
+    WHITESPACE_RE,
 )
 from .size import parse_size, to_size, parse_cpu
 from .sqlite import SqliteDb

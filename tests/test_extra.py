@@ -103,10 +103,18 @@ def test_config_with_missing_resource(test_home):
         assert_query("SELECT * FROM stuff", "")
 
 
-def test_no_config_for_schema(test_home):
+def test_no_config_for_schema():
     """Ensure correct error when a schema has no configs."""
     with pytest.raises(KuglError, match="no configurations found for schema 'my'"):
         assert_query("SELECT * from my.stuff", "")
+
+
+def test_invalid_table_ref():
+    """Ensure correct error for a bad schema or table name"""
+    with pytest.raises(KuglError, match=r"invalid schema name in 'oh@my.stuff' -- must contain"):
+        assert_query("SELECT * from oh@my.stuff", "")
+    with pytest.raises(KuglError, match=r"invalid table name in 'my.@stuff' -- must contain"):
+        assert_query("SELECT * from my.@stuff", "")
 
 
 def test_select_from_stdin(test_home, monkeypatch, capsys):

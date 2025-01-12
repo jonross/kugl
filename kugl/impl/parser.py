@@ -6,7 +6,7 @@ import funcy as fn
 import sqlparse
 from sqlparse.tokens import Name, Comment, Punctuation
 
-from kugl.util import fail
+from kugl.util import fail, TABLE_NAME_RE
 
 
 @dataclass(frozen=True)
@@ -14,6 +14,12 @@ class NamedTable:
     """Capture e.g. 'kubernetes.pods" as an object + make it hashable for use in sets."""
     schema_name: Optional[str]
     name: str
+
+    def __post_init__(self):
+        if not TABLE_NAME_RE.match(self.name):
+            fail(f"invalid table name in '{self}' -- must contain only letters, digits, and underscores")
+        if self.schema_name and not TABLE_NAME_RE.match(self.schema_name):
+            fail(f"invalid schema name in '{self}' -- must contain only letters, digits, and underscores")
 
     def __str__(self):
         return f"{self.schema_name}.{self.name}" if self.schema_name else self.name

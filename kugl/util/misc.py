@@ -16,7 +16,8 @@ import yaml
 
 from kugl.util import Age, clock
 
-WHITESPACE = re.compile(r"\s+")
+WHITESPACE_RE = re.compile(r"\s+")
+TABLE_NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 DEBUG_FLAGS = {}
 
 
