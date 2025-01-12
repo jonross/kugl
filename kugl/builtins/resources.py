@@ -32,7 +32,7 @@ class ShellResource(Resource):
     exec: Union[str, list[str]]
 
     def get_objects(self):
-        _, out, _ = run(resource.exec)
+        _, out, _ = run(self.exec)
         return _parse(out)
 
     def cache_path(self):

@@ -124,15 +124,19 @@ def test_bad_queries(query, error):
         assert_query(query, "")
 
 
-def test_select_from_stdin(test_home, monkeypatch, capsys):
-    """Test the stdin file resource.  Also test the 'sqlite' debug option."""
-    (test_home / "hr.yaml").write_text("""
+@pytest.mark.parametrize("resource", [
+    "file: stdin",
+    "exec: cat $KUGL_MOCKDIR/people_data.json",
+])
+def test_stdin_and_exec(test_home, resource, monkeypatch, capsys):
+    """Test the stdin and exec resources.  Also test the 'sqlite' debug option."""
+    (test_home / "hr.yaml").write_text(f"""
         resources:
-          - name: stdin
-            file: stdin
+          - name: people
+            {resource}
         create:
           - table: people
-            resource: stdin
+            resource: people
             row_source:
               - people
             columns:
@@ -142,10 +146,16 @@ def test_select_from_stdin(test_home, monkeypatch, capsys):
                 path: age
                 type: integer
     """)
-    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps({"people": [
+    people_data = json.dumps({"people": [
         {"name": "Jim", "age": 42},
         {"name": "Jill", "age": 43},
-    ]})))
+    ]})
+    if resource.startswith("file:"):
+        # The file: stdin form of the test; mock stdin
+        monkeypatch.setattr(sys, "stdin", io.StringIO(people_data))
+    else:
+        # The exec: form of the test; write the data to a file that will be cat'ed
+        (Path(os.getenv("KUGL_MOCKDIR")) / "people_data.json").write_text(people_data)
     with features_debugged("sqlite"):
         main1(["SELECT name, age FROM hr.people"])
     out, err = capsys.readouterr()

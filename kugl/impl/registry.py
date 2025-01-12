@@ -154,7 +154,7 @@ class Schema(BaseModel):
         if "file" in fields:
             return rgy.get_resource_by_family("file")(**fields)
         if "exec" in fields:
-            return rgy.get_resource_by_family("exec")(**fields)
+            return rgy.get_resource_by_family("shell")(**fields)
         impl = rgy.get_resource_by_schema(self.name)
         if impl is None:
             fail(f"Schema {self.name} has no default resource family")

@@ -25,6 +25,7 @@ def pytest_sessionstart(session):
 def test_home(tmp_path, monkeypatch):
     monkeypatch.setenv("KUGL_HOME", str(tmp_path))
     monkeypatch.setenv("KUGL_MOCKDIR", str(tmp_path / "cache"))
+    (tmp_path / "cache").mkdir()
     kube_home().mkdir()
     kube_home().joinpath("config").write_text("current-context: nocontext")
     yield KPath(tmp_path)
