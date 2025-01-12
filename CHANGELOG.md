@@ -1,6 +1,7 @@
 ## 0.4.0
 
 - Support multiple schemas & join across them
+- Allow environment variables in `file` resource paths
 - Resource cache paths and file formats have changed, old `~/.kugl/cache` files are not compatible
 - `rm -r ~/.kugl/cache` is recommended before installing
 

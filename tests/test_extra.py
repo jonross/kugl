@@ -3,7 +3,9 @@ Assorted query tests not covered elsewhere.
 """
 import io
 import json
+import os
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -157,5 +159,69 @@ def test_select_from_stdin(test_home, monkeypatch, capsys):
         sqlite: execute: CREATE TABLE hr.people (name text, age integer)
         sqlite: execute: INSERT INTO hr.people VALUES(?, ?)
         sqlite: query: SELECT name, age FROM hr.people
+    """)
+
+
+def test_multi_schema_query(test_home, capsys):
+    """Test a query that references multiple schemas."""
+    (test_home / "hr.yaml").write_text("""
+        resources:
+          - name: people
+            file: $KUGL_MOCKDIR/people_data.yaml
+        create:
+          - table: people
+            resource: people
+            row_source:
+              - people
+            columns:
+              - name: name
+                path: name
+              - name: age
+                path: age
+                type: integer
+    """)
+    (test_home / "sales.yaml").write_text("""
+        resources:
+          - name: sales_volume
+            file: $KUGL_MOCKDIR/sales_data.yaml
+        create:
+          - table: volume
+            resource: sales_volume
+            row_source:
+              - sales
+            columns:
+              - name: name
+                path: name
+              - name: dollars
+                type: integer
+                path: dollars
+    """)
+    mockdir = Path(os.getenv("KUGL_MOCKDIR"))
+    mockdir.mkdir(parents=True, exist_ok=True)
+    (mockdir / "people_data.yaml").write_text("""
+        people:
+          - name: Jim
+            age: 42
+          - name: Jill
+            age: 43
+    """)
+    (mockdir / "sales_data.yaml").write_text("""
+        sales:
+          - name: Jim
+            dollars: 10000
+          - name: Jill
+            dollars: 12000
+    """)
+    main1(["""
+        SELECT person.name, person.age, volume.dollars
+        FROM hr.people AS person
+        JOIN sales.volume AS volume ON person.name = volume.name
+        ORDER BY 2 DESC
+    """])
+    out, err = capsys.readouterr()
+    assert_by_line(out, """
+        name      age    dollars
+        Jill       43      12000
+        Jim        42      10000
     """)
 

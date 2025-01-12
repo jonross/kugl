@@ -36,4 +36,6 @@ Obviously this has limited utility, since there's no way to filter the data befo
 For example, you can't add an argument to a resource `exec` command based on the query terms.
 
 As an alternative, you can define a resource to use `file: stdin` instead of `exec: some command`,
-and then pipe the output of any command to Kugl.
+and then pipe the output of any command to Kugl.  `file:` also works with any pathname, and supports
+environment variable subtitution using `Path.expandvars` as described
+[here](https://docs.python.org/id/3.5/library/os.path.html#os.path.expandvars).

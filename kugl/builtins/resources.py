@@ -1,5 +1,6 @@
 import json
 import sys
+import os.path
 from pathlib import Path
 from typing import Union
 
@@ -20,7 +21,8 @@ class FileResource(Resource):
         if self.file == "stdin":
             return _parse(sys.stdin.read())
         try:
-            return _parse(Path(self.file).read_text())
+            file = os.path.expandvars(os.path.expanduser(self.file))
+            return _parse(Path(file).read_text())
         except OSError as e:
             fail(f"Failed to read {self.file}", e)
 
