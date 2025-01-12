@@ -71,7 +71,7 @@ def make_node(name: str, taints: Optional[List[Taint]] = None, labels: Optional[
     responses from the K8S API.
     :param name: Node name
     """
-    node = yaml.safe_load(_resource("sample_node.yaml"))
+    node = yaml.safe_load(_resource_content("sample_node.yaml"))
     node["metadata"]["name"] = name
     node["metadata"]["uid"] = "uid-" + name
     if taints:
@@ -101,7 +101,7 @@ def make_pod(name: str,
     :param name_at_root: Put the object name at top level, not in the metadata
     :param no_name: Pretend there is no object name
     """
-    obj = yaml.safe_load(_resource("sample_pod.yaml"))
+    obj = yaml.safe_load(_resource_content("sample_pod.yaml"))
     if name_at_root:
         obj["name"] = name
     elif not no_name:
@@ -140,7 +140,7 @@ def make_job(name: str,
     :param condition: If present, a condition tuple (type, status, reason)
     :param: pod: If present, a pod dict to be used as the template, returned from make_pod
     """
-    obj = yaml.safe_load(_resource("sample_job.yaml"))
+    obj = yaml.safe_load(_resource_content("sample_job.yaml"))
     obj["metadata"]["name"] = name
     obj["metadata"]["uid"] = "uid-" + name
     obj["metadata"]["labels"]["job-name"] = name
@@ -194,6 +194,5 @@ def assert_by_line(lines: Union[str, list[str]], expected: Union[str, list[Union
             assert exp.match(line.strip()), f"Did not find {exp.pattern} in {line.strip()}"
 
 
-def _resource(filename: str):
-    # TODO: rename me
+def _resource_content(filename: str):
     return Path(__file__).parent.joinpath("resources", filename).read_text()

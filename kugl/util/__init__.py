@@ -19,6 +19,6 @@ from .misc import (
     WHITESPACE,
 )
 from .size import parse_size, to_size, parse_cpu
-from .sqlite import SqliteDb, fqtn
+from .sqlite import SqliteDb
 
 import kugl.util.clock as clock

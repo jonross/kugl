@@ -22,7 +22,6 @@ from .tables import Table
 DEFAULT_SCHEMA = "kubernetes"
 
 # Cache behaviors
-# TODO consider an enum
 ALWAYS_UPDATE, CHECK, NEVER_UPDATE = 1, 2, 3
 CacheFlag = Literal[ALWAYS_UPDATE, CHECK, NEVER_UPDATE]
 

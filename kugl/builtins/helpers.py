@@ -145,7 +145,6 @@ class JobHelper(ItemHelper, Containerized):
         for c in status.get("conditions", []):
             if c["status"] == "True":
                 if c["type"] == "Failed":
-                    # TODO use a separate column
                     return c.get("reason") or "Failed"
                 if c["type"] == "Suspended":
                     return "Suspended"
