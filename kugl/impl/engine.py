@@ -13,13 +13,11 @@ from typing import Tuple, Set, Optional, Literal
 
 from tabulate import tabulate
 
-from .config import Settings
+from .config import Settings, DEFAULT_SCHEMA
 from .parser import Query
 from .registry import Schema, Resource, Registry
-from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, debugging, to_age, Age, KPath
+from ..util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, debugging, to_age, Age, KPath
 from .tables import Table
-
-DEFAULT_SCHEMA = "kubernetes"
 
 # Cache behaviors
 ALWAYS_UPDATE, CHECK, NEVER_UPDATE = 1, 2, 3

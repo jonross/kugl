@@ -4,7 +4,6 @@ Assorted query tests not covered elsewhere.
 import io
 import json
 import sys
-import textwrap
 
 import pytest
 
@@ -14,6 +13,8 @@ from .testing import kubectl_response, assert_query, assert_by_line
 
 
 def test_non_sql_types(test_home, capsys):
+    """Test the column types that don't correspond exactly to SQLite types.
+    Also test the 'extract' debug option."""
     (test_home / "kubernetes.yaml").write_text("""
       resources:
         - name: things
@@ -69,6 +70,7 @@ def test_non_sql_types(test_home, capsys):
 
 
 def test_too_many_parents(test_home):
+    """Ensure correct error when a parent field reference is too long."""
     (test_home / "kubernetes.yaml").write_text("""
       resources:
         - name: things
@@ -90,6 +92,7 @@ def test_too_many_parents(test_home):
 
 
 def test_config_with_missing_resource(test_home):
+    """Ensure correct error when an undefined resource is used."""
     (test_home / "kubernetes.yaml").write_text("""
         create:
           - table: stuff
@@ -100,7 +103,14 @@ def test_config_with_missing_resource(test_home):
         assert_query("SELECT * FROM stuff", "")
 
 
+def test_no_config_for_schema(test_home):
+    """Ensure correct error when a schema has no configs."""
+    with pytest.raises(KuglError, match="no configurations found for schema 'my'"):
+        assert_query("SELECT * from my.stuff", "")
+
+
 def test_select_from_stdin(test_home, monkeypatch, capsys):
+    """Test the stdin file resource.  Also test the 'sqlite' debug option."""
     (test_home / "hr.yaml").write_text("""
         resources:
           - name: stdin

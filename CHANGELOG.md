@@ -1,3 +1,9 @@
+## 0.4.0
+
+- Support multiple schemas & join across them
+- Resource cache paths and file formats have changed, old `~/.kugl/cache` files are not compatible
+- `rm -r ~/.kugl/cache` is recommended before installing
+
 ## 0.3.3
 
 - Add security warning for configuration files

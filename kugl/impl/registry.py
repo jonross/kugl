@@ -3,12 +3,11 @@ Registry of resources and tables, independent of configuration file format.
 """
 
 from argparse import ArgumentParser
-from dataclasses import dataclass
-from typing import Type, Iterable
+from typing import Type
 
 from pydantic import BaseModel
 
-from kugl.impl.config import UserConfig, parse_file, CreateTable, ExtendTable, ResourceDef
+from kugl.impl.config import UserConfig, parse_file, CreateTable, ExtendTable, ResourceDef, DEFAULT_SCHEMA
 from kugl.impl.tables import TableFromCode, TableFromConfig, TableDef, Table
 from kugl.util import fail, debugging, ConfigPath, kugl_home
 
@@ -118,21 +117,28 @@ class Schema(BaseModel):
     def read_configs(self):
         """Apply the built-in and user configuration files for the schema, if present."""
         def _apply(path: ConfigPath):
-            if path.exists():
-                config, errors = parse_file(UserConfig, path)
-                if errors:
-                    fail("\n".join(errors))
-                self._create.update({c.table: c for c in config.create})
-                self._extend.update({e.table: e for e in config.extend})
-                self._resources.update({r.name: self._find_resource(r) for r in config.resources})
+            if not path.exists():
+                return False
+            config, errors = parse_file(UserConfig, path)
+            if errors:
+                fail("\n".join(errors))
+            self._create.update({c.table: c for c in config.create})
+            self._extend.update({e.table: e for e in config.extend})
+            self._resources.update({r.name: self._find_resource(r) for r in config.resources})
+            return True
 
         # Reset the non-builtin tables, since these can change during unit tests.
         for mapping in [self._create, self._extend, self._resources]:
             mapping.clear()
 
         # Apply builtin config and user config
-        _apply(ConfigPath(__file__).parent.parent / "builtins" / "schemas" / f"{self.name}.yaml")
-        _apply(ConfigPath(kugl_home() / f"{self.name}.yaml"))
+        found = any([_apply(path) for path in [
+            ConfigPath(__file__).parent.parent / "builtins" / "schemas" / f"{self.name}.yaml",
+            ConfigPath(kugl_home() / f"{self.name}.yaml"),
+        ]])
+        if not found and self.name != DEFAULT_SCHEMA:
+            # There's a built-in schema for Kubernetes, so no issue if no config files
+            fail(f"no configurations found for schema '{self.name}'")
 
         # Verify user-defined tables have the needed resources
         for table in self._create.values():

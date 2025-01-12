@@ -12,6 +12,7 @@ from pydantic.functional_validators import model_validator
 from kugl.util import Age, parse_utc, parse_size, KPath, ConfigPath, parse_age, parse_cpu, fail
 
 PARENTED_PATH = re.compile(r"^(\^*)(.*)")
+DEFAULT_SCHEMA = "kubernetes"
 
 
 class Settings(BaseModel):
