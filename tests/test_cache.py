@@ -45,9 +45,9 @@ def test_cache(test_home, capsys):
         assert max_age == 70
         out, err = capsys.readouterr()
         assert_by_line(err, [
-            re.compile(r"cache: missing cache file.*foo\.jobs\.json"),
-            re.compile(r"cache: found cache file.*foo\.nodes\.json"),
-            re.compile(r"cache: found cache file.*foo\.pods\.json"),
+            re.compile(r"cache: missing cache file.*/kubernetes/nocontext/foo\.jobs\.json"),
+            re.compile(r"cache: found cache file.*/kubernetes/nocontext/foo\.nodes\.json"),
+            re.compile(r"cache: found cache file.*/kubernetes/nocontext/foo\.pods\.json"),
             "cache: requested [kubernetes.events kubernetes.jobs kubernetes.nodes kubernetes.pods]",
             "cache: cacheable [kubernetes.jobs kubernetes.nodes kubernetes.pods]",
             "cache: non-cacheable [kubernetes.events]",
@@ -62,9 +62,9 @@ def test_cache(test_home, capsys):
         assert max_age == 50
         out, err = capsys.readouterr()
         assert_by_line(err, [
-            re.compile(r"cache: missing cache file.*foo\.jobs\.json"),
-            re.compile(r"cache: found cache file.*foo\.nodes\.json"),
-            re.compile(r"cache: found cache file.*foo\.pods\.json"),
+            re.compile(r"cache: missing cache file.*/kubernetes/nocontext/foo\.jobs\.json"),
+            re.compile(r"cache: found cache file.*/kubernetes/nocontext/foo\.nodes\.json"),
+            re.compile(r"cache: found cache file.*/kubernetes/nocontext/foo\.pods\.json"),
             "cache: requested [kubernetes.events kubernetes.jobs kubernetes.nodes kubernetes.pods]",
             "cache: cacheable [kubernetes.jobs kubernetes.nodes kubernetes.pods]",
             "cache: non-cacheable [kubernetes.events]",

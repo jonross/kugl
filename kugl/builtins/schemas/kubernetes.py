@@ -31,7 +31,6 @@ class KubernetesResource(Resource):
         if args.all_namespaces and args.namespace:
             fail("Cannot use both -a/--all-namespaces and -n/--namespace")
         if args.all_namespaces:
-            # FIXME: engine.py and testing.py still use this
             self._ns = "__all"
             self._all_ns = True
         else:

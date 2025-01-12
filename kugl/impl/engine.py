@@ -193,7 +193,7 @@ class DataCache:
         return json.loads(self.cache_path(ref).read_text())
 
     def cache_path(self, ref: ResourceRef) -> Path:
-        path = self.dir / ref.resource.cache_path()
+        path = self.dir / ref.schema.name / ref.resource.cache_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
