@@ -20,6 +20,8 @@ create:
         path: InstanceType
       - name: zone
         path: Placement.AvailabilityZone
+      - name: private_dns
+        path: PrivateDnsName
       - name: state
         path: State.Name
       - name: launched
@@ -39,3 +41,17 @@ As an alternative, you can define a resource to use `file: stdin` instead of `ex
 and then pipe the output of any command to Kugl.  `file:` also works with any pathname, and supports
 environment variable subtitution using `Path.expandvars` as described
 [here](https://docs.python.org/id/3.5/library/os.path.html#os.path.expandvars).
+
+You can also join across schemas.  For example, given the above `instances` table, report on the
+capacity per zone in an EKS cluster:
+
+```shell
+kugl "SELECT e.zone, sum(n.cpu_alloc) as cpus, sum(n.gpu_alloc) as gpus
+      FROM kubernetes.nodes n
+      JOIN ec2.instances e ON n.name = e.hostname
+      GROUP BY 1
+```
+
+Note the explicit use of a `kubernetes.` schema prefix.  This is required when joining across schemas.
+(While `kubernetes` is the default schema, you can't always rely on SQLite's search behavior for
+unqualified table names.  It's better to be explicit.)
