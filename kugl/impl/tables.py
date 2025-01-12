@@ -13,7 +13,6 @@ from .config import ColumnDef, ExtendTable, CreateTable
 # TODO: make abstract
 # TODO: completely sever from user configs
 from ..util import fail, debugging
-from ..util.sqlite import fqtn
 
 
 class TableDef(BaseModel):
@@ -44,14 +43,16 @@ class Table:
         self.ddl = ddl
         self.extras = extras
 
-    def build(self, db, kube_data: dict):
+    def build(self, db, kube_data: dict, multi_schema: bool):
         """Create the table in SQLite and insert the data.
 
         :param db: the SqliteDb instance
         :param kube_data: the JSON data from 'kubectl get'
+        :param multi_schema: whether to use the schema name in the table name
         """
         context = RowContext(kube_data)
-        db.execute(f"CREATE TABLE {fqtn(self.schema_name, self.name)} ({self.ddl})")
+        table_name = f"{self.schema_name}.{self.name}" if multi_schema else self.name
+        db.execute(f"CREATE TABLE {table_name} ({self.ddl})")
         item_rows = list(self.make_rows(context))
         if item_rows:
             if self.extras:
@@ -60,7 +61,7 @@ class Table:
                 extend_row = lambda item, row: row
             rows = [extend_row(item, row) for item, row in item_rows]
             placeholders = ", ".join("?" * len(rows[0]))
-            db.execute(f"INSERT INTO {fqtn(self.schema_name, self.name)} VALUES({placeholders})", rows)
+            db.execute(f"INSERT INTO {table_name} VALUES({placeholders})", rows)
 
     @staticmethod
     def column_ddl(columns: list[ColumnDef]) -> str:

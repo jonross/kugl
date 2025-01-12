@@ -69,11 +69,3 @@ class SqliteDb:
             conn.cursor().executemany(sql, data)
         else:
             conn.cursor().execute(sql, data)
-
-
-def fqtn(schema: str, table: str):
-    """
-    Fully qualified table name combining schema name & table name.
-    """
-    # At the moment, we don't have multiple attached in-memory databases working, so fake it like this.
-    return f"{schema}${table}"

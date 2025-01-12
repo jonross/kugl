@@ -11,7 +11,6 @@ from kugl.impl.config import Settings
 from kugl.impl.engine import CHECK, ALWAYS_UPDATE, NEVER_UPDATE
 from kugl.main import main1, parse_args
 from kugl.util import KuglError, Age
-from kugl.util.sqlite import fqtn
 
 
 def test_enforce_one_cache_option(test_home):
@@ -25,7 +24,7 @@ def test_enforce_one_namespace_option(test_home):
 
 
 def test_no_such_table(test_home):
-    with pytest.raises(sqlite3.OperationalError, match=re.escape(f"no such table: {fqtn('kubernetes', 'foo')}")):
+    with pytest.raises(sqlite3.OperationalError, match=re.escape(f"no such table: foo")):
         main1(["select * from foo"])
 
 
