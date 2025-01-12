@@ -67,21 +67,8 @@ def main2(argv: List[str]):
             fail(f"No shortcut named '{argv[-1]}' is defined in ~/.kugl/init.yaml")
         return main1(argv[:-1] + new_argv)
 
-    # Need the query schema for command line parsing.
-    # FIXME: Move the namespace & cache flag out of the query
-    registry = Registry.get()
-    query = Query(sql=argv[-1], default_schema="kubernetes")
-    schema_refs = {ref.schema_name for ref in query.tables}
-    if len(schema_refs) == 0:
-        schema = registry.get_schema("empty")
-    elif len(schema_refs) == 1:
-        schema = registry.get_schema(next(iter(schema_refs)))
-    else:
-        fail("Cross-schema query not implemented yet")
-    schema.read_configs()
-
     ap = ArgumentParser()
-    registry.augment_cli(ap)
+    Registry.get().augment_cli(ap)
     args, cache_flag = parse_args(argv, ap, init.settings)
 
     if args.debug:
@@ -89,8 +76,8 @@ def main2(argv: List[str]):
     if debug := debugging("init"):
         debug(f"settings: {init.settings}")
 
-    engine = Engine(schema, args, cache_flag, init.settings)
-    print(engine.query_and_format(query))
+    engine = Engine(args, cache_flag, init.settings)
+    print(engine.query_and_format(Query(args.sql)))
 
 
 def parse_args(argv: list[str], ap: ArgumentParser, settings: Settings) -> tuple[argparse.Namespace, CacheFlag]:

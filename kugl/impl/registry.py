@@ -3,6 +3,7 @@ Registry of resources and tables, independent of configuration file format.
 """
 
 from argparse import ArgumentParser
+from dataclasses import dataclass
 from typing import Type, Iterable
 
 from pydantic import BaseModel
@@ -105,16 +106,6 @@ class Resource(BaseModel):
     def cache_path(self):
         raise NotImplementedError(f"{self.__class__} must implement cache_path()")
 
-    def __hash__(self):
-        return hash(self.name)
-
-    def __eq__(self, other):
-        return self.name == other.name
-
-    def __lt__(self, other):
-        return self.name < other.name
-
-
 
 class Schema(BaseModel):
     """Collection of tables and resource definitions."""
@@ -122,7 +113,7 @@ class Schema(BaseModel):
     builtin: dict[str, TableDef] = {}
     _create: dict[str, CreateTable] = {}
     _extend: dict[str, ExtendTable] = {}
-    _resources: dict[str, ResourceDef] = {}
+    _resources: dict[str, Resource] = {}
 
     def read_configs(self):
         """Apply the built-in and user configuration files for the schema, if present."""
@@ -150,8 +141,8 @@ class Schema(BaseModel):
 
         return self
 
-    def _find_resource(self, r: ResourceDef) -> ResourceDef:
-        """Return the resource definition for a table's resource name."""
+    def _find_resource(self, r: ResourceDef) -> Resource:
+        """Return a Resource subclass instance for a table's resource name."""
         rgy = Registry.get()
         fields = r.model_dump()
         if "file" in fields:
@@ -175,6 +166,6 @@ class Schema(BaseModel):
         if creator:
             return TableFromConfig(name, self.name, creator, extender)
 
-    def resources_used(self, tables: Iterable[Table]) -> set[ResourceDef]:
-        """Return the ResourceDefs used by the listed tables."""
-        return {self._resources[t.resource] for t in tables}
+    def resource_for(self, table: Table) -> set[ResourceDef]:
+        """Return the ResourceDef used by a Table."""
+        return self._resources[table.resource]

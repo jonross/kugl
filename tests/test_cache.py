@@ -48,13 +48,13 @@ def test_cache(test_home, capsys):
             re.compile(r"cache: missing cache file.*foo\.jobs\.json"),
             re.compile(r"cache: found cache file.*foo\.nodes\.json"),
             re.compile(r"cache: found cache file.*foo\.pods\.json"),
-            "cache: requested [events jobs nodes pods]",
-            "cache: cacheable [jobs nodes pods]",
-            "cache: non-cacheable [events]",
-            "cache: ages jobs=None nodes=70 pods=50",
-            "cache: expired [nodes]",
-            "cache: missing [jobs]",
-            "cache: refreshable [events jobs]",
+            "cache: requested [kubernetes.events kubernetes.jobs kubernetes.nodes kubernetes.pods]",
+            "cache: cacheable [kubernetes.jobs kubernetes.nodes kubernetes.pods]",
+            "cache: non-cacheable [kubernetes.events]",
+            "cache: ages kubernetes.jobs=None kubernetes.nodes=70 kubernetes.pods=50",
+            "cache: expired [kubernetes.nodes]",
+            "cache: missing [kubernetes.jobs]",
+            "cache: refreshable [kubernetes.events kubernetes.jobs]",
         ])
 
         refresh, max_age = cache.advise_refresh(all_res, CHECK)
@@ -65,13 +65,13 @@ def test_cache(test_home, capsys):
             re.compile(r"cache: missing cache file.*foo\.jobs\.json"),
             re.compile(r"cache: found cache file.*foo\.nodes\.json"),
             re.compile(r"cache: found cache file.*foo\.pods\.json"),
-            "cache: requested [events jobs nodes pods]",
-            "cache: cacheable [jobs nodes pods]",
-            "cache: non-cacheable [events]",
-            "cache: ages jobs=None nodes=70 pods=50",
-            "cache: expired [nodes]",
-            "cache: missing [jobs]",
-            "cache: refreshable [events jobs nodes]",
+            "cache: requested [kubernetes.events kubernetes.jobs kubernetes.nodes kubernetes.pods]",
+            "cache: cacheable [kubernetes.jobs kubernetes.nodes kubernetes.pods]",
+            "cache: non-cacheable [kubernetes.events]",
+            "cache: ages kubernetes.jobs=None kubernetes.nodes=70 kubernetes.pods=50",
+            "cache: expired [kubernetes.nodes]",
+            "cache: missing [kubernetes.jobs]",
+            "cache: refreshable [kubernetes.events kubernetes.jobs kubernetes.nodes]",
         ])
 
         refresh, max_age = cache.advise_refresh(all_res, ALWAYS_UPDATE)

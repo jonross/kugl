@@ -1,17 +1,16 @@
-from collections import deque, namedtuple
+from collections import deque
 from dataclasses import dataclass
 from typing import Optional
 
 import funcy as fn
 import sqlparse
-from sqlparse.sql import Token
-from sqlparse.tokens import Name, Comment, Punctuation, Keyword
+from sqlparse.tokens import Name, Comment, Punctuation
 
-from kugl.util import fqtn, fail
+from kugl.util import fail
 
 
 @dataclass(frozen=True)
-class TableRef:
+class NamedTable:
     """Capture e.g. 'kubernetes.pods" as an object + make it hashable for use in sets."""
     schema_name: Optional[str]
     name: str
@@ -54,12 +53,12 @@ class Query:
     def __init__(self, sql: str):
         self.sql = sql
         # Anything we found following FROM or JOIN.  May include CTEs, but that's OK.
-        self.refs = set()
+        self.named_tables = set()
         self._scan()
 
-    @property
-    def rebuilt(self):
-        return self._tokens.join()
+    def schemas_named(self):
+        """Return a set of schema names referenced in the query."""
+        return {nt.schema_name for nt in self.named_tables if nt.schema_name}
 
     def _scan(self):
         """Find table references."""
@@ -77,7 +76,7 @@ class Query:
                 self._scan_table_name(tl)
 
     def _scan_table_name(self, tl: Tokens):
-        """Scan for a table name following FROM or JOIN and add it to self.refs.
+        """Scan for a table name following FROM or JOIN and add it to self.named_tables.
         Don't skip whitespace, since the name parts should be adjacent."""
         if (token := tl.get()) is None:
             return
@@ -87,8 +86,8 @@ class Query:
             name += token.value
         parts = name.split(".")
         if len(parts) == 1:
-            self.refs.add(TableRef(None, *parts))
+            self.named_tables.add(NamedTable(None, *parts))
         elif len(parts) == 2:
-            self.refs.add(TableRef(*parts))
+            self.named_tables.add(NamedTable(*parts))
         else:
             fail(f"invalid schema name in table: {name}")

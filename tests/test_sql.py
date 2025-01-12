@@ -21,7 +21,7 @@ def test_schema_extraction(sql, refs: list[str], error: Optional[str]):
             Query(sql)
     else:
         q = Query(sql)
-        assert set(refs) == set(str(ref) for ref in q.refs)
+        assert set(refs) == set(str(nt) for nt in q.named_tables)
 
 
 def test_multiple_sqlite_dbs():
