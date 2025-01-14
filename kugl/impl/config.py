@@ -14,6 +14,28 @@ from kugl.util import Age, parse_utc, parse_size, KPath, ConfigPath, parse_age, 
 PARENTED_PATH = re.compile(r"^(\^*)(.*)")
 DEFAULT_SCHEMA = "kubernetes"
 
+KUGL_TYPE_CONVERTERS = {
+    # Valid choices for column type in config -> function to extract that from a string
+    "integer": int,
+    "real" : float,
+    "text": str,
+    "date": parse_utc,
+    "age": parse_age,
+    "size": parse_size,
+    "cpu": parse_cpu,
+}
+
+KUGL_TYPE_TO_SQL_TYPE = {
+    # Valid choices for column type in config -> SQLite type to hold it
+    "integer": "integer",
+    "real": "real",
+    "text": "text",
+    "date": "integer",
+    "age": "integer",
+    "size": "integer",
+    "cpu": "real",
+}
+
 
 class Settings(BaseModel):
     """Holds the settings: entry from a user config file."""
@@ -120,27 +142,6 @@ class UserColumn(BuiltinColumn):
         if len(text) > 100:
             return text[:100] + "..."
         return text
-
-
-KUGL_TYPE_CONVERTERS = {
-    "integer": int,
-    "real" : float,
-    "text": str,
-    "date": parse_utc,
-    "age": parse_age,
-    "size": parse_size,
-    "cpu": parse_cpu,
-}
-
-KUGL_TYPE_TO_SQL_TYPE = {
-    "integer": "integer",
-    "real": "real",
-    "text": "text",
-    "date": "integer",
-    "age": "integer",
-    "size": "integer",
-    "cpu": "real",
-}
 
 
 class ExtendTable(BaseModel):
