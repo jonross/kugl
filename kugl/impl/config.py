@@ -29,23 +29,29 @@ class UserInit(BaseModel):
     shortcuts: dict[str, list[str]] = {}
 
 
-class UserColumn(BaseModel):
-    """Holds one entry from a columns: list in a user config file."""
+class BuiltinColumn(BaseModel):
+    """The minimal field set for a table column defined from code.  Columns defined from user
+    config files use UserColumn, a subclass."""
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     name: str
     type: Literal["text", "integer", "real", "date", "age", "size", "cpu"] = "text"
-    path: Optional[str] = None
-    label: Optional[Union[str, list[str]]] = None
     # Function to extract a column value from an object.
     _extract: Callable[[object], object]
     # Function to convert the extracted value to the SQL type
     _convert: type
+    # SQL type for this column
+    _sqltype: str
+
+
+class UserColumn(BuiltinColumn):
+    """Holds one entry from a columns: list in a user config file."""
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+    path: Optional[str] = None
+    label: Optional[Union[str, list[str]]] = None
     # Parsed value of self.path
     _finder: jmespath.parser.Parser
     # Number of ^ in self.path
     _parents: int
-    # SQL type for this column
-    _sqltype: str
 
     @model_validator(mode="after")
     @classmethod
