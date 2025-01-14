@@ -8,7 +8,7 @@ from typing import Optional, Type
 import jmespath
 from pydantic import Field, BaseModel
 
-from .config import ColumnDef, ExtendTable, CreateTable
+from .config import UserColumn, ExtendTable, CreateTable
 from ..util import fail, debugging
 
 
@@ -26,7 +26,7 @@ class TableDef(BaseModel):
 class Table:
     """The engine-level representation of a table, independent of the config file format"""
 
-    def __init__(self, name: str, schema_name, resource: str, ddl: str, extras: list[ColumnDef]):
+    def __init__(self, name: str, schema_name, resource: str, ddl: str, extras: list[UserColumn]):
         """
         :param name: the table name, e.g. "pods"
         :param name: the schema name, e.g. "kubernetes"
@@ -61,7 +61,7 @@ class Table:
             db.execute(f"INSERT INTO {table_name} VALUES({placeholders})", rows)
 
     @staticmethod
-    def column_ddl(columns: list[ColumnDef]) -> str:
+    def column_ddl(columns: list[UserColumn]) -> str:
         return ", ".join(f"{c.name} {c._sqltype}" for c in columns)
 
 

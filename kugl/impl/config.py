@@ -29,7 +29,7 @@ class UserInit(BaseModel):
     shortcuts: dict[str, list[str]] = {}
 
 
-class ColumnDef(BaseModel):
+class UserColumn(BaseModel):
     """Holds one entry from a columns: list in a user config file."""
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     name: str
@@ -49,7 +49,7 @@ class ColumnDef(BaseModel):
 
     @model_validator(mode="after")
     @classmethod
-    def gen_extractor(cls, config: 'ColumnDef') -> 'ColumnDef':
+    def gen_extractor(cls, config: 'UserColumn') -> 'UserColumn':
         """
         Generate the extract function for a column definition; given an object, it will
         return a column value of the appropriate type.
@@ -141,7 +141,7 @@ class ExtendTable(BaseModel):
     """Holds the extend: section from a user config file."""
     model_config = ConfigDict(extra="forbid")
     table: str
-    columns: list[ColumnDef] = []
+    columns: list[UserColumn] = []
 
 
 class ResourceDef(BaseModel):
