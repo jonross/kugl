@@ -5,6 +5,7 @@ Registry of resources and tables, independent of configuration file format.
 from argparse import ArgumentParser
 from typing import Type
 
+import funcy as fn
 from pydantic import BaseModel
 
 from kugl.impl.config import UserConfig, parse_file, CreateTable, ExtendTable, ResourceDef, DEFAULT_SCHEMA
@@ -85,6 +86,17 @@ class Registry:
         for resource_class in set(self.resources_by_family.values()):
             if hasattr(resource_class, "add_cli_options"):
                 resource_class.add_cli_options(ap)
+
+    def printable_schema(self, arg: str):
+        if "." in arg:
+            schema_name, table_name = arg.split(".", 1)
+        else:
+            schema_name, table_name = arg, None
+        schema = self.get_schema(schema_name).read_configs()
+        if table_name:
+            return str(schema.table_builder(table_name))
+        else:
+            return "\n".join(str(schema.table_builder(name)) for name in schema.all_table_names())
 
 
 class Resource(BaseModel):
@@ -171,6 +183,9 @@ class Schema(BaseModel):
             return TableFromCode(builtin, extender)
         if creator:
             return TableFromConfig(name, self.name, creator, extender)
+
+    def all_table_names(self):
+        return set(fn.cat([self.builtin.keys(), self._create.keys(), self._extend.keys()]))
 
     def resource_for(self, table: Table) -> set[ResourceDef]:
         """Return the ResourceDef used by a Table."""

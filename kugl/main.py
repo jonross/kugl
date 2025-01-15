@@ -63,7 +63,11 @@ def main2(argv: List[str]):
     Registry.get().augment_cli(ap)
     args, cache_flag = parse_args(argv, ap, init.settings)
 
-    # Check for shortcut and reparse, because they can contain command-line options. now, because they can include command line options.  But the
+    if args.schema:
+        print(Registry.get().printable_schema(args.sql))
+        return
+
+    # Check for shortcut and reparse, because they can contain command-line options.
     if " " not in args.sql:
         if not (new_argv := init.shortcuts.get(argv[-1])):
             fail(f"No shortcut named '{argv[-1]}' is defined in ~/.kugl/init.yaml")
@@ -83,7 +87,7 @@ def parse_args(argv: list[str], ap: ArgumentParser, settings: Settings) -> tuple
     ap.add_argument("-D", "--debug", type=str)
     ap.add_argument("-c", "--cache", default=False, action="store_true")
     ap.add_argument("-r", "--reckless", default=False, action="store_true")
-    ap.add_argument("--schema", type=str)
+    ap.add_argument("--schema", default=False, action="store_true")
     ap.add_argument("-t", "--timeout", type=str)
     ap.add_argument("-u", "--update", default=False, action="store_true")
     ap.add_argument("sql")
