@@ -23,6 +23,8 @@ extend:
   - name: owner
     type: text
     path: metadata.labels."com.mycompany/ml-job-owner"
+    # Comments are optional; you can see these with 'kugl --schema'
+    comment: ML team member who submitted the work
         
   # Using Karpenter on AWS?  Add the Karpenter node pool and AWS provider ID
   # to the nodes table.

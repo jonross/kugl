@@ -57,6 +57,7 @@ class BuiltinColumn(BaseModel):
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     name: str
     type: Literal["text", "integer", "real", "date", "age", "size", "cpu"] = "text"
+    comment: Optional[str] = None
     # SQL type for this column
     _sqltype: str
 
