@@ -59,23 +59,48 @@ class BuiltinColumn(BaseModel):
     type: Literal["text", "integer", "real", "date", "age", "size", "cpu"] = "text"
     # Function to extract a column value from an object.
     _extract: Callable[[object], object]
-    # Function to convert the extracted value to the SQL type.
+    # Function to convert the extracted value to the SQL type
     _convert: type
     # SQL type for this column
     _sqltype: str
 
+
+class UserColumn(BuiltinColumn):
+    """Holds one entry from a columns: list in a user config file."""
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+    path: Optional[str] = None
+    label: Optional[Union[str, list[str]]] = None
+    # Parsed value of self.path
+    _finder: jmespath.parser.Parser
+    # Number of ^ in self.path
+    _parents: int
+
     @model_validator(mode="after")
     @classmethod
-    def recognize_type(cls, column: 'BuiltinColumn') -> 'BuiltinColumn':
-        column._sqltype = KUGL_TYPE_TO_SQL_TYPE[column.type]
-        column._convert = KUGL_TYPE_CONVERTERS[column.type]
-        return column
-
-    def extract_with(self, func: Callable[[object], object]):
-        """Set extraction function for the column.  For user-defined columns this function is
-        constructed by the UserColumn validation callback.  For built-in columns it's set when
-        the table class is registered."""
-        self._extract = func
+    def gen_extractor(cls, config: 'UserColumn') -> 'UserColumn':
+        """
+        Generate the extract function for a column definition; given an object, it will
+        return a column value of the appropriate type.
+        """
+        if config.path and config.label:
+            raise ValueError("cannot specify both path and label")
+        elif config.path:
+            m = PARENTED_PATH.match(config.path)
+            config._parents = len(m.group(1))
+            try:
+                config._finder = jmespath.compile(m.group(2))
+            except jmespath.exceptions.ParseError as e:
+                raise ValueError(f"invalid JMESPath expression {m.group(2)} in column {config.name}") from e
+            config._extract = config._extract_jmespath
+        elif config.label:
+            if not isinstance(config.label, list):
+                config.label = [config.label]
+            config._extract = config._extract_label
+        else:
+            raise ValueError("must specify either path or label")
+        config._sqltype = KUGL_TYPE_TO_SQL_TYPE[config.type]
+        config._convert = KUGL_TYPE_CONVERTERS[config.type]
+        return config
 
     def extract(self, obj: object, context) -> object:
         """Extract the column value from an object and convert to the correct type."""
@@ -90,42 +115,6 @@ class BuiltinColumn(BaseModel):
         if context.debug:
             context.debug(f"got {result}")
         return result
-    
-
-class UserColumn(BuiltinColumn):
-    """Holds one entry from a columns: list in a user config file."""
-    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
-    path: Optional[str] = None
-    label: Optional[Union[str, list[str]]] = None
-    # Parsed value of self.path
-    _finder: jmespath.parser.Parser
-    # Number of ^ in self.path
-    _parents: int
-
-    @model_validator(mode="after")
-    @classmethod
-    def gen_extractor(cls, column: 'UserColumn') -> 'UserColumn':
-        """
-        Generate the extract function for a column definition; given an object, it will
-        return a column value of the appropriate type.
-        """
-        if column.path and column.label:
-            raise ValueError("cannot specify both path and label")
-        elif column.path:
-            m = PARENTED_PATH.match(column.path)
-            column._parents = len(m.group(1))
-            try:
-                column._finder = jmespath.compile(m.group(2))
-            except jmespath.exceptions.ParseError as e:
-                raise ValueError(f"invalid JMESPath expression {m.group(2)} in column {column.name}") from e
-            column.extract_with(column._extract_jmespath)
-        elif column.label:
-            if not isinstance(column.label, list):
-                column.label = [column.label]
-            column.extract_with(column._extract_label)
-        else:
-            raise ValueError("must specify either path or label")
-        return column
 
     def _extract_jmespath(self, obj: object, context) -> object:
         """Extract a value from an object using a JMESPath finder."""
