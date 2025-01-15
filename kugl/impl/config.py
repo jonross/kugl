@@ -57,10 +57,6 @@ class BuiltinColumn(BaseModel):
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     name: str
     type: Literal["text", "integer", "real", "date", "age", "size", "cpu"] = "text"
-    # Function to extract a column value from an object.
-    _extract: Callable[[object], object]
-    # Function to convert the extracted value to the SQL type
-    _convert: type
     # SQL type for this column
     _sqltype: str
 
@@ -74,6 +70,10 @@ class UserColumn(BuiltinColumn):
     _finder: jmespath.parser.Parser
     # Number of ^ in self.path
     _parents: int
+    # Function to extract a column value from an object.
+    _extract: Callable[[object], object]
+    # Function to convert the extracted value to the SQL type
+    _convert: type
 
     @model_validator(mode="after")
     @classmethod
