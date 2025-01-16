@@ -50,7 +50,8 @@ class Table:
         """
         context = RowContext(kube_data)
         table_name = f"{self.schema_name}.{self.name}" if multi_schema else self.name
-        db.execute(f"CREATE TABLE {table_name} ({self.ddl})")
+        ddl = ", ".join(f"{c.name} {c._sqltype}" for c in self.builtin_columns + self.non_builtin_columns)
+        db.execute(f"CREATE TABLE {table_name} ({ddl})")
         item_rows = list(self.make_rows(context))
         if item_rows:
             if self.non_builtin_columns:
