@@ -11,7 +11,7 @@ from argparse import ArgumentParser
 from threading import Thread
 
 from ..helpers import Limits, ItemHelper, PodHelper, JobHelper
-from kugl.api import table, fail, resource, run, parse_utc, Resource
+from kugl.api import table, fail, resource, run, parse_utc, Resource, column
 from kugl.util import WHITESPACE_RE, kube_context
 
 
@@ -100,18 +100,17 @@ class KubernetesResource(Resource):
 @table(schema="kubernetes", name="nodes", resource="nodes")
 class NodesTable:
 
-    @property
-    def ddl(self):
-        return """
-            name TEXT,
-            uid TEXT,
-            cpu_alloc REAL,
-            gpu_alloc REAL,
-            mem_alloc INTEGER,
-            cpu_cap REAL,
-            gpu_cap REAL,
-            mem_cap INTEGER
-        """
+    def columns(self):
+        return [
+            column("name", "TEXT"),
+            column("uid", "TEXT"),
+            column("cpu_alloc", "REAL"),
+            column("gpu_alloc", "REAL"),
+            column("mem_alloc", "INTEGER"),
+            column("cpu_cap", "REAL"),
+            column("gpu_cap", "REAL"),
+            column("mem_cap", "INTEGER"),
+        ]
 
     def make_rows(self, context) -> list[tuple[dict, tuple]]:
         for item in context.data["items"]:
@@ -127,25 +126,24 @@ class NodesTable:
 @table(schema="kubernetes", name="pods", resource="pods")
 class PodsTable:
 
-    @property
-    def ddl(self):
-        return """
-            name TEXT,
-            uid TEXT,
-            is_daemon INTEGER,
-            namespace TEXT,
-            node_name TEXT,
-            creation_ts INTEGER,
-            command TEXT,
-            phase TEXT,
-            status TEXT,
-            cpu_req REAL,
-            gpu_req REAL,
-            mem_req INTEGER,
-            cpu_lim REAL,
-            gpu_lim REAL,
-            mem_lim INTEGER
-        """
+    def columns(self):
+        return [
+            column("name", "TEXT", "pod name, from metadata.name"),
+            column("uid", "TEXT", "pod UID, from metadata.uid"),
+            column("namespace", "TEXT", "pod namespace, from metadata.namespace"),
+            column("node_name", "TEXT", "node name, from spec.nodeName, or null"),
+            column("creation_ts", "INTEGER", "creation timestamp in epoch seconds, from metadata.creationTimestamp"),
+            column("is_daemon", "INTEGER", "1 if a daemonset pod, 0 otherwise"),
+            column("command", "TEXT", "command from main container"),
+            column("phase", "TEXT", "pod phase, from status.phase"),
+            column("status", "TEXT", "pod STATUS as output by 'kubectl get pod'"),
+            column("cpu_req", "REAL", "sum of CPUs requested across containers"),
+            column("gpu_req", "REAL", "sum of GPUs requested, or null"),
+            column("mem_req", "INTEGER", "sum of memory requested, in bytes"),
+            column("cpu_lim", "REAL", "CPU limit, or null"),
+            column("gpu_lim", "REAL", "GPU limit, or null"),
+            column("mem_lim", "INTEGER", "memory limit, or null"),
+        ]
 
     def make_rows(self, context) -> list[tuple[dict, tuple]]:
         for item in context.data["items"]:
@@ -153,10 +151,10 @@ class PodsTable:
             yield item, (
                 pod.name,
                 pod.metadata.get("uid"),
-                1 if pod.is_daemon else 0,
                 pod.namespace,
                 pod["spec"].get("nodeName"),
                 parse_utc(pod.metadata["creationTimestamp"]),
+                1 if pod.is_daemon else 0,
                 pod.command,
                 pod["status"]["phase"],
                 pod["kubectl_status"],
@@ -168,20 +166,19 @@ class PodsTable:
 @table(schema="kubernetes", name="jobs", resource="jobs")
 class JobsTable:
 
-    @property
-    def ddl(self):
-        return """
-            name TEXT,
-            uid TEXT,
-            namespace TEXT,
-            status TEXT,
-            cpu_req REAL,
-            gpu_req REAL,
-            mem_req INTEGER,
-            cpu_lim REAL,
-            gpu_lim REAL,
-            mem_lim INTEGER
-        """
+    def columns(self):
+        return [
+            column("name", "TEXT", "job name, from metadata.name"),
+            column("uid", "TEXT", "job UID, from metadata.name"),
+            column("namespace", "TEXT", "job namespace,from metadata.namespace"),
+            column("status", "TEXT", "job status, one of `Running`, `Complete`, `Suspended`, Failed`, `Unknown`"),
+            column("cpu_req", "REAL", "sum of CPUs requested across containers"),
+            column("gpu_req", "REAL", "sum of GPUs requested, or null"),
+            column("mem_req", "INTEGER", "sum of memory requested, in bytes"),
+            column("cpu_lim", "REAL", "CPU limit, or null"),
+            column("gpu_lim", "REAL", "GPU limit, or null"),
+            column("mem_lim", "INTEGER", "memory limit, or null"),
+        ]
 
     def make_rows(self, context) -> list[tuple[dict, tuple]]:
         for item in context.data["items"]:
@@ -199,13 +196,12 @@ class JobsTable:
 class LabelsTable:
     """Base class for all built-in label tables; subclasses need only define UID_FIELD."""
 
-    @property
-    def ddl(self):
-        return f"""
-            {self.UID_FIELD} TEXT,
-            key TEXT,
-            value TEXT
-        """
+    def columns(self):
+        return [
+            column(self.UID_FIELD, "TEXT", "object UID, from metadata.uid"),
+            column("key", "TEXT", "label key"),
+            column("value", "TEXT", "label value"),
+        ]
 
     def make_rows(self, context) -> list[tuple[dict, tuple]]:
         for item in context.data["items"]:

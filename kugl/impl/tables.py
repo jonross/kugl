@@ -74,7 +74,7 @@ class TableFromCode(Table):
         :param extender: an ExtendTable object from the extend: section of a user config file
         """
         impl = table_def.cls()
-        ddl = impl.ddl
+        ddl = ", ".join(f"{c.name} {c._sqltype}" for c in impl.columns())
         if extender:
             ddl += ", " + Table.column_ddl(extender.columns)
             extras = extender.columns
