@@ -47,13 +47,6 @@ class Tokens:
             return token
         return None
 
-    def join(self):
-        return "".join(fn.concat(self._seen, self._unseen))
-
-    @property
-    def context(self):
-        return " ".join(t.value for t in list(self._seen_nowhite)[-6:-1])
-
 
 class Query:
     """Hold a SQL query + information parsed from it using sqlparse."""
