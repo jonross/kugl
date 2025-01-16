@@ -102,14 +102,14 @@ class NodesTable:
 
     def columns(self):
         return [
-            column("name", "TEXT"),
-            column("uid", "TEXT"),
-            column("cpu_alloc", "REAL"),
-            column("gpu_alloc", "REAL"),
-            column("mem_alloc", "INTEGER"),
-            column("cpu_cap", "REAL"),
-            column("gpu_cap", "REAL"),
-            column("mem_cap", "INTEGER"),
+            column("name", "TEXT", "node name, from metadata.name"),
+            column("uid", "TEXT", "node UID, from metadata.uid"),
+            column("cpu_alloc", "REAL", "allocatable CPUs, from status.allocatable"),
+            column("gpu_alloc", "REAL", "allocatable GPUs, or null if none"),
+            column("mem_alloc", "INTEGER", "allocatable memory, in bytes"),
+            column("cpu_cap", "REAL", "CPU capacity, from status.capacity"),
+            column("gpu_cap", "REAL", "GPU capacity, or null if none"),
+            column("mem_cap", "INTEGER", "memory capacity, in bytes"),
         ]
 
     def make_rows(self, context) -> list[tuple[dict, tuple]]:
@@ -171,7 +171,7 @@ class JobsTable:
             column("name", "TEXT", "job name, from metadata.name"),
             column("uid", "TEXT", "job UID, from metadata.name"),
             column("namespace", "TEXT", "job namespace,from metadata.namespace"),
-            column("status", "TEXT", "job status, one of `Running`, `Complete`, `Suspended`, Failed`, `Unknown`"),
+            column("status", "TEXT", "job status, one of 'Running', 'Complete', 'Suspended', 'Failed', 'Unknown'"),
             column("cpu_req", "REAL", "sum of CPUs requested across containers"),
             column("gpu_req", "REAL", "sum of GPUs requested, or null"),
             column("mem_req", "INTEGER", "sum of memory requested, in bytes"),

@@ -95,9 +95,9 @@ class Registry:
         schema = self.get_schema(schema_name).read_configs()
         if table_name:
             if not (table := schema.table_builder(table_name)):
-                fail(f"Table {table_name} is not defines in schema {schema_name}")
+                fail(f"Table '{table_name}' is not defined in schema {schema_name}")
             return table.printable_schema()
-        return "\n\n".join(f"--- {name}\n" + schema.table_builder(name).printable_schema()
+        return "\n\n".join(f"## {name}\n" + schema.table_builder(name).printable_schema()
                          for name in sorted(schema.all_table_names()))
 
 
