@@ -7,6 +7,7 @@ from typing import Optional, Type
 
 import jmespath
 from pydantic import Field, BaseModel
+from tabulate import tabulate
 
 from .config import UserColumn, ExtendTable, CreateTable, Column
 from ..util import fail, debugging
@@ -61,9 +62,9 @@ class Table:
             placeholders = ", ".join("?" * len(rows[0]))
             db.execute(f"INSERT INTO {table_name} VALUES({placeholders})", rows)
 
-    @staticmethod
-    def column_ddl(columns: list[UserColumn]) -> str:
-        return ", ".join(f"{c.name} {c._sqltype}" for c in columns)
+    def printable_schema(self):
+        rows = [(c.name, c._sqltype, c.comment or "") for c in self.builtin_columns + self.non_builtin_columns]
+        return tabulate(rows, tablefmt="plain")
 
 
 class TableFromCode(Table):
