@@ -94,9 +94,11 @@ class Registry:
             schema_name, table_name = arg, None
         schema = self.get_schema(schema_name).read_configs()
         if table_name:
-            return str(schema.table_builder(table_name))
-        else:
-            return "\n".join(str(schema.table_builder(name)) for name in schema.all_table_names())
+            if not (table := schema.table_builder(table_name)):
+                fail(f"Table {table_name} is not defines in schema {schema_name}")
+            return table.printable_schema()
+        return "\n".join(f"--- {name}" + schema.table_builder(name).printable_schema()
+                         for name in schema.all_table_names())
 
 
 class Resource(BaseModel):
