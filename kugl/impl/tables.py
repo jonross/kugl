@@ -26,18 +26,16 @@ class TableDef(BaseModel):
 class Table:
     """The engine-level representation of a table, independent of the config file format"""
 
-    def __init__(self, name: str, schema_name, resource: str, ddl: str,
+    def __init__(self, name: str, schema_name, resource: str,
                  builtin_columns: list[Column], non_builtin_columns: list[UserColumn]):
         """
         :param name: the table name, e.g. "pods"
         :param name: the schema name, e.g. "kubernetes"
         :param resource: the Kubernetes resource type, e.g. "pods"
-        :param ddl: SQL for creating the table, e.g. "name TEXT, age INTEGER"
         """
         self.name = name
         self.schema_name = schema_name
         self.resource = resource
-        self.ddl = ddl
         self.builtin_columns = builtin_columns
         self.non_builtin_columns = non_builtin_columns
 
@@ -76,18 +74,9 @@ class TableFromCode(Table):
         :param table_def: a TableDef from the @table decorator
         :param extender: an ExtendTable object from the extend: section of a user config file
         """
-        impl = table_def.cls()
-        columns = impl.columns()
-        ddl = ", ".join(f"{c.name} {c._sqltype}" for c in columns)
-        if extender:
-            ddl += ", " + Table.column_ddl(extender.columns)
-            extras = extender.columns
-        else:
-            extras = []
-        if debug:= debugging("schema"):
-            debug(f"table {table_def.name}: {ddl}")
-        super().__init__(table_def.name, table_def.schema_name, table_def.resource, ddl, columns, extras)
-        self.impl = impl
+        self.impl = table_def.cls()
+        super().__init__(table_def.name, table_def.schema_name, table_def.resource, self.impl.columns(),
+                         extender.columns if extender else [])
 
     def make_rows(self, context: "RowContext") -> list[tuple[dict, tuple]]:
         """Delegate to the user-defined table implementation."""
@@ -108,12 +97,8 @@ class TableFromConfig(Table):
             self.itemizer = lambda data: data["items"]
         else:
             self.itemizer = lambda data: self._itemize(creator.row_source, data)
-        schema = Table.column_ddl(creator.columns)
-        extras = creator.columns
-        if extender:
-            schema += ", " + Table.column_ddl(extender.columns)
-            extras += extender.columns
-        super().__init__(name, schema_name, creator.resource, schema, [], extras)
+        super().__init__(name, schema_name, creator.resource, [],
+                         creator.columns + (extender.columns if extender else []))
         self.row_source = creator.row_source
 
     def make_rows(self, context: "RowContext") -> list[tuple[dict, tuple]]:
