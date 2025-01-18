@@ -39,8 +39,6 @@ class Registry:
 
     def add_table(self, cls: type, **kwargs):
         """Register a class to define a table in Python; this is called by the @table decorator."""
-        if debug := debugging("registry"):
-            debug(f"Add table {kwargs}")
         t = TableDef(cls=cls, **kwargs)
         self.get_schema(t.schema_name).builtin[t.name] = t
 
