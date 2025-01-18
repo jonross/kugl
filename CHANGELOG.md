@@ -2,6 +2,7 @@
 
 - Support multiple schemas & join across them
 - Allow comments for user-defined columns
+- Print schema & table definitions using `--schema` option
 - Allow environment variables in `file` resource paths
 - Resource cache paths and file formats have changed, and cache now lives in `~/.kuglcache`
 - `rm -r ~/.kugl/cache` is recommended to clear obsolete files

@@ -2,7 +2,6 @@ from collections import deque
 from dataclasses import dataclass
 from typing import Optional
 
-import funcy as fn
 import sqlparse
 from sqlparse.tokens import Name, Comment, Punctuation
 

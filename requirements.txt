@@ -1,5 +1,4 @@
 arrow==1.2.0
-funcy==1.17
 jmespath==1.0.1
 pydantic==2.6.1
 pytest-cov==4.1.0

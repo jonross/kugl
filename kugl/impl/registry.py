@@ -3,9 +3,9 @@ Registry of resources and tables, independent of configuration file format.
 """
 
 from argparse import ArgumentParser
+from itertools import chain
 from typing import Type
 
-import funcy as fn
 from pydantic import BaseModel
 
 from kugl.impl.config import UserConfig, parse_file, CreateTable, ExtendTable, ResourceDef, DEFAULT_SCHEMA
@@ -184,7 +184,7 @@ class Schema(BaseModel):
             return TableFromConfig(name, self.name, creator, extender)
 
     def all_table_names(self):
-        return set(fn.cat([self.builtin.keys(), self._create.keys(), self._extend.keys()]))
+        return set(chain(self.builtin.keys(), self._create.keys(), self._extend.keys()))
 
     def resource_for(self, table: Table) -> set[ResourceDef]:
         """Return the ResourceDef used by a Table."""

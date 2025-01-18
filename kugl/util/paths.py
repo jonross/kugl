@@ -1,7 +1,7 @@
+from functools import cache
 import os
 from pathlib import Path
 
-import funcy as fn
 import yaml
 
 from .age import Age
@@ -66,7 +66,7 @@ def kube_home() -> KPath:
     return KPath.home() / ".kube"
 
 
-@fn.memoize
+@cache
 def kube_context() -> str:
     """Return the current kubernetes context."""
     kube_config = kube_home() / "config"

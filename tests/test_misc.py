@@ -28,7 +28,6 @@ def test_limits_misc(capsys):
     assert Limits(1, 2, 10) + Limits(2, 3, 100) == Limits(3, 5, 110)
 
 
-@patch.dict(kube_context.memory, clear=True)  # suppress memoization
 def test_kube_home_missing(test_home):
     shutil.rmtree(str(kube_home()))
     with pytest.raises(KuglError, match="can't determine current context"):
@@ -36,7 +35,6 @@ def test_kube_home_missing(test_home):
         main1(["select * from nodes"])
 
 
-@patch.dict(kube_context.memory, clear=True)  # suppress memoization
 def test_no_kube_context(test_home, tmp_path):
     kube_home().prep().joinpath("config").write_text("")
     with pytest.raises(KuglError, match="No current context"):
