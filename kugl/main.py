@@ -9,11 +9,10 @@ from sqlite3 import DatabaseError
 from types import SimpleNamespace
 from typing import List, Union
 
-from kugl.impl.parser import Query
 from kugl.impl.registry import Registry
 from kugl.impl.engine import Engine, CHECK, NEVER_UPDATE, ALWAYS_UPDATE, CacheFlag
 from kugl.impl.config import UserInit, parse_file, Settings
-from kugl.util import Age, fail, debug_features, kugl_home, kube_home, ConfigPath, debugging, KuglError, kube_context
+from kugl.util import Age, fail, debug_features, kugl_home, kube_home, ConfigPath, debugging, KuglError, kube_context, Query
 
 # Register built-ins immediately because they're needed for command-line parsing
 import kugl.builtins.resources

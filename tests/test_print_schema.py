@@ -23,6 +23,7 @@ def test_print_one_table(test_home, capsys):
     main1(["--schema", "kubernetes.nodes"])
     out, err = capsys.readouterr()
     assert_by_line(out, """
+        ## nodes
         name       text     node name, from metadata.name
         uid        text     node UID, from metadata.uid
         cpu_alloc  real     allocatable CPUs, from status.allocatable

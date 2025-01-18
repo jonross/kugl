@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from kugl.impl.config import UserConfig, parse_file, CreateTable, ExtendTable, ResourceDef, DEFAULT_SCHEMA
 from kugl.impl.tables import TableFromCode, TableFromConfig, TableDef, Table
-from kugl.util import fail, debugging, ConfigPath, kugl_home
+from kugl.util import fail, debugging, ConfigPath, kugl_home, cleave
 
 _REGISTRY = None
 
@@ -88,16 +88,13 @@ class Registry:
                 resource_class.add_cli_options(ap)
 
     def printable_schema(self, arg: str):
-        if "." in arg:
-            schema_name, table_name = arg.split(".", 1)
-        else:
-            schema_name, table_name = arg, None
+        schema_name, table_name = cleave(arg, ".")
         schema = self.get_schema(schema_name).read_configs()
         if table_name:
             if not (table := schema.table_builder(table_name)):
                 fail(f"Table '{table_name}' is not defined in schema {schema_name}")
             return table.printable_schema()
-        return "\n\n".join(f"## {name}\n" + schema.table_builder(name).printable_schema()
+        return "\n\n".join(schema.table_builder(name).printable_schema()
                          for name in sorted(schema.all_table_names()))
 
 

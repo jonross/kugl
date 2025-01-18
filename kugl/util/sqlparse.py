@@ -6,7 +6,7 @@ import funcy as fn
 import sqlparse
 from sqlparse.tokens import Name, Comment, Punctuation
 
-from kugl.util import fail, TABLE_NAME_RE
+from kugl.util import fail, TABLE_NAME_RE, cleave
 
 
 @dataclass(frozen=True)
@@ -32,7 +32,6 @@ class Tokens:
 
     def __init__(self, tokens):
         self._unseen = deque(tokens)
-        self._seen = deque()
 
     def get(self, skip: bool = True):
         """
@@ -41,7 +40,6 @@ class Tokens:
         """
         while self._unseen:
             token = self._unseen.popleft()
-            self._seen.append(token)
             if skip and (token.is_whitespace or token.ttype is Comment):
                 continue
             return token
@@ -85,10 +83,4 @@ class Query:
         while (token := tl.get(skip=False)) and (token.ttype == Name or
                                                  token.ttype == Punctuation and token.value == "."):
             name += token.value
-        parts = name.split(".")
-        if len(parts) == 1:
-            self.named_tables.add(NamedTable(None, *parts))
-        elif len(parts) == 2:
-            self.named_tables.add(NamedTable(*parts))
-        else:
-            fail(f"invalid schema name in table: {name}")
+        self.named_tables.add(NamedTable(*cleave(name, ".", flip=True)))

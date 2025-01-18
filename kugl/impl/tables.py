@@ -64,7 +64,7 @@ class Table:
 
     def printable_schema(self):
         rows = [(c.name, c._sqltype, c.comment or "") for c in self.builtin_columns + self.non_builtin_columns]
-        return tabulate(rows, tablefmt="plain")
+        return f"## {self.name}\n" + tabulate(rows, tablefmt="plain")
 
 
 class TableFromCode(Table):
