@@ -6,8 +6,6 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Optional
 
-import funcy as fn
-
 from kugl.util import parse_size, parse_cpu
 
 # What container name is considered the "main" container, if present
@@ -128,7 +126,7 @@ class PodHelper(ItemHelper, Containerized):
         """
         if not self.containers:
             return None
-        main = fn.first(fn.filter(lambda c: c["name"] in MAIN_CONTAINERS, self.containers))
+        main = next(filter(lambda c: c["name"] in MAIN_CONTAINERS, self.containers), None)
         return main or self.containers[0]
 
 

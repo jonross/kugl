@@ -14,6 +14,28 @@ from kugl.util import Age, parse_utc, parse_size, KPath, ConfigPath, parse_age, 
 PARENTED_PATH = re.compile(r"^(\^*)(.*)")
 DEFAULT_SCHEMA = "kubernetes"
 
+KUGL_TYPE_CONVERTERS = {
+    # Valid choices for column type in config -> function to extract that from a string
+    "integer": int,
+    "real" : float,
+    "text": str,
+    "date": parse_utc,
+    "age": parse_age,
+    "size": parse_size,
+    "cpu": parse_cpu,
+}
+
+KUGL_TYPE_TO_SQL_TYPE = {
+    # Valid choices for column type in config -> SQLite type to hold it
+    "integer": "integer",
+    "real": "real",
+    "text": "text",
+    "date": "integer",
+    "age": "integer",
+    "size": "integer",
+    "cpu": "real",
+}
+
 
 class Settings(BaseModel):
     """Holds the settings: entry from a user config file."""
@@ -29,50 +51,62 @@ class UserInit(BaseModel):
     shortcuts: dict[str, list[str]] = {}
 
 
-class ColumnDef(BaseModel):
-    """Holds one entry from a columns: list in a user config file."""
+class Column(BaseModel):
+    """The minimal field set for a table column defined from code.  Columns defined from user
+    config files use UserColumn, a subclass."""
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     name: str
     type: Literal["text", "integer", "real", "date", "age", "size", "cpu"] = "text"
-    path: Optional[str] = None
-    label: Optional[Union[str, list[str]]] = None
-    # Function to extract a column value from an object.
-    _extract: Callable[[object], object]
-    # Function to convert the extracted value to the SQL type
-    _convert: type
-    # Parsed value of self.path
-    _finder: jmespath.parser.Parser
-    # Number of ^ in self.path
-    _parents: int
+    comment: Optional[str] = None
     # SQL type for this column
     _sqltype: str
 
     @model_validator(mode="after")
     @classmethod
-    def gen_extractor(cls, config: 'ColumnDef') -> 'ColumnDef':
+    def recognize_type(cls, column: 'Column') -> 'Column':
+        column._sqltype = KUGL_TYPE_TO_SQL_TYPE[column.type]
+        return column
+
+
+class UserColumn(Column):
+    """Holds one entry from a columns: list in a user config file."""
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+    path: Optional[str] = None
+    label: Optional[Union[str, list[str]]] = None
+    # Parsed value of self.path
+    _finder: jmespath.parser.Parser
+    # Number of ^ in self.path
+    _parents: int
+    # Function to extract a column value from an object.
+    _extract: Callable[[object], object]
+    # Function to convert the extracted value to the SQL type
+    _convert: type
+
+    @model_validator(mode="after")
+    @classmethod
+    def gen_extractor(cls, column: 'UserColumn') -> 'UserColumn':
         """
         Generate the extract function for a column definition; given an object, it will
         return a column value of the appropriate type.
         """
-        if config.path and config.label:
+        if column.path and column.label:
             raise ValueError("cannot specify both path and label")
-        elif config.path:
-            m = PARENTED_PATH.match(config.path)
-            config._parents = len(m.group(1))
+        elif column.path:
+            m = PARENTED_PATH.match(column.path)
+            column._parents = len(m.group(1))
             try:
-                config._finder = jmespath.compile(m.group(2))
+                column._finder = jmespath.compile(m.group(2))
             except jmespath.exceptions.ParseError as e:
-                raise ValueError(f"invalid JMESPath expression {m.group(2)} in column {config.name}") from e
-            config._extract = config._extract_jmespath
-        elif config.label:
-            if not isinstance(config.label, list):
-                config.label = [config.label]
-            config._extract = config._extract_label
+                raise ValueError(f"invalid JMESPath expression {m.group(2)} in column {column.name}") from e
+            column._extract = column._extract_jmespath
+        elif column.label:
+            if not isinstance(column.label, list):
+                column.label = [column.label]
+            column._extract = column._extract_label
         else:
             raise ValueError("must specify either path or label")
-        config._sqltype = KUGL_TYPE_TO_SQL_TYPE[config.type]
-        config._convert = KUGL_TYPE_CONVERTERS[config.type]
-        return config
+        column._convert = KUGL_TYPE_CONVERTERS[column.type]
+        return column
 
     def extract(self, obj: object, context) -> object:
         """Extract the column value from an object and convert to the correct type."""
@@ -116,32 +150,11 @@ class ColumnDef(BaseModel):
         return text
 
 
-KUGL_TYPE_CONVERTERS = {
-    "integer": int,
-    "real" : float,
-    "text": str,
-    "date": parse_utc,
-    "age": parse_age,
-    "size": parse_size,
-    "cpu": parse_cpu,
-}
-
-KUGL_TYPE_TO_SQL_TYPE = {
-    "integer": "integer",
-    "real": "real",
-    "text": "text",
-    "date": "integer",
-    "age": "integer",
-    "size": "integer",
-    "cpu": "real",
-}
-
-
 class ExtendTable(BaseModel):
     """Holds the extend: section from a user config file."""
     model_config = ConfigDict(extra="forbid")
     table: str
-    columns: list[ColumnDef] = []
+    columns: list[UserColumn] = []
 
 
 class ResourceDef(BaseModel):

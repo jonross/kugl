@@ -13,6 +13,9 @@ back to strings like `2021-01-01 12:34:56Z` or `5d`, `4h30m` using the `to_utc` 
 Built from `kubectl get pods`, one row per pod.  Two calls are made to `get pods`, one to get textual outut
 of the STATUS column, since this is difficult to determine from the pod detail.
 
+NOTE: some of the containers in a pod may have no limits expressed.  If all have no limits for e.g. CPU,
+`cpu_req` will be null; otherwise, to sum container resources, a null value will be treated as zero.
+
 | Column                    | Type    | Description                                                                                                                                                                                       |
 |---------------------------|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | name                      | TEXT    | Pod name, from `metadata.name`                                                                                                                                                                    |

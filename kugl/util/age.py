@@ -2,8 +2,6 @@ import datetime as dt
 import re
 from typing import Dict
 
-import funcy as fn
-
 
 class Age(dt.timedelta):
     """
@@ -51,8 +49,10 @@ class Age(dt.timedelta):
         x = x.strip()
         if not x:
             raise ValueError("Empty argument")
-        if fn.silent(int)(x) is not None:
+        try:
             return {"seconds": int(x)}
+        except:
+            pass
         if not cls.AGE_RE.match(x):
             raise ValueError(f"Invalid age syntax: {x}")
         suffixes = {"s": "seconds", "m": "minutes", "h": "hours", "d": "days"}

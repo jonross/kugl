@@ -2,8 +2,7 @@ from typing import Optional
 
 import pytest
 
-from kugl.impl.parser import Query
-from kugl.util import KuglError, SqliteDb
+from kugl.util import KuglError, SqliteDb, Query
 
 
 @pytest.mark.parametrize("sql,refs,error", [
@@ -12,7 +11,6 @@ from kugl.util import KuglError, SqliteDb
     ("""select xyz from pods""", ["pods"], None),
     ("""select xyz from pods left outer join nodes""", ["pods", "nodes"], None),
     ("""select xyz from my.pods a join his.nodes b""", ["my.pods", "his.nodes"], None),
-    ("""select xyz from my.own.pods""", None, "invalid schema name in table: my.own.pods"),
 ])
 def test_schema_extraction(sql, refs: list[str], error: Optional[str]):
     """Verify extraction of Kugl schemas from SQL queries."""

@@ -5,11 +5,12 @@ Registry of resources and tables, independent of configuration file format.
 from argparse import ArgumentParser
 from typing import Type
 
+import funcy as fn
 from pydantic import BaseModel
 
 from kugl.impl.config import UserConfig, parse_file, CreateTable, ExtendTable, ResourceDef, DEFAULT_SCHEMA
 from kugl.impl.tables import TableFromCode, TableFromConfig, TableDef, Table
-from kugl.util import fail, debugging, ConfigPath, kugl_home
+from kugl.util import fail, debugging, ConfigPath, kugl_home, cleave
 
 _REGISTRY = None
 
@@ -85,6 +86,16 @@ class Registry:
         for resource_class in set(self.resources_by_family.values()):
             if hasattr(resource_class, "add_cli_options"):
                 resource_class.add_cli_options(ap)
+
+    def printable_schema(self, arg: str):
+        schema_name, table_name = cleave(arg, ".")
+        schema = self.get_schema(schema_name).read_configs()
+        if table_name:
+            if not (table := schema.table_builder(table_name)):
+                fail(f"Table '{table_name}' is not defined in schema {schema_name}")
+            return table.printable_schema()
+        return "\n\n".join(schema.table_builder(name).printable_schema()
+                         for name in sorted(schema.all_table_names()))
 
 
 class Resource(BaseModel):
@@ -171,6 +182,9 @@ class Schema(BaseModel):
             return TableFromCode(builtin, extender)
         if creator:
             return TableFromConfig(name, self.name, creator, extender)
+
+    def all_table_names(self):
+        return set(fn.cat([self.builtin.keys(), self._create.keys(), self._extend.keys()]))
 
     def resource_for(self, table: Table) -> set[ResourceDef]:
         """Return the ResourceDef used by a Table."""

@@ -9,11 +9,10 @@ from sqlite3 import DatabaseError
 from types import SimpleNamespace
 from typing import List, Union
 
-from kugl.impl.parser import Query
 from kugl.impl.registry import Registry
 from kugl.impl.engine import Engine, CHECK, NEVER_UPDATE, ALWAYS_UPDATE, CacheFlag
 from kugl.impl.config import UserInit, parse_file, Settings
-from kugl.util import Age, fail, debug_features, kugl_home, kube_home, ConfigPath, debugging, KuglError, kube_context
+from kugl.util import Age, fail, debug_features, kugl_home, kube_home, ConfigPath, debugging, KuglError, kube_context, Query
 
 # Register built-ins immediately because they're needed for command-line parsing
 import kugl.builtins.resources
@@ -59,17 +58,19 @@ def main2(argv: List[str]):
     if errors:
         fail("\n".join(errors))
 
-    # Check for shortcuts now, because they can include command line options.  But the
-    # command line as given also applies.  So we have to treat the last arg as SQL or
-    # shortcut name, even before we see the options.
-    if " " not in argv[-1]:
-        if not (new_argv := init.shortcuts.get(argv[-1])):
-            fail(f"No shortcut named '{argv[-1]}' is defined in ~/.kugl/init.yaml")
-        return main1(argv[:-1] + new_argv)
-
     ap = ArgumentParser()
     Registry.get().augment_cli(ap)
     args, cache_flag = parse_args(argv, ap, init.settings)
+
+    if args.schema:
+        print(Registry.get().printable_schema(args.sql))
+        return
+
+    # Check for shortcut and reparse, because they can contain command-line options.
+    if " " not in args.sql:
+        if not (new_argv := init.shortcuts.get(argv[-1])):
+            fail(f"No shortcut named '{argv[-1]}' is defined in ~/.kugl/init.yaml")
+        return main1(argv[:-1] + new_argv)
 
     if args.debug:
         debug_features(args.debug.split(","))
@@ -85,6 +86,7 @@ def parse_args(argv: list[str], ap: ArgumentParser, settings: Settings) -> tuple
     ap.add_argument("-D", "--debug", type=str)
     ap.add_argument("-c", "--cache", default=False, action="store_true")
     ap.add_argument("-r", "--reckless", default=False, action="store_true")
+    ap.add_argument("--schema", default=False, action="store_true")
     ap.add_argument("-t", "--timeout", type=str)
     ap.add_argument("-u", "--update", default=False, action="store_true")
     ap.add_argument("sql")
