@@ -20,6 +20,7 @@ import kugl.builtins.schemas.kubernetes
 
 
 def main() -> None:
+    sys.argv[0] = "kugl"
     main1(sys.argv[1:])
 
 
