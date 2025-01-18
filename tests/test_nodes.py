@@ -2,15 +2,12 @@
 Tests for the nodes and taints tables.
 """
 
-import yaml
-
-from kugl.impl.config import parse_model, UserConfig
-from kugl.util import fail, features_debugged
+from kugl.util import features_debugged, kugl_home
 from .testing import make_node, kubectl_response, assert_query, Taint, assert_by_line
 
 
 def test_node_query(test_home):
-    (test_home / "kubernetes.yaml").write_text("""
+    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
         extend:
           - table: nodes
             columns:

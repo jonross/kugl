@@ -10,7 +10,7 @@ import pytest
 from kugl.impl.config import Settings
 from kugl.impl.engine import CHECK, ALWAYS_UPDATE, NEVER_UPDATE
 from kugl.main import main1, parse_args
-from kugl.util import KuglError, Age
+from kugl.util import KuglError, Age, kugl_home
 
 
 def test_enforce_one_cache_option(test_home):
@@ -39,7 +39,7 @@ def test_missing_query(test_home):
 
 
 def test_shortcut_with_invalid_option(test_home, capsys):
-    test_home.joinpath("init.yaml").write_text("""
+    kugl_home().prep().joinpath("init.yaml").write_text("""
         shortcuts:
           foo:
           - --badoption
@@ -57,7 +57,7 @@ def test_unknown_option(test_home, capsys):
 
 
 def test_enforce_one_cache_option_via_shortcut(test_home, capsys):
-    test_home.joinpath("init.yaml").write_text("""
+    kugl_home().prep().joinpath("init.yaml").write_text("""
         shortcuts:
           foo:
           - -u
@@ -68,7 +68,7 @@ def test_enforce_one_cache_option_via_shortcut(test_home, capsys):
 
 
 def test_simple_shortcut(test_home, capsys):
-    test_home.joinpath("init.yaml").write_text("""
+    kugl_home().prep().joinpath("init.yaml").write_text("""
         shortcuts:
           foo: ["select 1, 2"]
     """)

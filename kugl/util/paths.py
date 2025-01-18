@@ -26,6 +26,10 @@ class KPath(type(Path())):
         time = clock.CLOCK.now() - age.value
         os.utime(str(self), times=(time, time))
 
+    def prep(self):
+        super().mkdir(parents=True, exist_ok=True)
+        return self
+
 
 class ConfigPath(KPath):
     """Same as a KPath but adds debug statements"""
@@ -42,16 +46,23 @@ class ConfigPath(KPath):
 
 
 def kugl_home() -> KPath:
-    # KUGL_HOME override is for unit tests, not for users (as least for now)
+    # KUGL_HOME override is for unit tests, not users
     if "KUGL_HOME" in os.environ:
         return KPath(os.environ["KUGL_HOME"])
     return KPath.home() / ".kugl"
 
 
+def kugl_cache() -> KPath:
+    # KUGL_CACHE override is for unit tests, not users
+    if "KUGL_CACHE" in os.environ:
+        return KPath(os.environ["KUGL_CACHE"])
+    return KPath.home() / ".kuglcache"
+
+
 def kube_home() -> KPath:
-    # KUGL_HOME override is for unit tests, not for users (as least for now)
-    if "KUGL_HOME" in os.environ:
-        return KPath(os.environ["KUGL_HOME"]) / ".kube"
+    # KUGL_KUBE_HOME override is for unit tests, not for users (as least for now)
+    if "KUGL_KUBE_HOME" in os.environ:
+        return KPath(os.environ["KUGL_KUBE_HOME"])
     return KPath.home() / ".kube"
 
 

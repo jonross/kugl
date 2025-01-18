@@ -10,14 +10,14 @@ from pathlib import Path
 import pytest
 
 from kugl.main import main1
-from kugl.util import KuglError, features_debugged
+from kugl.util import KuglError, features_debugged, kugl_home, KPath
 from .testing import kubectl_response, assert_query, assert_by_line
 
 
 def test_non_sql_types(test_home, capsys):
     """Test the column types that don't correspond exactly to SQLite types.
     Also test the 'extract' debug option."""
-    (test_home / "kubernetes.yaml").write_text("""
+    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
       resources:
         - name: things
           namespaced: false
@@ -73,7 +73,7 @@ def test_non_sql_types(test_home, capsys):
 
 def test_too_many_parents(test_home):
     """Ensure correct error when a parent field reference is too long."""
-    (test_home / "kubernetes.yaml").write_text("""
+    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
       resources:
         - name: things
       create:
@@ -95,7 +95,7 @@ def test_too_many_parents(test_home):
 
 def test_config_with_missing_resource(test_home):
     """Ensure correct error when an undefined resource is used."""
-    (test_home / "kubernetes.yaml").write_text("""
+    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
         create:
           - table: stuff
             resource: stuff
@@ -130,7 +130,7 @@ def test_bad_queries(query, error):
 ])
 def test_stdin_and_exec(test_home, resource, monkeypatch, capsys):
     """Test the stdin and exec resources.  Also test the 'sqlite' debug option."""
-    (test_home / "hr.yaml").write_text(f"""
+    kugl_home().prep().joinpath("hr.yaml").write_text(f"""
         resources:
           - name: people
             {resource}
@@ -155,7 +155,7 @@ def test_stdin_and_exec(test_home, resource, monkeypatch, capsys):
         monkeypatch.setattr(sys, "stdin", io.StringIO(people_data))
     else:
         # The exec: form of the test; write the data to a file that will be cat'ed
-        (Path(os.getenv("KUGL_MOCKDIR")) / "people_data.json").write_text(people_data)
+        KPath(os.getenv("KUGL_MOCKDIR")).prep().joinpath("people_data.json").write_text(people_data)
     with features_debugged("sqlite"):
         main1(["SELECT name, age FROM hr.people"])
     out, err = capsys.readouterr()
@@ -174,7 +174,7 @@ def test_stdin_and_exec(test_home, resource, monkeypatch, capsys):
 
 def test_multi_schema_query(test_home, capsys):
     """Test a query that references multiple schemas."""
-    (test_home / "hr.yaml").write_text("""
+    kugl_home().prep().joinpath("hr.yaml").write_text("""
         resources:
           - name: people
             file: $KUGL_MOCKDIR/people_data.yaml
@@ -190,7 +190,7 @@ def test_multi_schema_query(test_home, capsys):
                 path: age
                 type: integer
     """)
-    (test_home / "sales.yaml").write_text("""
+    kugl_home().joinpath("sales.yaml").write_text("""
         resources:
           - name: sales_volume
             file: $KUGL_MOCKDIR/sales_data.yaml

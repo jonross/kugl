@@ -15,7 +15,7 @@ from tabulate import tabulate
 
 from .config import Settings, DEFAULT_SCHEMA
 from .registry import Schema, Resource, Registry
-from ..util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, debugging, to_age, Age, KPath, Query
+from ..util import fail, SqliteDb, to_size, to_utc, kugl_cache, clock, debugging, to_age, Age, KPath, Query
 from .tables import Table
 
 # Cache behaviors
@@ -52,7 +52,7 @@ class Engine:
         self.args = args
         self.cache_flag = cache_flag
         self.settings = settings
-        self.cache = DataCache(kugl_home() / "cache", self.settings.cache_timeout)
+        self.cache = DataCache(kugl_cache(), self.settings.cache_timeout)
         # Maps resource name e.g. "pods" to the response from "kubectl get pods -o json"
         self.data = {}
         self.db = SqliteDb()

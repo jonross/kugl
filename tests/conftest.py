@@ -23,9 +23,13 @@ def pytest_sessionstart(session):
 
 @pytest.fixture(scope="function")
 def test_home(tmp_path, monkeypatch):
-    monkeypatch.setenv("KUGL_HOME", str(tmp_path))
-    monkeypatch.setenv("KUGL_MOCKDIR", str(tmp_path / "cache"))
-    (tmp_path / "cache").mkdir()
-    kube_home().mkdir()
-    kube_home().joinpath("config").write_text("current-context: nocontext")
+    # Put all the folders where we find config data under the temp folder.
+    monkeypatch.setenv("KUGL_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("KUGL_CACHE", str(tmp_path / "cache"))
+    monkeypatch.setenv("KUGL_KUBE_HOME", str(tmp_path / "kube"))
+    monkeypatch.setenv("KUGL_MOCKDIR", str(tmp_path / "results"))
+    # Write a fake kubeconfig file so we don't have to mock it.
+    # A specific unit test will test proper behavior when it's absent.
+    # The other folders are Kugl-owned, so we should verify they're auto-created when appropriate.
+    kube_home().prep().joinpath("config").write_text("current-context: nocontext")
     yield KPath(tmp_path)

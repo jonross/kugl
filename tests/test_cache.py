@@ -11,7 +11,6 @@ from tests.testing import assert_by_line
 
 
 def test_cache(test_home, capsys):
-    NS = "default"
     cache = DataCache(test_home, Age("1m"))
     mock_schema = SimpleNamespace(name="kubernetes")
 
