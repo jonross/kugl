@@ -65,6 +65,13 @@ class HRData:
                 type: integer
     """)
 
+    # Result of SELECT name, age FROM hr.people
+    PEOPLE_RESULT = """
+        name      age
+        Jim        42
+        Jill       43
+    """
+
     def config(self):
         """Return a deepcopy of the default HR configuration, for customization in a test."""
         return deepcopy(self.CONFIG)
