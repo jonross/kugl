@@ -1,12 +1,14 @@
 """
 Tests for user configuration file content.
 """
+import pytest
 
 from kugl.impl.config import Settings, UserConfig, parse_model, ExtendTable, CreateTable, UserInit
 
 import yaml
 
-from kugl.util import Age
+from kugl.main import main1
+from kugl.util import Age, kugl_home, KuglError
 
 
 def test_settings_defaults():
@@ -148,3 +150,53 @@ def test_must_specify_path_or_label():
           - name: foo
     """))
     assert errors == ["columns.0: Value error, must specify either path or label"]
+
+
+def test_file_resources_are_not_cacheable(test_home):
+    kugl_home().prep().joinpath("hr.yaml").write_text("""
+        resources:
+          - name: people
+            file: blah
+            cacheable: true
+    """)
+    with pytest.raises(KuglError, match="File resource 'people' cannot be cacheable"):
+        main1(["select * from hr.xyz"])
+
+
+def test_noncacheable_nonkeyed(test_home):
+    """A non-cacheable exec resource doesn't need a cache key."""
+    kugl_home().prep().joinpath("hr.yaml").write_text(yaml.dump(_empty_people()))
+    main1(["select * from hr.people"])
+
+
+def test_noncacheable_nonkeyed(test_home):
+    """A acheable exec resource doesn't need a cache key."""
+    kugl_home().prep().joinpath("hr.yaml").write_text("""
+        resources:
+          - name: people
+            exec: |
+              echo '{"items": []}'
+        create:
+          - table: people
+            resource: people
+            columns:
+              - name: firstname
+                path: firstname
+    """)
+    main1(["select * from hr.people"])
+
+
+def _empty_people():
+    """A simple schema used by other tests in this file."""
+    return yaml.safe_load("""
+        resources:
+          - name: people
+            exec: |
+              echo '{"items": []}'
+        create:
+          - table: people
+            resource: people
+            columns:
+              - name: firstname
+                path: firstname
+    """)

@@ -18,9 +18,10 @@ class FileResource(Resource):
     @classmethod
     def set_cacheable(cls, resource: "FileResource") -> "FileResource":
         # File resources are not cacheable.  I'm not sure it's appropriate to mirror the folder
-        # structure of file resources under ~/.kuglcache.  Maybe that's just paranoia.
+        # structure of file resources under ~/.kuglcache.  Maybe that's just paranoia.  But if
+        # we change this, make sure stdin is never cachable.
         if resource.cacheable is True:
-            fail(f"File resource {resource.name} cannot be cacheable")
+            fail(f"File resource '{resource.name}' cannot be cacheable")
         resource.cacheable = False
         return resource
 
@@ -48,9 +49,9 @@ class ShellResource(Resource):
             resource.cacheable = False
         elif resource.cacheable is True:
             if resource.cache_key is None:
-                fail(f"Exec resource {resource.name} must have a cache_key")
+                fail(f"Exec resource '{resource.name}' must have a cache_key")
             if expandvars(resource.cache_key) == resource.cache_key:
-                fail(f"Exec resource {resource.name} cache_key does not contain non-empty environment references")
+                fail(f"Exec resource '{resource.name}' cache_key does not contain non-empty environment references")
         return resource
 
     def get_objects(self):
