@@ -165,7 +165,7 @@ class ResourceDef(BaseModel):
     """
     model_config = ConfigDict(extra="allow")
     name: str
-    cacheable: bool = True
+    cacheable: Optional[bool] = None
 
 
 class CreateTable(ExtendTable):

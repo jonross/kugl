@@ -10,6 +10,8 @@ import os
 from argparse import ArgumentParser
 from threading import Thread
 
+from pydantic import model_validator
+
 from ..helpers import Limits, ItemHelper, PodHelper, JobHelper
 from kugl.api import table, fail, resource, run, parse_utc, Resource, column
 from kugl.util import WHITESPACE_RE, kube_context
@@ -21,6 +23,14 @@ class KubernetesResource(Resource):
     namespaced: bool = True
     _all_ns: bool
     _ns: str
+
+    @model_validator(mode="after")
+    @classmethod
+    def set_cacheable(cls, resource: "KubernetesResource") -> "KubernetesResource":
+        # Kubernetes resources are cacheable by default, for reasons outlined in README.md
+        if resource.cacheable is None:
+            resource.cacheable = True
+        return resource
 
     @classmethod
     def add_cli_options(cls, ap: ArgumentParser):

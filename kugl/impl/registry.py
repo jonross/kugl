@@ -4,7 +4,7 @@ Registry of resources and tables, independent of configuration file format.
 
 from argparse import ArgumentParser
 from itertools import chain
-from typing import Type
+from typing import Type, Optional
 
 from pydantic import BaseModel
 
@@ -65,7 +65,6 @@ class Registry:
             existing = self.resources_by_schema.get(schema_name)
             if existing:
                 fail(f"Resource type {family} already registered as the default for schema {schema_name}")
-        cls.__family = family
         self.resources_by_family[family] = cls
         for schema_name in schema_defaults:
             self.resources_by_schema[schema_name] = cls
@@ -89,9 +88,7 @@ class Registry:
         schema_name, table_name = cleave(arg, ".")
         schema = self.get_schema(schema_name).read_configs()
         if table_name:
-            if not (table := schema.table_builder(table_name)):
-                fail(f"Table '{table_name}' is not defined in schema {schema_name}")
-            return table.printable_schema()
+            return schema.table_builder(table_name, missing_ok=False).printable_schema()
         return "\n\n".join(schema.table_builder(name).printable_schema()
                          for name in sorted(schema.all_table_names()))
 
@@ -99,7 +96,9 @@ class Registry:
 class Resource(BaseModel):
     """Common attributes of all resource types."""
     name: str
-    cacheable: bool = True
+    # This is optional because the default cache behavior for every resource type is different.
+    # We set it to None to detect when the user hasn't configured it.
+    cacheable: Optional[bool] = None
 
     @classmethod
     def add_cli_options(cls, ap: ArgumentParser):
@@ -169,8 +168,10 @@ class Schema(BaseModel):
             fail(f"Schema {self.name} has no default resource family")
         return impl(**fields)
 
-    def table_builder(self, name):
-        """Return the Table builder subclass (see tables.py) for a table name."""
+    def table_builder(self, name, missing_ok=True):
+        """Return the Table builder subclass (see tables.py) for a table name.
+        :param missing_ok: Defaults to True because we normally let SQLite flag missing tables.
+        """
         builtin = self.builtin.get(name)
         creator = self._create.get(name)
         extender = self._extend.get(name)
@@ -180,6 +181,8 @@ class Schema(BaseModel):
             return TableFromCode(builtin, extender)
         if creator:
             return TableFromConfig(name, self.name, creator, extender)
+        if not missing_ok:
+            fail(f"Table '{name}' is not defined in schema {self.name}")
 
     def all_table_names(self):
         return set(chain(self.builtin.keys(), self._create.keys(), self._extend.keys()))
