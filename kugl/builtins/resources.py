@@ -10,20 +10,34 @@ from pydantic import model_validator
 from kugl.api import resource, fail, run, Resource
 
 
-@resource("file")
-class FileResource(Resource):
-    file: str
+class NonCacheableResource(Resource):
 
     @model_validator(mode="after")
     @classmethod
-    def set_cacheable(cls, resource: "FileResource") -> "FileResource":
-        # File resources are not cacheable.  I'm not sure it's appropriate to mirror the folder
-        # structure of file resources under ~/.kuglcache.  Maybe that's just paranoia.  But if
-        # we change this, make sure stdin is never cachable.
+    def set_cacheable(cls, resource: "NonCacheableResource") -> "NonCacheableResource":
         if resource.cacheable is True:
-            fail(f"File resource '{resource.name}' cannot be cacheable")
+            fail(f"resource '{resource.name}' cannot be cacheable")
         resource.cacheable = False
         return resource
+
+
+@resource("data")
+class DataResource(NonCacheableResource):
+    """A resource whose data is provided directly in the configuration file."""
+    data: dict
+
+    def get_objects(self):
+        return self.data
+
+
+@resource("file")
+class FileResource(NonCacheableResource):
+    """A resource that reads a file from disk.
+
+    These are non-cacheable because'm not sure it's appropriate to mirror the folder structure of file
+    resources under ~/.kuglcache.  Maybe that's just paranoia. But if we change this, make sure stdin
+    is never cachable."""
+    file: str
 
     def get_objects(self):
         if self.file == "stdin":
@@ -32,7 +46,7 @@ class FileResource(Resource):
             file = expandvars(expanduser(self.file))
             return _parse(Path(file).read_text())
         except OSError as e:
-            fail(f"Failed to read {self.file}", e)
+            fail(f"failed to read {self.file}", e)
 
 
 @resource("shell")

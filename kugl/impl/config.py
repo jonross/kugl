@@ -180,6 +180,8 @@ class UserConfig(BaseModel):
     resources: list[ResourceDef] = []
     extend: list[ExtendTable] = []
     create: list[CreateTable] = []
+    # User can put chunks of reusable YAML under here, we will ignore
+    utils: Optional[object] = None
 
 
 # FIXME use typevars

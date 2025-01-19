@@ -115,7 +115,7 @@ class Engine:
                 else:
                     self.data[ref.name] = self.cache.load(ref)
             except Exception as e:
-                fail(f"Failed to fetch resource {ref.name}: {e}")
+                fail(f"failed to fetch resource {ref.name}: {e}")
         with ThreadPoolExecutor(max_workers=8) as pool:
             for _ in pool.map(fetch, resource_refs):
                 pass

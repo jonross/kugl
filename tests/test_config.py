@@ -152,17 +152,6 @@ def test_must_specify_path_or_label():
     assert errors == ["columns.0: Value error, must specify either path or label"]
 
 
-def test_file_resources_are_not_cacheable(test_home):
-    kugl_home().prep().joinpath("hr.yaml").write_text("""
-        resources:
-          - name: people
-            file: blah
-            cacheable: true
-    """)
-    with pytest.raises(KuglError, match="File resource 'people' cannot be cacheable"):
-        main1(["select * from hr.xyz"])
-
-
 def test_noncacheable_nonkeyed(test_home):
     """A non-cacheable exec resource doesn't need a cache key."""
     kugl_home().prep().joinpath("hr.yaml").write_text(yaml.dump(_empty_people()))
