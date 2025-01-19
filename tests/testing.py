@@ -6,6 +6,7 @@ import json
 import os
 import re
 import textwrap
+from functools import cache
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Optional, Tuple, Union, List
@@ -194,5 +195,6 @@ def assert_by_line(lines: Union[str, list[str]], expected: Union[str, list[Union
             assert exp.match(line.strip()), f"Did not find {exp.pattern} in {line.strip()}"
 
 
+@cache
 def _resource_content(filename: str):
     return Path(__file__).parent.joinpath("resources", filename).read_text()
