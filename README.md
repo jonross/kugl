@@ -6,7 +6,7 @@ Explore Kubernetes resources using SQLite.
 
 Find the top users of a GPU pool, based on instance type and a team-specific pod label.
 
-With Kugl (and a little configuration)
+With Kugl (and a bit of configuration for owner and instance type)
 
 ```shell
 kugl -a "select owner, sum(gpu_req), sum(cpu_req)
