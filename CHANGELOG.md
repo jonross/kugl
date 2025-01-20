@@ -4,6 +4,7 @@
 - Allow comments for user-defined columns
 - Print schema & table definitions using `--schema` option
 - Allow environment variables in `file` resource paths
+- Fix the `exec` resource by adding a `cache_key` field; these resources would otherwise experience cache collisions
 - Resource cache paths and file formats have changed, and cache now lives in `~/.kuglcache`
 - `rm -r ~/.kugl/cache` is recommended to clear obsolete files
 
