@@ -65,7 +65,7 @@ class HRData:
                 type: integer
     """)
 
-    # Result of SELECT name, age FROM hr.people
+    PEOPLE_QUERY = "SELECT name, age FROM hr.people ORDER BY age"
     PEOPLE_RESULT = """
         name      age
         Jim        42

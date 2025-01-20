@@ -16,7 +16,7 @@ class NonCacheableResource(Resource):
     @classmethod
     def set_cacheable(cls, resource: "NonCacheableResource") -> "NonCacheableResource":
         if resource.cacheable is True:
-            fail(f"resource '{resource.name}' cannot be cacheable")
+            fail(f"resource '{resource.name}' cannot be cacheable: true")
         resource.cacheable = False
         return resource
 
@@ -63,9 +63,9 @@ class ShellResource(Resource):
             resource.cacheable = False
         elif resource.cacheable is True:
             if resource.cache_key is None:
-                fail(f"Exec resource '{resource.name}' must have a cache_key")
+                fail(f"exec resource '{resource.name}' must have a cache key")
             if expandvars(resource.cache_key) == resource.cache_key:
-                fail(f"Exec resource '{resource.name}' cache_key does not contain non-empty environment references")
+                fail(f"exec resource '{resource.name}' cache_key does not contain non-empty environment references")
         return resource
 
     def get_objects(self):
