@@ -159,16 +159,13 @@ class Schema(BaseModel):
         """Return a Resource subclass instance for a table's resource name."""
         rgy = Registry.get()
         fields = r.model_dump()
-        if "file" in fields:
-            return rgy.get_resource_by_family("file")(**fields)
-        if "exec" in fields:
-            return rgy.get_resource_by_family("exec")(**fields)
-        if "data" in fields:
-            return rgy.get_resource_by_family("data")(**fields)
-        impl = rgy.get_resource_by_schema(self.name)
-        if impl is None:
-            fail(f"Schema {self.name} has no default resource family")
-        return impl(**fields)
+        for family in ["file", "exec", "data"]:
+            if family in fields:
+                return rgy.get_resource_by_family(family)(**fields)
+        # If no family is specified, the schema may have a default one
+        if (impl := rgy.get_resource_by_schema(self.name)):
+            return impl(**fields)
+        fail(f"can't determine type of resource '{r.name}'")
 
     def table_builder(self, name, missing_ok=True):
         """Return the Table builder subclass (see tables.py) for a table name.

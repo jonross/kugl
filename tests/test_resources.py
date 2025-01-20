@@ -32,6 +32,16 @@ def test_debugged_data_resource(hr, capsys):
     """)
 
 
+def test_untypeable_resource(hr):
+    """A resource we can't type should fail."""
+    config = hr.config()
+    # Replace the HR schema's "people" resource with an untypeable one.
+    config["resources"][0] = dict(name="people")
+    hr.save(config)
+    with pytest.raises(KuglError, match="can't determine type of resource 'people'"):
+        assert_query(hr.PEOPLE_QUERY, None)
+
+
 def test_file_resources_not_cacheable(hr):
     """As of this writing, file resources can't be cached."""
     config = hr.config()
