@@ -1,3 +1,8 @@
+## Note
+
+Since configuration files can contain scripts, they should be protected to the same degree as your shell scripts
+and anything on your `PYTHONPATH.`  Kugl will refuse to read a configuration file that is world-writable.
+
 ## File resources
 
 Kugl can be used to query YAML data in a file.  For instance, this will implement a bit of `kubectl config get-contexts`.

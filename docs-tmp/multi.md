@@ -1,3 +1,8 @@
+## Note
+
+Since configuration files can contain scripts, they should be protected to the same degree as your shell scripts 
+and anything on your `PYTHONPATH.`  Kugl will refuse to read a configuration file that is world-writable.
+
 ## Extending Kugl to AWS
 
 (So far this is just an experiment, the functionality is pretty limited.)
