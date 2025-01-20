@@ -10,41 +10,54 @@ import os
 from argparse import ArgumentParser
 from threading import Thread
 
-from .helpers import Limits, ItemHelper, PodHelper, JobHelper
-from kugl.api import schema, table, fail
-from kugl.util import parse_utc, run, WHITESPACE
+from pydantic import model_validator
+
+from ..helpers import Limits, ItemHelper, PodHelper, JobHelper
+from kugl.api import table, fail, resource, run, parse_utc, Resource, column
+from kugl.util import WHITESPACE_RE, kube_context
 
 
-@schema("kubernetes")
-class KubernetesData:  # FIXME: this should be a resource type, not a schema
+@resource("kubernetes", schema_defaults=["kubernetes"])
+class KubernetesResource(Resource):
 
-    def add_cli_options(self, ap: ArgumentParser):
+    namespaced: bool = True
+    _all_ns: bool
+    _ns: str
+
+    @model_validator(mode="after")
+    @classmethod
+    def set_cacheable(cls, resource: "KubernetesResource") -> "KubernetesResource":
+        # Kubernetes resources are cacheable by default, for reasons outlined in README.md
+        if resource.cacheable is None:
+            resource.cacheable = True
+        return resource
+
+    @classmethod
+    def add_cli_options(cls, ap: ArgumentParser):
         ap.add_argument("-a", "--all-namespaces", default=False, action="store_true")
         ap.add_argument("-n", "--namespace", type=str)
 
     def handle_cli_options(self, args):
         if args.all_namespaces and args.namespace:
             fail("Cannot use both -a/--all-namespaces and -n/--namespace")
-        self.set_namespace(args.all_namespaces, args.namespace)
-
-    def set_namespace(self, all_namespaces: bool, namespace: str):
-        if all_namespaces:
-            # FIXME: engine.py and testing.py still use this
-            self.ns = "__all"
-            self.all_ns = True
+        if args.all_namespaces:
+            self._ns = "__all"
+            self._all_ns = True
         else:
-            self.ns = namespace or "default"
-            self.all_ns = False
+            self._ns = args.namespace or "default"
+            self._all_ns = False
 
-    def get_objects(self, kind: str, namespaced: bool)-> dict:
+    def cache_path(self) -> str:
+        return f"{kube_context()}/{self._ns}.{self.name}.json"
+
+    def get_objects(self) -> dict:
         """Fetch resources from Kubernetes using kubectl.
 
-        :param kind: Kubernetes resource type e.g. "pods"
-        :return: JSON as output by "kubectl get {kind} -o json"
+        :return: JSON as output by "kubectl get {self.name} -o json"
         """
         unit_testing = "KUGL_UNIT_TESTING" in os.environ
-        namespace_flag = ["--all-namespaces"] if self.all_ns else ["-n", self.ns]
-        if kind == "pods":
+        namespace_flag = ["--all-namespaces"] if self._all_ns else ["-n", self._ns]
+        if self.name == "pods":
             pod_statuses = {}
             # Kick off a thread to get pod statuses
             def _fetch():
@@ -55,12 +68,12 @@ class KubernetesData:  # FIXME: this should be a resource type, not a schema
             # In unit tests, wait for pod status here so the log order is deterministic.
             if unit_testing:
                 status_thread.join()
-        if namespaced:
-            _, output, _= run(["kubectl", "get", kind, *namespace_flag, "-o", "json"])
+        if self.namespaced:
+            _, output, _ = run(["kubectl", "get", self.name, *namespace_flag, "-o", "json"])
         else:
-            _, output, _ = run(["kubectl", "get", kind, "-o", "json"])
+            _, output, _ = run(["kubectl", "get", self.name, "-o", "json"])
         data = json.loads(output)
-        if kind == "pods":
+        if self.name == "pods":
             # Add pod status to pods
             if not unit_testing:
                 status_thread.join()
@@ -79,7 +92,7 @@ class KubernetesData:  # FIXME: this should be a resource type, not a schema
         Convert the tabular output of 'kubectl get pods' to JSON.
         :return: a dict mapping "namespace/name" to status
         """
-        rows = [WHITESPACE.split(line.strip()) for line in output.strip().split("\n")]
+        rows = [WHITESPACE_RE.split(line.strip()) for line in output.strip().split("\n")]
         if len(rows) < 2:
             return {}
         header, rows = rows[0], rows[1:]
@@ -87,28 +100,27 @@ class KubernetesData:  # FIXME: this should be a resource type, not a schema
         status_index = header.index("STATUS")
         # It would be nice if 'kubectl get pods' printed the UID, but it doesn't, so use
         # "namespace/name" as the key.  (Can't use a tuple since this has to be JSON-dumped.)
-        if self.all_ns:
+        if self._all_ns:
             namespace_index = header.index("NAMESPACE")
             return {f"{row[namespace_index]}/{row[name_index]}": row[status_index] for row in rows}
         else:
-            return {f"{self.ns}/{row[name_index]}": row[status_index] for row in rows}
+            return {f"{self._ns}/{row[name_index]}": row[status_index] for row in rows}
 
 
 @table(schema="kubernetes", name="nodes", resource="nodes")
 class NodesTable:
 
-    @property
-    def schema(self):
-        return """
-            name TEXT,
-            uid TEXT,
-            cpu_alloc REAL,
-            gpu_alloc REAL,
-            mem_alloc INTEGER,
-            cpu_cap REAL,
-            gpu_cap REAL,
-            mem_cap INTEGER
-        """
+    def columns(self):
+        return [
+            column("name", "TEXT", "node name, from metadata.name"),
+            column("uid", "TEXT", "node UID, from metadata.uid"),
+            column("cpu_alloc", "REAL", "allocatable CPUs, from status.allocatable"),
+            column("gpu_alloc", "REAL", "allocatable GPUs, or null if none"),
+            column("mem_alloc", "INTEGER", "allocatable memory, in bytes"),
+            column("cpu_cap", "REAL", "CPU capacity, from status.capacity"),
+            column("gpu_cap", "REAL", "GPU capacity, or null if none"),
+            column("mem_cap", "INTEGER", "memory capacity, in bytes"),
+        ]
 
     def make_rows(self, context) -> list[tuple[dict, tuple]]:
         for item in context.data["items"]:
@@ -124,25 +136,24 @@ class NodesTable:
 @table(schema="kubernetes", name="pods", resource="pods")
 class PodsTable:
 
-    @property
-    def schema(self):
-        return """
-            name TEXT,
-            uid TEXT,
-            is_daemon INTEGER,
-            namespace TEXT,
-            node_name TEXT,
-            creation_ts INTEGER,
-            command TEXT,
-            phase TEXT,
-            status TEXT,
-            cpu_req REAL,
-            gpu_req REAL,
-            mem_req INTEGER,
-            cpu_lim REAL,
-            gpu_lim REAL,
-            mem_lim INTEGER
-        """
+    def columns(self):
+        return [
+            column("name", "TEXT", "pod name, from metadata.name"),
+            column("uid", "TEXT", "pod UID, from metadata.uid"),
+            column("namespace", "TEXT", "pod namespace, from metadata.namespace"),
+            column("node_name", "TEXT", "node name, from spec.nodeName, or null"),
+            column("creation_ts", "INTEGER", "creation timestamp in epoch seconds, from metadata.creationTimestamp"),
+            column("is_daemon", "INTEGER", "1 if a daemonset pod, 0 otherwise"),
+            column("command", "TEXT", "command from main container"),
+            column("phase", "TEXT", "pod phase, from status.phase"),
+            column("status", "TEXT", "pod STATUS as output by 'kubectl get pod'"),
+            column("cpu_req", "REAL", "sum of CPUs requested across containers"),
+            column("gpu_req", "REAL", "sum of GPUs requested, or null"),
+            column("mem_req", "INTEGER", "sum of memory requested, in bytes"),
+            column("cpu_lim", "REAL", "CPU limit, or null"),
+            column("gpu_lim", "REAL", "GPU limit, or null"),
+            column("mem_lim", "INTEGER", "memory limit, or null"),
+        ]
 
     def make_rows(self, context) -> list[tuple[dict, tuple]]:
         for item in context.data["items"]:
@@ -150,10 +161,10 @@ class PodsTable:
             yield item, (
                 pod.name,
                 pod.metadata.get("uid"),
-                1 if pod.is_daemon else 0,
                 pod.namespace,
                 pod["spec"].get("nodeName"),
                 parse_utc(pod.metadata["creationTimestamp"]),
+                1 if pod.is_daemon else 0,
                 pod.command,
                 pod["status"]["phase"],
                 pod["kubectl_status"],
@@ -165,20 +176,19 @@ class PodsTable:
 @table(schema="kubernetes", name="jobs", resource="jobs")
 class JobsTable:
 
-    @property
-    def schema(self):
-        return """
-            name TEXT,
-            uid TEXT,
-            namespace TEXT,
-            status TEXT,
-            cpu_req REAL,
-            gpu_req REAL,
-            mem_req INTEGER,
-            cpu_lim REAL,
-            gpu_lim REAL,
-            mem_lim INTEGER
-        """
+    def columns(self):
+        return [
+            column("name", "TEXT", "job name, from metadata.name"),
+            column("uid", "TEXT", "job UID, from metadata.name"),
+            column("namespace", "TEXT", "job namespace,from metadata.namespace"),
+            column("status", "TEXT", "job status, one of 'Running', 'Complete', 'Suspended', 'Failed', 'Unknown'"),
+            column("cpu_req", "REAL", "sum of CPUs requested across containers"),
+            column("gpu_req", "REAL", "sum of GPUs requested, or null"),
+            column("mem_req", "INTEGER", "sum of memory requested, in bytes"),
+            column("cpu_lim", "REAL", "CPU limit, or null"),
+            column("gpu_lim", "REAL", "GPU limit, or null"),
+            column("mem_lim", "INTEGER", "memory limit, or null"),
+        ]
 
     def make_rows(self, context) -> list[tuple[dict, tuple]]:
         for item in context.data["items"]:
@@ -196,13 +206,12 @@ class JobsTable:
 class LabelsTable:
     """Base class for all built-in label tables; subclasses need only define UID_FIELD."""
 
-    @property
-    def schema(self):
-        return f"""
-            {self.UID_FIELD} TEXT,
-            key TEXT,
-            value TEXT
-        """
+    def columns(self):
+        return [
+            column(self.UID_FIELD, "TEXT", "object UID, from metadata.uid"),
+            column("key", "TEXT", "label key"),
+            column("value", "TEXT", "label value"),
+        ]
 
     def make_rows(self, context) -> list[tuple[dict, tuple]]:
         for item in context.data["items"]:

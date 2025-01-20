@@ -113,7 +113,9 @@ In any case, please be mindful of stale data and server load.
 * [Built-in tables and functions](./docs-tmp/builtins.md)
 * [Configuring new columns and tables](./docs-tmp/extending.md)
 * [Troubleshooting and feedback](./docs-tmp/trouble.md)
-* [Beyond Kubernetes](./docs-tmp/beyond.md)
+* Beyond Kubernetes and kubectl
+    * [Other resource types](./docs-tmp/resources.md)
+    * [Additional schemas](./docs-tmp/multi.md)
 * [License](./LICENSE)
 
 ### Pronunciation

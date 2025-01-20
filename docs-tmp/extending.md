@@ -23,6 +23,8 @@ extend:
   - name: owner
     type: text
     path: metadata.labels."com.mycompany/ml-job-owner"
+    # Comments are optional; you can see these with 'kugl --schema'
+    comment: ML team member who submitted the work
         
   # Using Karpenter on AWS?  Add the Karpenter node pool and AWS provider ID
   # to the nodes table.
@@ -109,7 +111,7 @@ of a column definition and automatically convert response values.
 | `cpu`      | `REAL`       | CPU limit or request; accepts values like `0.5` or `300m`                   |
 | `date`     | `INTEGER`    | Unix epoch timestamp in seconds; accepts values like `2021-01-01T12:34:56Z` |
 
-## Generating multiple rows per respone item
+## Generating multiple rows per response item
 
 It's rare for a `kubectl get` response item to map directly to a single row in a table.  For example,
 a node can have multiple taints, and a pod can have multiple containers.  Kugl handles this using
@@ -139,7 +141,44 @@ Each `"^"` at the start of a `path` refers to the part of the response one level
 * `^metadata.uid` means the `.metadata.uid` in each element of the response `items` array
 * `key` and `effect` refer to each taint in the `spec.taints` array
 
+### More about row_source
+
+In detail, here's how `row_source` is handled.
+* Begin with a list containing a single element, which is the entire response JSON.
+* Apply the first `row_source` expression to each element of this list to build a new list
+    * If the expression yields a non-list result, add it to the new list
+    * If the expression yields a list, add each item (not the whole list) to the new list
+    * In either case, establish a parent / child relationship between the old and new items
+* Repeat with each successive `row_source` entry.
+
+This can produce surprising results if one step in the `row_source` list tries to do too much.
+Let's say the `node_taints` table didn't need a `^metadata.uid` reference, so only requires the
+taint lists.  This source list would not work, because `.spec` is not a child of `.items`.
+
+```yaml
+row_source:
+  - items.spec.taints
+```
+
+Addressing each element in `items` requires a JMESpath [projection](https://jmespath.org/tutorial.html#projections),
+in this case `items[*].spec`.  Continuing this with `.taints` in a single expression will then create a list of lists
+that must be flattened:
+
+```yaml
+row_source:
+  - items[*].spec.taints[]
+```
+
+Although the multi-step `row_source` is incrementally slower for large lists, it's clearly less error-prone than
+projecting and flattening, so is the recommended approach.
+
+As noted in [Troubleshooting](./trouble.md), running with `--debug itemize` will show the intermediate results of
+`row_source` processing.
+
 ## Tips
 
 If creating multiple tables from a resource, you should use the `uid` column (sourced from `metadata.uid`)
 as a join key, since this is a guaranteed unique key.
+
+The `utils:` section of `~/.kugl/init.yaml` is ignored during configuration parsing, so you can use it to store
+reusable bits of YAML.

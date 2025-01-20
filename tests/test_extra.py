@@ -3,18 +3,21 @@ Assorted query tests not covered elsewhere.
 """
 import io
 import json
+import os
 import sys
-import textwrap
+from pathlib import Path
 
 import pytest
 
 from kugl.main import main1
-from kugl.util import KuglError, features_debugged
+from kugl.util import KuglError, features_debugged, kugl_home, KPath
 from .testing import kubectl_response, assert_query, assert_by_line
 
 
 def test_non_sql_types(test_home, capsys):
-    (test_home / "kubernetes.yaml").write_text("""
+    """Test the column types that don't correspond exactly to SQLite types.
+    Also test the 'extract' debug option."""
+    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
       resources:
         - name: things
           namespaced: false
@@ -69,7 +72,8 @@ def test_non_sql_types(test_home, capsys):
 
 
 def test_too_many_parents(test_home):
-    (test_home / "kubernetes.yaml").write_text("""
+    """Ensure correct error when a parent field reference is too long."""
+    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
       resources:
         - name: things
       create:
@@ -90,7 +94,8 @@ def test_too_many_parents(test_home):
 
 
 def test_config_with_missing_resource(test_home):
-    (test_home / "kubernetes.yaml").write_text("""
+    """Ensure correct error when an undefined resource is used."""
+    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
         create:
           - table: stuff
             resource: stuff
@@ -100,38 +105,20 @@ def test_config_with_missing_resource(test_home):
         assert_query("SELECT * FROM stuff", "")
 
 
-def test_select_from_stdin(test_home, monkeypatch, capsys):
-    (test_home / "hr.yaml").write_text("""
-        resources:
-          - name: stdin
-            file: stdin
-        create:
-          - table: people
-            resource: stdin
-            row_source:
-              - people
-            columns:
-              - name: name
-                path: name
-              - name: age
-                path: age
-                type: integer
-    """)
-    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps({"people": [
-        {"name": "Jim", "age": 42},
-        {"name": "Jill", "age": 43},
-    ]})))
-    with features_debugged("sqlite"):
-        main1(["SELECT name, age FROM hr.people"])
-    out, err = capsys.readouterr()
-    assert_by_line(out, """
-        name      age
-        Jim        42
-        Jill       43
-    """)
-    assert_by_line(err, """
-        sqlite: execute: CREATE TABLE people (name text, age integer)
-        sqlite: execute: INSERT INTO people VALUES(?, ?)
-        sqlite: query: SELECT name, age FROM people
-    """)
+def test_no_config_for_schema():
+    """Ensure correct error when a schema has no configs."""
+    with pytest.raises(KuglError, match="no configurations found for schema 'my'"):
+        assert_query("SELECT * from my.stuff", "")
 
+
+@pytest.mark.parametrize("query,error", [
+    ("SELECT * FROM my.stuff", "no configurations found for schema 'my'"),
+    ("SELECT * FROM oh@my.stuff", "invalid schema name in 'oh@my.stuff' -- must contain"),
+    ("SELECT * FROM my.@stuff", "invalid table name in 'my.@stuff' -- must contain"),
+    ("SELECT * FROM main.stuff", "invalid schema name, must not be 'main', 'temp', or 'init'"),
+    ("SELECT * FROM temp.stuff", "invalid schema name, must not be 'main', 'temp', or 'init'"),
+    ("SELECT * FROM init.stuff", "invalid schema name, must not be 'main', 'temp', or 'init'"),
+])
+def test_bad_queries(query, error):
+    with pytest.raises(KuglError, match=error):
+        assert_query(query, "")

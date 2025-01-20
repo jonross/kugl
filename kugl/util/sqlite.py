@@ -69,4 +69,3 @@ class SqliteDb:
             conn.cursor().executemany(sql, data)
         else:
             conn.cursor().execute(sql, data)
-

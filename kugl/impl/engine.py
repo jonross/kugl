@@ -6,86 +6,54 @@ See also tables.py
 
 from concurrent.futures import ThreadPoolExecutor
 import json
+from dataclasses import dataclass
 from pathlib import Path
-import re
 import sys
 from typing import Tuple, Set, Optional, Literal
 
-import yaml
-from pydantic import BaseModel, ConfigDict, Field
 from tabulate import tabulate
 
-from .config import ResourceDef, Settings
-from .registry import Schema
-from kugl.util import fail, SqliteDb, to_size, to_utc, kugl_home, clock, debugging, to_age, run, Age, KPath
-
-# Needed to locate the built-in table builders by class name.
-import kugl.builtins.kubernetes
+from .config import Settings, DEFAULT_SCHEMA
+from .registry import Schema, Resource, Registry
+from ..util import fail, SqliteDb, to_size, to_utc, kugl_cache, clock, debugging, to_age, Age, KPath, Query
+from .tables import Table
 
 # Cache behaviors
-# TODO consider an enum
-
 ALWAYS_UPDATE, CHECK, NEVER_UPDATE = 1, 2, 3
 CacheFlag = Literal[ALWAYS_UPDATE, CHECK, NEVER_UPDATE]
 
 
-class Query(BaseModel):
-    """A SQL query + query-related behaviors"""
-    sql: str
-    # TODO: move this elsewhere, it's K8S-specific
-    namespace: str = "default"
-    cache_flag: CacheFlag = ALWAYS_UPDATE
+# FIXME maybe just fully qualify resource names in schema dict
+@dataclass
+class ResourceRef:
+    """The Engine needs to associate a Resource with a Schema in a hashable type, so this captures that."""
+    schema: Schema
+    resource: Resource
 
     @property
-    def table_refs(self) -> Set["TableRef"]:
-        # Determine which tables are needed for the query by looking for symmbols that follow
-        # FROM and JOIN.  Some of these may be CTEs, so don't assume they're all availabie in
-        # Kubernetes, just pick out the ones we know about and let SQLite take care of
-        # "unknown table" errors.
-        # FIXME: use sqlparse package
-        sql = self.sql.replace("\n", " ")
-        refs = set(re.findall(r"(?<=from|join)\s+([.\w]+)", sql, re.IGNORECASE))
-        return {TableRef.parse(ref) for ref in refs}
+    def name(self):
+        return f"{self.schema.name}.{self.resource.name}"
 
-    @property
-    def sql_schemaless(self) -> str:
-        """Return the SQL query with schema hints removed."""
-        sql = self.sql.replace("\n", " ")
-        return re.sub(r"((from|join)\s+)[^.\s]+\.", r"\1", sql, flags=re.IGNORECASE)
+    def __eq__(self, other):
+        return self.schema.name == other.schema.name and self.resource.name == other.resource.name
 
+    def __hash__(self):
+        return hash((self.schema.name, self.resource.name))
 
-class TableRef(BaseModel):
-    """A reference to a table in a query."""
-    model_config = ConfigDict(frozen=True)
-    schema_name: str = Field(..., alias="schema")  # e.g. "kubernetes"
-    name: str  # e.g. "pods"
-
-    @classmethod
-    def parse(cls, ref: str):
-        """Parse a table reference of the form "pods" or "kubernetes.pods".
-        SQLite doesn't actually support schemas, so the schema is just a hint.
-        We replace the dot with an underscore to make it a valid table name."""
-        parts = ref.split(".")
-        if len(parts) == 1:
-            return cls(schema="kubernetes", name=parts[0])
-        if len(parts) == 2:
-            if parts[0] == "k8s":
-                parts[0] = "kubernetes"
-            return cls(schema=parts[0], name=parts[1])
-        fail(f"Invalid table reference: {ref}")
+    def __lt__(self, other):
+        return (self.schema.name, self.resource.name) < (other.schema.name, other.resource.name)
 
 
 class Engine:
 
-    def __init__(self, schema: Schema, settings: Settings, context_name: str):
+    def __init__(self, args, cache_flag: CacheFlag, settings: Settings):
         """
         :param config: the parsed user settings file
-        :param context_name: the Kubernetes context to use, e.g. "minikube", "research-cluster"
         """
-        self.schema = schema
+        self.args = args
+        self.cache_flag = cache_flag
         self.settings = settings
-        self.context_name = context_name
-        self.cache = DataCache(kugl_home() / "cache" / self.context_name, self.settings.cache_timeout)
+        self.cache = DataCache(kugl_cache(), self.settings.cache_timeout)
         # Maps resource name e.g. "pods" to the response from "kubectl get pods -o json"
         self.data = {}
         self.db = SqliteDb()
@@ -101,40 +69,60 @@ class Engine:
         :return: a tuple of (rows, column names)
         """
 
-        # Reconcile tables created / extended in the config file with tables defined in code, and
-        # generate the table builders.
-        tables = {}
-        for name in {t.name for t in query.table_refs}:
-            # Some of the named tables may be CTEs, so it's not an error if we can't create
-            # them.  If actually missing when we reach the query, let SQLite issue the error.
-            if (table := self.schema.table_builder(name)) is not None:
-                tables[name] = table
+        # Identify schemas named in the query and read their configs.
+        # If none named, assume the "kubernetes" schema.
+        schemas_named = query.schemas_named()
+        if schemas_named:
+            multi_schema = True
+            # Make a separate in-memory db per schema
+            for name in schemas_named:
+                self.db.execute(f"ATTACH DATABASE ':memory:' AS '{name}'")
+        else:
+            schemas_named = {"kubernetes"}
+            multi_schema = False
+        registry = Registry.get()
+        schemas = {name: registry.get_schema(name).read_configs() for name in schemas_named}
+
+        # Reconcile tables created / extended in the config file with tables defined in code,
+        # generate the table builders, and identify the required resources. Note: some of the
+        # named tables may be CTEs, so it's not a problem if we can't create them.  SQLite
+        # will say "no such table" when we issue the query.
+        tables: list[tuple[Table, ResourceRef]] = []
+        resource_refs: set[ResourceRef] = set()
+        for named_table in query.named_tables:
+            schema = schemas[named_table.schema_name or DEFAULT_SCHEMA]
+            if table := schema.table_builder(named_table.name):
+                resource_ref = ResourceRef(schema, schema.resource_for(table))
+                tables.append((table, resource_ref))
+                resource_refs.add(resource_ref)
 
         # Identify what to fetch vs what's stale or expired.
-        resources_used = self.schema.resources_used(tables.values())
-        refreshable, max_staleness = self.cache.advise_refresh(query.namespace, resources_used, query.cache_flag)
+        for r in resource_refs:
+            r.resource.handle_cli_options(self.args)
+        refreshable, max_staleness = self.cache.advise_refresh(resource_refs, self.cache_flag)
         if not self.settings.reckless and max_staleness is not None:
             print(f"(Data may be up to {max_staleness} seconds old.)", file=sys.stderr)
             clock.CLOCK.sleep(0.5)
 
-        # Retrieve resource data in parallel.  If fetching from Kubernetes, update the cache;
+        # Retrieve resource data in parallel.  If actually fetching externally, update the cache;
         # otherwise just read from the cache.
-        def fetch(res: ResourceDef):
+        def fetch(ref: ResourceRef):
             try:
-                if res in refreshable:
-                    self.data[res.name] = self._get_objects(res)
-                    self.cache.dump(query.namespace, res.name, self.data[res.name])
+                if ref in refreshable:
+                    self.data[ref.name] = ref.resource.get_objects()
+                    if ref.resource.cacheable:
+                        self.cache.dump(ref, self.data[ref.name])
                 else:
-                    self.data[res.name] = self.cache.load(query.namespace, res.name)
+                    self.data[ref.name] = self.cache.load(ref)
             except Exception as e:
-                fail(f"Failed to get {res.name} objects: {e}")
+                fail(f"failed to fetch resource {ref.name}: {e}")
         with ThreadPoolExecutor(max_workers=8) as pool:
-            for _ in pool.map(fetch, resources_used):
+            for _ in pool.map(fetch, resource_refs):
                 pass
 
         # Create tables in SQLite
-        for table in tables.values():
-            table.build(self.db, self.data[table.resource])
+        for table, resource_ref in tables:
+            table.build(self.db, self.data[resource_ref.name], multi_schema)
 
         column_names = []
         rows = self.db.query(query.sql, names=column_names)
@@ -144,32 +132,6 @@ class Engine:
         truncate = lambda x: int(x) if isinstance(x, float) and x == float(int(x)) else x
         rows = [[truncate(x) for x in row] for row in rows]
         return rows, column_names
-
-    def _get_objects(self, resource: ResourceDef) -> dict:
-        """Called for a cache miss, go actually fetch resources.
-        Handle built-in resources here, and dispatch to schema implementation for those
-        that aren't.
-        """
-        def parse(text):
-            if not text:
-                return {}
-            if text[0] in "{[":
-                return json.loads(text)
-            return yaml.safe_load(text)
-
-        if resource.file is not None:
-            if resource.file == "stdin":
-                return parse(sys.stdin.read())
-            try:
-                return parse(Path(resource.file).read_text())
-            except OSError as e:
-                fail(f"Failed to read {resource.file}", e)
-
-        if resource.exec is not None:
-            _, out, _ = run(resource.exec)
-            return parse(out)
-
-        return self.schema.impl.get_objects(resource.name, resource.namespaced)
 
 
 class DataCache:
@@ -187,10 +149,9 @@ class DataCache:
         dir.mkdir(parents=True, exist_ok=True)
         self.timeout = timeout
 
-    def advise_refresh(self, namespace: str, resources: Set[ResourceDef], flag: CacheFlag) -> Tuple[Set[str], int]:
+    def advise_refresh(self, resources: Set[ResourceRef], flag: CacheFlag) -> Tuple[Set[str], int]:
         """Determine which resources to use from cache or to refresh.
 
-        :param namespace: the Kubernetes namespace to query, or ALL_NAMESPACE
         :param resources: the resource types to consider
         :param flag: the user-specified cache behavior
         :return: a tuple of (refreshable, max_age) where refreshable is the set of resources types
@@ -200,10 +161,10 @@ class DataCache:
             # Refresh everything and don't issue a "stale data" warning
             return resources, None
         # Find what's expired or missing
-        cacheable = {r for r in resources if r.cacheable}
-        non_cacheable = {r for r in resources if not r.cacheable}
+        cacheable = {r for r in resources if r.resource.cacheable}
+        non_cacheable = {r for r in resources if not r.resource.cacheable}
         # Sort here for deterministic behavior in unit tests
-        cache_ages = {r: self.age(self.cache_path(namespace, r.name)) for r in sorted(cacheable)}
+        cache_ages = {r: self.age(self.cache_path(r)) for r in sorted(cacheable)}
         expired = {r for r, age in cache_ages.items() if age is not None and age >= self.timeout.value}
         missing = {r for r, age in cache_ages.items() if age is None}
         # Always refresh what's missing or non-cacheable, and possibly also what's expired
@@ -223,14 +184,16 @@ class DataCache:
             debug("refreshable", names(refreshable))
         return refreshable, max_age
 
-    def cache_path(self, namespace: str, kind: str) -> Path:
-        return self.dir / f"{namespace}.{kind}.json"
+    def dump(self, ref: ResourceRef, data: dict):
+        self.cache_path(ref).write_text(json.dumps(data))
 
-    def dump(self, namespace: str, kind: str, data: dict):
-        self.cache_path(namespace, kind).write_text(json.dumps(data))
+    def load(self, ref: ResourceRef) -> dict:
+        return json.loads(self.cache_path(ref).read_text())
 
-    def load(self, namespace: str, kind: str) -> dict:
-        return json.loads(self.cache_path(namespace, kind).read_text())
+    def cache_path(self, ref: ResourceRef) -> Path:
+        path = self.dir / ref.schema.name / ref.resource.cache_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
 
     def age(self, path: Path) -> Optional[int]:
         """The age of a file in seconds, relative to the current time, or None if it doesn't exist."""
@@ -251,5 +214,3 @@ def add_custom_functions(db):
     db.create_function("now", 0, lambda: clock.CLOCK.now())
     db.create_function("to_age", 1, to_age)
     db.create_function("to_utc", 1, to_utc)
-
-

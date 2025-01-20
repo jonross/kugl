@@ -7,7 +7,8 @@ from kugl.impl.config import Settings, UserConfig, parse_model, ExtendTable, Cre
 
 import yaml
 
-from kugl.util import Age, KuglError
+from kugl.main import main1
+from kugl.util import Age, kugl_home, KuglError
 
 
 def test_settings_defaults():
@@ -42,6 +43,7 @@ def test_config_with_table_extension():
             columns:
               - name: foo
                 path: metadata.name
+                comment: a comment
               - name: bar
                 type: integer
                 path: metadata.creationTimestamp
@@ -51,9 +53,11 @@ def test_config_with_table_extension():
     assert columns[0].name == "foo"
     assert columns[0].type == "text"
     assert columns[0].path == "metadata.name"
+    assert columns[0].comment == "a comment"
     assert columns[1].name == "bar"
     assert columns[1].type == "integer"
     assert columns[1].path == "metadata.creationTimestamp"
+    assert columns[1].comment is None
 
 
 def test_config_with_table_creation():

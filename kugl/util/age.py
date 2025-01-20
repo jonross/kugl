@@ -2,8 +2,6 @@ import datetime as dt
 import re
 from typing import Dict
 
-import funcy as fn
-
 
 class Age(dt.timedelta):
     """
@@ -12,6 +10,7 @@ class Age(dt.timedelta):
     FIXME: Don't subclass timedelta, it's breaking the constructor contract.
     """
 
+    INT_RE = re.compile(r"\d+")
     AGE_RE = re.compile(r"(\d+[a-z])+")
     AGE_PART = re.compile(r"\d+[a-z]")
 
@@ -51,7 +50,7 @@ class Age(dt.timedelta):
         x = x.strip()
         if not x:
             raise ValueError("Empty argument")
-        if fn.silent(int)(x) is not None:
+        if cls.INT_RE.fullmatch(x):
             return {"seconds": int(x)}
         if not cls.AGE_RE.match(x):
             raise ValueError(f"Invalid age syntax: {x}")

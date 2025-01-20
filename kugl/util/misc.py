@@ -2,24 +2,20 @@
 Assorted utility functions / classes with no obvious home.
 """
 import json
-import os
 import re
 import subprocess as sp
 import sys
-from contextlib import contextmanager
-from pathlib import Path
-from typing import Optional, Union, Callable
+from typing import Optional, Union, Callable, Tuple
 
 import arrow
-import yaml
 
-from kugl.util import Age, clock
+from .debug import debugging
 
-WHITESPACE = re.compile(r"\s+")
-DEBUG_FLAGS = {}
+WHITESPACE_RE = re.compile(r"\s+")
+TABLE_NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 
-def run(args: Union[str, list[str]], error_ok=False):
+def run(args: Union[str, list[str]], error_ok: bool = False) -> Tuple[int, str, str]:
     """
     Invoke an external command, which may be a list or a string; in the latter case it will be
     interpreted using bash -c.  Returns exit status, stdout and stderr.
@@ -58,92 +54,16 @@ class KuglError(Exception):
     pass
 
 
-def debug_features(features: Union[str, list[str]], on: bool = True):
-    """Turn debugging on or off for a set of features.
-
-    :param features: list of feature names, parsed from the --debug command line option;
-        "all" means everything.
-    """
-    if isinstance(features, str):
-        features = features.split(",")
-    for feature in features:
-        if feature == "all" and not on:
-            DEBUG_FLAGS.clear()
-        else:
-            DEBUG_FLAGS[feature] = on
+def abbreviate(obj):
+    if not isinstance(obj, str):
+        obj = json.dumps(obj)
+    if len(obj) > 100:
+        return obj[:100] + "..."
+    return obj
 
 
-@contextmanager
-def features_debugged(features: Union[str, list[str]], on: bool = True):
-    """Like debug_features, but works as a context manager to set them temporarily."""
-    old_flags = dict(DEBUG_FLAGS)
-    debug_features(features, on)
-    try:
-        yield
-    finally:
-        DEBUG_FLAGS.clear()
-        DEBUG_FLAGS.update(old_flags)
-
-
-def debugging(feature: str = None) -> Optional[Callable]:
-    """Check if a feature is being debugged.
-
-    :return: A callable to print a message to stderr prefixed by the feature name, or
-        None if the feature isn't being debugged."""
-    if feature is None:
-        if len(DEBUG_FLAGS) > 0:
-            return lambda *args: _dprint("all", args)
-        return None
-    if DEBUG_FLAGS.get(feature) or DEBUG_FLAGS.get("all"):
-        return lambda *args: _dprint(feature, args)
-    return None
-
-
-def _dprint(feature, args):
-    """Print a debug to stderr tagged with the feature name."""
-    print(feature + ":", *args, file=sys.stderr)
-
-
-class KPath(type(Path())):
-    """It would be nice if Path were smarter, so do that."""
-
-    def is_world_writeable(self) -> bool:
-        return self.stat().st_mode & 0o2 == 0o2
-
-    def parse_json(self):
-        return json.loads(self.read_text())
-
-    def parse_yaml(self):
-        return yaml.safe_load(self.read_text())
-
-    def set_age(self, age: Age):
-        time = clock.CLOCK.now() - age.value
-        os.utime(str(self), times=(time, time))
-
-
-class ConfigPath(KPath):
-    """Same as a KPath but adds debug statements"""
-
-    def parse_json(self):
-        if debug := debugging("config"):
-            debug(f"loading {self}")
-        return super().parse_json()
-
-    def parse_yaml(self):
-        if debug := debugging("config"):
-            debug(f"loading {self}")
-        return super().parse_yaml()
-
-
-def kugl_home() -> KPath:
-    # KUGL_HOME override is for unit tests, not for users (as least for now)
-    if "KUGL_HOME" in os.environ:
-        return KPath(os.environ["KUGL_HOME"])
-    return KPath.home() / ".kugl"
-
-
-def kube_home() -> KPath:
-    # KUGL_HOME override is for unit tests, not for users (as least for now)
-    if "KUGL_HOME" in os.environ:
-        return KPath(os.environ["KUGL_HOME"]) / ".kube"
-    return KPath.home() / ".kube"
+def cleave(s: str, sep: str, flip: bool = False):
+    if sep in s:
+        parts = s.split(sep, 1)
+        return parts[0], parts[1]
+    return (None, s) if flip else (s, None)

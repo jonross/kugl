@@ -3,15 +3,16 @@ Assorted tests for various edge cases and error conditions.
 Some of these are just to achieve 100% coverage.
 """
 
-import os
 from pathlib import Path
+import shutil
+from unittest.mock import patch
 
 import pytest
 from kugl.util.clock import RealClock, Clock
 
 from kugl.builtins.helpers import Limits, Containerized
 from kugl.main import main1
-from kugl.util import Age, KuglError, kube_home, kugl_home, features_debugged, debugging, run
+from kugl.util import Age, KuglError, kube_home, kugl_home, features_debugged, debugging, run, kube_context
 
 
 def test_limits_misc(capsys):
@@ -27,16 +28,18 @@ def test_limits_misc(capsys):
     assert Limits(1, 2, 10) + Limits(2, 3, 100) == Limits(3, 5, 110)
 
 
-def test_kube_home_missing(test_home, tmp_path):
-    os.environ["KUGL_HOME"] = str(tmp_path / "doesnt_exist")
+def test_kube_home_missing(test_home):
+    shutil.rmtree(str(kube_home()))
     with pytest.raises(KuglError, match="can't determine current context"):
-        main1(["select 1"])
+        # Must actually query resource or KubernetesResource won't ask for the context
+        main1(["select * from nodes"])
 
 
 def test_no_kube_context(test_home, tmp_path):
-    kube_home().joinpath("config").write_text("")
+    kube_home().prep().joinpath("config").write_text("")
     with pytest.raises(KuglError, match="No current context"):
-        main1(["select 1"])
+        # Must actually query a resource or KubernetesResource won't ask for the context
+        main1(["select * from nodes"])
 
 
 def test_enforce_mockdir(test_home, monkeypatch):
@@ -46,8 +49,8 @@ def test_enforce_mockdir(test_home, monkeypatch):
 
 
 def test_kube_home_without_envar(monkeypatch):
-    monkeypatch.setenv("KUGL_HOME", "xxx")  # must exist before deleting
-    monkeypatch.delenv("KUGL_HOME")
+    monkeypatch.setenv("KUGL_KUBE_HOME", "xxx")  # must exist before deleting
+    monkeypatch.delenv("KUGL_KUBE_HOME")
     assert kube_home() == Path.home() / ".kube"
 
 
@@ -58,7 +61,7 @@ def test_kugl_home_without_envar(monkeypatch):
 
 
 def test_reject_world_writeable_config(test_home):
-    init_file = kugl_home() / "init.yaml"
+    init_file = kugl_home().prep() / "init.yaml"
     init_file.write_text("foo: bar")
     init_file.chmod(0o777)
     with pytest.raises(KuglError, match="is world writeable"):

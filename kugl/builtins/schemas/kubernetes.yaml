@@ -21,7 +21,10 @@ create:
     columns:
       - name: node_uid
         path: ^metadata.uid
+        comment: node UID, from metadata.uid
       - name: key
         path: key
+        comment: taint key
       - name: effect
         path: effect
+        comment: taint effect

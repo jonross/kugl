@@ -6,14 +6,16 @@ import json
 import os
 import re
 import textwrap
+from functools import cache
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Optional, Tuple, Union, List
 
 import yaml
 from pydantic import Field, BaseModel, ConfigDict
 
 from kugl.impl.config import Settings
-from kugl.impl.engine import Engine, Query
+from kugl.impl.engine import Engine, Query, ALWAYS_UPDATE
 from kugl.impl.registry import Registry
 from kugl.util import to_utc, UNIT_TEST_TIMEBASE
 
@@ -70,7 +72,7 @@ def make_node(name: str, taints: Optional[List[Taint]] = None, labels: Optional[
     responses from the K8S API.
     :param name: Node name
     """
-    node = yaml.safe_load(_resource("sample_node.yaml"))
+    node = yaml.safe_load(_resource_content("sample_node.yaml"))
     node["metadata"]["name"] = name
     node["metadata"]["uid"] = "uid-" + name
     if taints:
@@ -100,7 +102,7 @@ def make_pod(name: str,
     :param name_at_root: Put the object name at top level, not in the metadata
     :param no_name: Pretend there is no object name
     """
-    obj = yaml.safe_load(_resource("sample_pod.yaml"))
+    obj = yaml.safe_load(_resource_content("sample_pod.yaml"))
     if name_at_root:
         obj["name"] = name
     elif not no_name:
@@ -139,7 +141,7 @@ def make_job(name: str,
     :param condition: If present, a condition tuple (type, status, reason)
     :param: pod: If present, a pod dict to be used as the template, returned from make_pod
     """
-    obj = yaml.safe_load(_resource("sample_job.yaml"))
+    obj = yaml.safe_load(_resource_content("sample_job.yaml"))
     obj["metadata"]["name"] = name
     obj["metadata"]["uid"] = "uid-" + name
     obj["metadata"]["labels"]["job-name"] = name
@@ -164,14 +166,13 @@ def assert_query(sql: str, expected: Union[str, list], all_ns: bool = False):
         caller can indent for neatness.  Or, if a list, each item will be checked in order.
     :param all_ns: FIXME temporary hack until we get namespaces out of engine.py
     """
-    schema = Registry.get().get_schema("kubernetes")
-    schema.impl.set_namespace(all_ns, "__all" if all_ns else "default")
-    engine = Engine(schema, Settings(), "nocontext")
+    args = SimpleNamespace(all_namespaces=all_ns, namespace=None)
+    engine = Engine(args, ALWAYS_UPDATE, Settings())
     if isinstance(expected, str):
-        actual = engine.query_and_format(Query(sql=sql))
+        actual = engine.query_and_format(Query(sql))
         assert actual.strip() == textwrap.dedent(expected).strip()
     else:
-        actual, _ = engine.query(Query(sql=sql))
+        actual, _ = engine.query(Query(sql))
         assert actual == expected
 
 
@@ -194,6 +195,6 @@ def assert_by_line(lines: Union[str, list[str]], expected: Union[str, list[Union
             assert exp.match(line.strip()), f"Did not find {exp.pattern} in {line.strip()}"
 
 
-def _resource(filename: str):
-    # TODO: rename me
+@cache
+def _resource_content(filename: str):
     return Path(__file__).parent.joinpath("resources", filename).read_text()

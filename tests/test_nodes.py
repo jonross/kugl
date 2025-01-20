@@ -2,15 +2,12 @@
 Tests for the nodes and taints tables.
 """
 
-import yaml
-
-from kugl.impl.config import parse_model, UserConfig
-from kugl.util import fail, features_debugged
+from kugl.util import features_debugged, kugl_home, fail
 from .testing import make_node, kubectl_response, assert_query, Taint, assert_by_line
 
 
 def test_node_query(test_home):
-    (test_home / "kubernetes.yaml").write_text("""
+    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
         extend:
           - table: nodes
             columns:
@@ -55,11 +52,18 @@ def test_taint_query(test_home, capsys):
             node-2  node.kubernetes.io/unschedulable  NoSchedule
             node-3  mycompany.com/priority            NoSchedule
         """)
-        out, err = capsys.readouterr()
-        assert_by_line(err, """
-            itemize: itemizing node_taints at items got 1 hits
-            itemize: itemizing node_taints at spec.taints got 3 hits
-        """)
+    out, err = capsys.readouterr()
+    assert_by_line(err, """
+        itemize: begin itemization with [{"items": [{"apiVersion": "v1", "kind": "Node", "metadata": {"creationTimestamp": "2023-03-01T23:04...
+        itemize: pass 1, row_source selector = items
+        itemize: add {"apiVersion": "v1", "kind": "Node", "metadata": {"creationTimestamp": "2023-03-01T23:04:15Z", "labe...
+        itemize: add {"apiVersion": "v1", "kind": "Node", "metadata": {"creationTimestamp": "2023-03-01T23:04:15Z", "labe...
+        itemize: add {"apiVersion": "v1", "kind": "Node", "metadata": {"creationTimestamp": "2023-03-01T23:04:15Z", "labe...
+        itemize: pass 2, row_source selector = spec.taints
+        itemize: add {"key": "node.kubernetes.io/unschedulable", "effect": "NoSchedule"}
+        itemize: add {"key": "node.kubernetes.io/unreachable", "effect": "NoExecute"}
+        itemize: add {"key": "mycompany.com/priority", "effect": "NoSchedule", "value": "true"}
+    """)
 
 
 def test_node_labels(test_home):
