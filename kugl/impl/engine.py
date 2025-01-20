@@ -3,7 +3,7 @@ Process Kugl queries.
 If you're looking for Kugl's "brain", you've found it.
 See also tables.py
 """
-
+import os
 from concurrent.futures import ThreadPoolExecutor
 import json
 from dataclasses import dataclass
@@ -209,8 +209,21 @@ class DataCache:
 
 
 def add_custom_functions(db):
-    db.create_function("to_size", 1, lambda x: to_size(x, iec=True))
+
+    def wrap(name, func):
+        def wrapped(*args):
+            if args and not args[0]:
+                return None
+            try:
+                return func(*args)
+            except Exception as e:
+                # Can't use fail() here because SQLite won't offer detail
+                print(f"kugl: exception in extension function {name}: {e}", file=sys.stderr)
+                os._exit(1)
+        return wrapped
+
+    db.create_function("to_size", 1, wrap("to_size", lambda x: to_size(x, iec=True)))
     # This must be a lambda because the clock is patched in unit tests
-    db.create_function("now", 0, lambda: clock.CLOCK.now())
-    db.create_function("to_age", 1, to_age)
-    db.create_function("to_utc", 1, to_utc)
+    db.create_function("now", 0, wrap("now", lambda: clock.CLOCK.now()))
+    db.create_function("to_age", 1, wrap("to_age", to_age))
+    db.create_function("to_utc", 1, wrap("to_age", to_utc))

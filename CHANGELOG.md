@@ -1,3 +1,7 @@
+## 0.4.1
+
+- Fix #127 - `null` protection + better error message for custom SQL functions
+
 ## 0.4.0
 
 - Support multiple schemas & join across them
