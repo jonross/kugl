@@ -9,7 +9,7 @@ import jmespath
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
-from kugl.util import Age, parse_utc, parse_size, KPath, ConfigPath, parse_age, parse_cpu, fail
+from kugl.util import Age, parse_utc, parse_size, KPath, ConfigPath, parse_age, parse_cpu, fail, abbreviate
 
 PARENTED_PATH = re.compile(r"^(\^*)(.*)")
 DEFAULT_SCHEMA = "kubernetes"
@@ -115,7 +115,7 @@ class UserColumn(Column):
                 context.debug(f"no object provided to extractor {self}")
             return None
         if context.debug:
-            context.debug(f"get {self} from {self._abbreviate(obj)}")
+            context.debug(f"get {self} from {abbreviate(obj)}")
         value = self._extract(obj, context)
         result = None if value is None else self._convert(value)
         if context.debug:
@@ -142,12 +142,6 @@ class UserColumn(Column):
         if self.path:
             return f"{self.name} path={self.path}"
         return f"{self.name} label={','.join(self.label)}"
-
-    def _abbreviate(self, obj):
-        text = json.dumps(obj)
-        if len(text) > 100:
-            return text[:100] + "..."
-        return text
 
 
 class ExtendTable(BaseModel):

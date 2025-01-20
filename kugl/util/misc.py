@@ -1,7 +1,7 @@
 """
 Assorted utility functions / classes with no obvious home.
 """
-
+import json
 import re
 import subprocess as sp
 import sys
@@ -52,6 +52,14 @@ def fail(message: str, e: Optional[Exception] = None):
 
 class KuglError(Exception):
     pass
+
+
+def abbreviate(obj):
+    if not isinstance(obj, str):
+        obj = json.dumps(obj)
+    if len(obj) > 100:
+        return obj[:100] + "..."
+    return obj
 
 
 def cleave(s: str, sep: str, flip: bool = False):

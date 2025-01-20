@@ -2,7 +2,7 @@
 Tests for the nodes and taints tables.
 """
 
-from kugl.util import features_debugged, kugl_home
+from kugl.util import features_debugged, kugl_home, fail
 from .testing import make_node, kubectl_response, assert_query, Taint, assert_by_line
 
 
@@ -54,8 +54,15 @@ def test_taint_query(test_home, capsys):
         """)
         out, err = capsys.readouterr()
         assert_by_line(err, """
-            itemize: itemizing node_taints at items got 1 hits
-            itemize: itemizing node_taints at spec.taints got 3 hits
+            itemize: begin itemization with [{"items": [{"apiVersion": "v1", "kind": "Node", "metadata": {"creationTimestamp": "2023-03-01T23:04...
+            itemize: pass 1, row_source selector = items
+            itemize: add {"apiVersion": "v1", "kind": "Node", "metadata": {"creationTimestamp": "2023-03-01T23:04:15Z", "labe...
+            itemize: add {"apiVersion": "v1", "kind": "Node", "metadata": {"creationTimestamp": "2023-03-01T23:04:15Z", "labe...
+            itemize: add {"apiVersion": "v1", "kind": "Node", "metadata": {"creationTimestamp": "2023-03-01T23:04:15Z", "labe...
+            itemize: pass 2, row_source selector = spec.taints
+            itemize: add {"key": "node.kubernetes.io/unschedulable", "effect": "NoSchedule"}
+            itemize: add {"key": "node.kubernetes.io/unreachable", "effect": "NoExecute"}
+            itemize: add {"key": "mycompany.com/priority", "effect": "NoSchedule", "value": "true"}
         """)
 
 

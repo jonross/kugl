@@ -10,7 +10,7 @@ from pydantic import Field, BaseModel
 from tabulate import tabulate
 
 from .config import UserColumn, ExtendTable, CreateTable, Column
-from ..util import fail, debugging
+from ..util import fail, debugging, abbreviate
 
 
 class TableDef(BaseModel):
@@ -93,25 +93,16 @@ class TableFromConfig(Table):
         :param creator: a CreateTable object from the create: section of a user config file
         :param extender: an ExtendTable object from the extend: section of a user config file
         """
-        if creator.row_source is None:
-            # FIXME: kubernetes-specific
-            self.itemizer = lambda data: data["items"]
-        else:
-            self.itemizer = lambda data: self._itemize(creator.row_source, data)
         super().__init__(name, schema_name, creator.resource, [],
                          creator.columns + (extender.columns if extender else []))
-        self.row_source = creator.row_source
+        self.row_source = creator.row_source or ["items"]
 
     def make_rows(self, context: "RowContext") -> list[tuple[dict, tuple]]:
         """
         Itemize the data according to the configuration, but return empty rows; all the
         columns will be added by Table.build.
         """
-        if self.row_source is not None:
-            items = self._itemize(self.row_source, context)
-        else:
-            # FIXME: this default only applies to Kubernetes
-            items = context.data["items"]
+        items = self._itemize(self.row_source, context)
         return [(item, tuple()) for item in items]
 
     def _itemize(self, row_source: list[str], context: "RowContext") -> list[dict]:
@@ -125,23 +116,29 @@ class TableFromConfig(Table):
         """
         items = [context.data]
         debug = debugging("itemize")
-        for source in row_source:
+        if debug:
+            debug("begin itemization with " + abbreviate(items))
+        for index, source in enumerate(row_source):
+            if debug:
+                debug(f"pass {index + 1}, row_source selector = {source}")
             try:
                 finder = jmespath.compile(source)
             except jmespath.exceptions.ParseError as e:
                 fail(f"invalid row_source {source} for {self.name} table", e)
             new_items = []
-            if debug:
-                debug(f"itemizing {self.name} at {source} got {len(items)} hits")
             for item in items:
                 found = finder.search(item)
                 if isinstance(found, list):
                     for child in found:
                         context.set_parent(child, item)
                         new_items.append(child)
+                        if debug:
+                            debug("add " + abbreviate(child))
                 elif found is not None:
                     context.set_parent(found, item)
                     new_items.append(found)
+                    if debug:
+                        debug("add " + abbreviate(found))
             items = new_items
         return items
 
