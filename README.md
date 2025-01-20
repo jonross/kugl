@@ -6,7 +6,7 @@ Explore Kubernetes resources using SQLite.
 
 Find the top users of a GPU pool, based on instance type and a team-specific pod label.
 
-With Kugl (and a little configuration)
+With Kugl (and a bit of configuration for owner and instance type)
 
 ```shell
 kugl -a "select owner, sum(gpu_req), sum(cpu_req)
@@ -15,7 +15,7 @@ kugl -a "select owner, sum(gpu_req), sum(cpu_req)
          group by 1 order by 2 desc limit 10"
 ```
 
-Without Kugl
+With `kubectl` and `jq`, that's a little more work:
 
 ```shell
 kubectl get pods -o json --all-namespaces | 
@@ -58,7 +58,7 @@ kugl() {
     docker run \
         -v ~/.kube:/root/.kube \
         -v ~/.kugl:/root/.kugl \
-        jonross/kugl:0.4.0 python3 -m kugl.main "$@"
+        jonross/kugl:0.4.1 python3 -m kugl.main "$@"
 }
 ```
 
