@@ -35,10 +35,10 @@ If it includes secure information from your cluster, please redact it before pos
 
 ### Can I give feedback without opening an issue?
 
-Yes, for now please post to [this discussion](https://github.com/jonross/kugl/issues/106) on Github.
+Sure, you can email `kugl dot devel at gmail dot com`.
 
 ### I didn't receive a response
 
 Like many open source committers, the author has a family and a day job.  🙂
 
-Please be exceedingly patient, and thank you for trying Kugl!
+Please be patient, and thank you for trying Kugl!
