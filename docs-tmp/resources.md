@@ -30,9 +30,12 @@ kugl "select name, cluster from contexts"
 Environment variable references like `$HOME` are allowed in resource filenames.
 Using `file: stdin` also works, and lets you pipe JSON or YAML to a Kugl query.
 
+Multi-file resources are planned.  In the meantime, you could use the `exec` resource (documented next)
+to combine several files with `echo`, `cat`, and / or `jq`.
+
 ## Exec resources
 
-By replacing `file: pathname` with `exec: some command` you can have Kugl run any command line that generates
+By replacing `file: pathname` with `exec: some command` you can have Kugl run any shell script that generates
 JSON or YAML output.  For example, this is equivalent to the above `file:` resource:
 
 ```yaml

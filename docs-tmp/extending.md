@@ -179,3 +179,6 @@ As noted in [Troubleshooting](./trouble.md), running with `--debug itemize` will
 
 If creating multiple tables from a resource, you should use the `uid` column (sourced from `metadata.uid`)
 as a join key, since this is a guaranteed unique key.
+
+The `utils:` section of `~/.kugl/init.yaml` is ignored during configuration parsing, so you can use it to store
+reusable bits of YAML.
