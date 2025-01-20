@@ -49,14 +49,14 @@ class FileResource(NonCacheableResource):
             fail(f"failed to read {self.file}", e)
 
 
-@resource("shell")
-class ShellResource(Resource):
+@resource("exec")
+class ExecResource(Resource):
     exec: Union[str, list[str]]
     cache_key: Optional[str] = None
 
     @model_validator(mode="after")
     @classmethod
-    def set_cacheable(cls, resource: "ShellResource") -> "ShellResource":
+    def set_cacheable(cls, resource: "ExecResource") -> "ExecResource":
         # To be cacheable, a shell resource must have a cache key that varies with the environment,
         # or cache entries will collide.
         if resource.cacheable is None:

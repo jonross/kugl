@@ -162,7 +162,7 @@ class Schema(BaseModel):
         if "file" in fields:
             return rgy.get_resource_by_family("file")(**fields)
         if "exec" in fields:
-            return rgy.get_resource_by_family("shell")(**fields)
+            return rgy.get_resource_by_family("exec")(**fields)
         if "data" in fields:
             return rgy.get_resource_by_family("data")(**fields)
         impl = rgy.get_resource_by_schema(self.name)
