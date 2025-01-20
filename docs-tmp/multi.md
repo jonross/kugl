@@ -14,7 +14,8 @@ create:
   - table: instances
     resource: instances
     row_source:
-      - Reservations[*].Instances[]
+      - Reservations
+      - Instances
     columns:
       - name: type
         path: InstanceType
