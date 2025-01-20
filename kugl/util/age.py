@@ -10,6 +10,7 @@ class Age(dt.timedelta):
     FIXME: Don't subclass timedelta, it's breaking the constructor contract.
     """
 
+    INT_RE = re.compile(r"\d+")
     AGE_RE = re.compile(r"(\d+[a-z])+")
     AGE_PART = re.compile(r"\d+[a-z]")
 
@@ -49,10 +50,8 @@ class Age(dt.timedelta):
         x = x.strip()
         if not x:
             raise ValueError("Empty argument")
-        try:
+        if cls.INT_RE.fullmatch(x):
             return {"seconds": int(x)}
-        except:
-            pass
         if not cls.AGE_RE.match(x):
             raise ValueError(f"Invalid age syntax: {x}")
         suffixes = {"s": "seconds", "m": "minutes", "h": "hours", "d": "days"}
