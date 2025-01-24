@@ -141,6 +141,9 @@ Each `"^"` at the start of a `path` refers to the part of the response one level
 * `^metadata.uid` means the `.metadata.uid` in each element of the response `items` array
 * `key` and `effect` refer to each taint in the `spec.taints` array
 
+The default `row_source` is just `items`, which is why the example `workflows` table shown earlier doesn't
+need to specify it.
+
 ### More about row_source
 
 In detail, here's how `row_source` is handled.
