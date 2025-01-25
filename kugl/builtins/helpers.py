@@ -136,7 +136,8 @@ class JobHelper(ItemHelper, Containerized):
     def status(self):
         status = self.obj.get("status", {})
         if len(status) == 0:
-            return "Unknown"
+            # Job can be marked "suspend: true" in spec and have no status
+            return "Suspended" if self.obj["spec"].get("suspend") else "Unknown"
         # Per
         # https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1JobStatus.md
         # and https://kubernetes.io/docs/concepts/workloads/controllers/job/

@@ -128,8 +128,9 @@ def make_job(name: str,
              namespace: str = None,
              active_count: Optional[int] = None,
              condition: Optional[Tuple[str, str, Optional[str]]] = None,
+             suspend: bool = False,
              pod: Optional[dict] = None,
-            labels: Optional[dict] = None,
+             labels: Optional[dict] = None,
              ):
     """
     Construct a Job dict from a generic chunk of pod YAML that we can alter to simulate different
@@ -138,6 +139,7 @@ def make_job(name: str,
     :param name: Job name
     :param active_count: If present, the number of active pods
     :param condition: If present, a condition tuple (type, status, reason)
+    :param suspend: If true, mark the job suspended and with no status
     :param: pod: If present, a pod dict to be used as the template, returned from make_pod
     """
     obj = yaml.safe_load(_resource_content("sample_job.yaml"))
@@ -146,10 +148,15 @@ def make_job(name: str,
     obj["metadata"]["labels"]["job-name"] = name
     if namespace is not None:
         obj["metadata"]["namespace"] = namespace
+    if len([x for x in [active_count, condition, suspend] if x]) > 1:
+        raise ValueError("Only one of active_count, condition, or suspend can be set")
     if active_count is not None:
         obj["status"]["active"] = active_count
-    if condition is not None:
+    elif condition is not None:
         obj["status"]["conditions"] = [{"type": condition[0], "status": condition[1], "reason": condition[2]}]
+    elif suspend:
+        obj["spec"]["suspend"] = True
+        del obj["status"]
     if labels is not None:
         obj["metadata"]["labels"] = labels
     if pod is not None:
