@@ -1,29 +1,62 @@
 """
 Tests for the nodes and taints tables.
 """
+import pytest
 
 from kugl.util import features_debugged, kugl_home, fail
 from .testing import make_node, kubectl_response, assert_query, Taint, assert_by_line
 
 
-def test_node_query(test_home):
-    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
+@pytest.mark.parametrize("table_name", ["nodes", "xnodes"])
+def test_node_query(test_home, table_name):
+    """Test the nodes table.  Include an alternate case where something like the nodes table is
+    defined in user code, which may help us catch nasty bugs like #132."""
+    config = "" if table_name == "nodes" else """
+        create:
+          - table: xnodes
+            resource: nodes
+            columns:
+              - name: name
+                path: metadata.name
+              - name: uid
+                path: metadata.uid
+              - name: cpu_alloc
+                type: cpu
+                path: status.allocatable.cpu
+              - name: gpu_alloc
+                type: integer
+                path: status.allocatable."nvidia.com/gpu"
+              - name: mem_alloc
+                type: size
+                path: status.allocatable.memory
+              - name: cpu_cap
+                type: cpu
+                path: status.capacity.cpu
+              - name: gpu_cap
+                type: integer
+                path: status.capacity."nvidia.com/gpu"
+              - name: mem_cap
+                type: size
+                path: status.capacity.memory
+    """
+    config += f"""
         extend:
-          - table: nodes
+          - table: {table_name}
             columns:
               - name: instance_type
                 label:
                   - node.kubernetes.io/instance-type
                   - beta.kubernetes.io/instance-type
             
-    """)
+    """
+    kugl_home().prep().joinpath("kubernetes.yaml").write_text(config)
     kubectl_response("nodes", {
         "items": [
             make_node("node-1", labels={"node.kubernetes.io/instance-type": "a40"}),
             make_node("node-2", labels={"beta.kubernetes.io/instance-type": "a40"}),
         ]
     })
-    assert_query("SELECT * FROM nodes ORDER BY name", """
+    assert_query(f"SELECT * FROM {table_name} ORDER BY name", """
         name    uid           cpu_alloc    gpu_alloc     mem_alloc    cpu_cap    gpu_cap       mem_cap  instance_type
         node-1  uid-node-1           93            4  807771639808         96          4  810023981056  a40
         node-2  uid-node-2           93            4  807771639808         96          4  810023981056  a40
