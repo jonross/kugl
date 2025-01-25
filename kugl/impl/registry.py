@@ -127,9 +127,7 @@ class Schema(BaseModel):
         def _apply(path: ConfigPath):
             if not path.exists():
                 return False
-            config, errors = parse_file(UserConfig, path)
-            if errors:
-                fail("\n".join(errors))
+            config = parse_file(UserConfig, path)
             self._create.update({c.table: c for c in config.create})
             self._extend.update({e.table: e for e in config.extend})
             self._resources.update({r.name: self._find_resource(r) for r in config.resources})

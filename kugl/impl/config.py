@@ -179,26 +179,25 @@ class UserConfig(BaseModel):
 
 
 # FIXME use typevars
-def parse_model(model_class, root: dict) -> Tuple[object, list[str]]:
+def parse_model(model_class, root: dict, return_errors: bool = False) -> Union[object, list[str]]:
     """Parse a dict into a model instance (typically a UserConfig).
 
-    :return: A tuple of (parsed object, list of errors).  On success, the error list is None.
-        On failure, the parsed object is None.
-    """
+    If return_errors is True, return a list of error strings instead of failing."""
     try:
-        return model_class.model_validate(root), None
+        return model_class.model_validate(root)
     except ValidationError as e:
         error_location = lambda err: '.'.join(str(x) for x in err['loc'])
-        return None, [f"{error_location(err)}: {err['msg']}" for err in e.errors()]
+        errors = [f"{error_location(err)}: {err['msg']}" for err in e.errors()]
+        if return_errors:
+            return errors
+        fail("\n".join(errors))
+
 
 # FIXME use typevars
-def parse_file(model_class, path: ConfigPath) -> Tuple[object, list[str]]:
-    """Parse a configuration file into a model instance, handling edge cases.
-
-    :return: Same as parse_model."""
+def parse_file(model_class, path: ConfigPath) -> object:
+    """Parse a configuration file into a model instance, handling edge cases."""
     if not path.exists():
-        return model_class(), None
+        return model_class()
     if path.is_world_writeable():
-        return None, [f"{path} is world writeable, refusing to run"]
+        fail(f"{path} is world writeable, refusing to run")
     return parse_model(model_class, path.parse_yaml() or {})
-

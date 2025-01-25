@@ -37,7 +37,7 @@ def test_empty_init():
 
 
 def test_config_with_table_extension():
-    c, e = parse_model(UserConfig, yaml.safe_load("""
+    c = parse_model(UserConfig, yaml.safe_load("""
         extend:
           - table: pods
             columns:
@@ -48,7 +48,6 @@ def test_config_with_table_extension():
                 type: integer
                 path: metadata.creationTimestamp
     """))
-    assert e is None
     columns = c.extend[0].columns
     assert columns[0].name == "foo"
     assert columns[0].type == "text"
@@ -61,7 +60,7 @@ def test_config_with_table_extension():
 
 
 def test_config_with_table_creation():
-    c, e = parse_model(UserConfig, yaml.safe_load("""
+    c = parse_model(UserConfig, yaml.safe_load("""
         resources:
           - name: pods
         create:
@@ -74,7 +73,6 @@ def test_config_with_table_creation():
                 type: integer
                 path: metadata.creationTimestamp
     """))
-    assert e is None
     pods = c.create[0]
     assert pods.resource == "pods"
     columns = pods.columns
@@ -87,66 +85,66 @@ def test_config_with_table_creation():
 
 
 def test_unknown_type():
-    _, errors = parse_model(ExtendTable, yaml.safe_load("""
+    errors = parse_model(ExtendTable, yaml.safe_load("""
         table: xyz
         columns:
           - name: foo
             type: unknown_type
             path: metadata.name
-    """))
+    """), return_errors=True)
     assert len(errors) == 1
     assert "columns.0.type: Input should be" in errors[0]
 
 
 def test_missing_fields_for_create():
-    _, errors = parse_model(CreateTable, yaml.safe_load("""
+    errors = parse_model(CreateTable, yaml.safe_load("""
         table: xyz
         columns:
           - name: foo
             path: metadata.name
-    """))
+    """), return_errors=True)
     assert set(errors) == set([
         "resource: Field required",
     ])
 
 
 def test_unexpected_keys():
-    _, errors = parse_model(ExtendTable, yaml.safe_load("""
+    errors = parse_model(ExtendTable, yaml.safe_load("""
         table: xyz
         columns:
           - name: foo
             path: metadata.name
             unexpected: 42
-    """))
+    """), return_errors=True)
     assert errors == ["columns.0.unexpected: Extra inputs are not permitted"]
 
 
 def test_invalid_jmespath():
-    _, errors = parse_model(ExtendTable, yaml.safe_load("""
+    errors = parse_model(ExtendTable, yaml.safe_load("""
         table: xyz
         columns:
           - name: foo
             path: ...name
-    """))
+    """), return_errors=True)
     assert errors == ["columns.0: Value error, invalid JMESPath expression ...name in column foo"]
 
 
 def test_cannot_have_both_path_and_label():
-    _, errors = parse_model(ExtendTable, yaml.safe_load("""
+    errors = parse_model(ExtendTable, yaml.safe_load("""
         table: xyz
         columns:
           - name: foo
             type: text
             path: xyz
             label: xyz
-    """))
+    """), return_errors=True)
     assert errors == ["columns.0: Value error, cannot specify both path and label"]
 
 
 def test_must_specify_path_or_label():
-    _, errors = parse_model(ExtendTable, yaml.safe_load("""
+    errors = parse_model(ExtendTable, yaml.safe_load("""
         table: xyz
         columns:
           - name: foo
-    """))
+    """), return_errors=True)
     assert errors == ["columns.0: Value error, must specify either path or label"]

@@ -53,12 +53,7 @@ def main2(argv: List[str]):
     if not argv:
         fail("Missing sql query")
 
-    # Load init file.
-    init_file = ConfigPath(kugl_home() / "init.yaml")
-    init, errors = parse_file(UserInit, init_file)
-    if errors:
-        fail("\n".join(errors))
-
+    init = parse_file(UserInit, ConfigPath(kugl_home() / "init.yaml"))
     ap = ArgumentParser()
     Registry.get().augment_cli(ap)
     args, cache_flag = parse_args(argv, ap, init.settings)
