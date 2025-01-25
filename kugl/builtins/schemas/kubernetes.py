@@ -20,7 +20,7 @@ from kugl.util import WHITESPACE_RE, kube_context
 @resource("kubernetes", schema_defaults=["kubernetes"])
 class KubernetesResource(Resource):
 
-    namespaced: bool = True
+    namespaced: bool
     _all_ns: bool
     _ns: str
 

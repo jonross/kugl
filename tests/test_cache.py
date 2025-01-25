@@ -14,10 +14,10 @@ def test_cache(test_home, capsys):
     cache = DataCache(test_home, Age("1m"))
     mock_schema = SimpleNamespace(name="kubernetes")
 
-    pods = ResourceRef(mock_schema, KubernetesResource(name="pods"))
-    jobs = ResourceRef(mock_schema, KubernetesResource(name="jobs"))
+    pods = ResourceRef(mock_schema, KubernetesResource(name="pods", namespaced=True))
+    jobs = ResourceRef(mock_schema, KubernetesResource(name="jobs", namespaced=True))
     nodes = ResourceRef(mock_schema, KubernetesResource(name="nodes", namespaced=False))
-    events = ResourceRef(mock_schema, KubernetesResource(name="events", cacheable=False))
+    events = ResourceRef(mock_schema, KubernetesResource(name="events", cacheable=False, namespaced=True))
     all_res = {pods, jobs, nodes, events}
 
     for r in all_res:

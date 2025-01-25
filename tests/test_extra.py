@@ -70,6 +70,7 @@ def test_too_many_parents(test_home):
     kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
       resources:
         - name: things
+          namespaced: true
       create:
         - table: things
           resource: things

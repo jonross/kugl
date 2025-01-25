@@ -7,7 +7,7 @@ import sys
 
 import pytest
 
-from kugl.util import KuglError, kugl_home, features_debugged, kugl_cache
+from kugl.util import KuglError, kugl_home, features_debugged, kugl_cache, fail
 from tests.testing import assert_query, assert_by_line
 
 
@@ -38,8 +38,21 @@ def test_untypeable_resource(hr):
     # Replace the HR schema's "people" resource with an untypeable one.
     config["resources"][0] = dict(name="people")
     hr.save(config)
-    with pytest.raises(KuglError, match="can't determine type of resource 'people'"):
+    with pytest.raises(KuglError, match="can't infer type of resource 'people'"):
         assert_query(hr.PEOPLE_QUERY, None)
+
+
+def test_namespaced_resources_are_kubernetes_resources(hr, capsys):
+    """A resource with a namespace: attribute is of type Kubernetes."""
+    config = hr.config()
+    # Replace the HR schema's "people" resource with one that will be inferred as Kubernetes
+    config["resources"][0] = dict(name="people", namespaced="true")
+    hr.save(config)
+    # This will fail because there's no Kubernetes "people" resource, but that's OK.
+    with pytest.raises(SystemExit):
+        assert_query(hr.PEOPLE_QUERY, None)
+    _, err = capsys.readouterr()
+    assert "failed to run [kubectl get people" in err
 
 
 def test_file_resources_not_cacheable(hr):

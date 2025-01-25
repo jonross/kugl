@@ -1,3 +1,9 @@
+## 0.4.2
+
+- Fix #130 - suspended jobs with no status will show status "Suspended"
+- Fix #131 - remove resource type ambiguity by requiring `namespaced` field
+- Fix #132 - `label` column extractor works for user-defined tables
+
 ## 0.4.1
 
 - Fix #127 - `null` protection + better error message for custom SQL functions
