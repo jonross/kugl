@@ -8,7 +8,7 @@ from typing import Type, Optional
 
 from pydantic import BaseModel
 
-from kugl.impl.config import UserConfig, parse_file, CreateTable, ExtendTable, ResourceDef, DEFAULT_SCHEMA
+from kugl.impl.config import UserConfig, parse_file, CreateTable, ExtendTable, ResourceDef, DEFAULT_SCHEMA, parse_model
 from kugl.impl.tables import TableFromCode, TableFromConfig, TableDef, Table
 from kugl.util import fail, debugging, ConfigPath, kugl_home, cleave
 
@@ -158,13 +158,13 @@ class Schema(BaseModel):
         rgy = Registry.get()
         fields = r.model_dump()
         if "namespaced" in fields:
-            return rgy.get_resource_by_family("kubernetes")(**fields)
+            return parse_model(rgy.get_resource_by_family("kubernetes"), fields)
         for family in ["file", "exec", "data"]:
             if family in fields:
-                return rgy.get_resource_by_family(family)(**fields)
+                return parse_model(rgy.get_resource_by_family(family), fields)
         # If no family is specified, the schema may have a default one
         if (impl := rgy.get_resource_by_schema(self.name)):
-            return impl(**fields)
+            return parse_model(impl, fields)
         fail(f"can't infer type of resource '{r.name}' -- need one of 'file', 'data', 'namespaced' etc")
 
     def table_builder(self, name, missing_ok=True):
