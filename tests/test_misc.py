@@ -5,7 +5,6 @@ Some of these are just to achieve 100% coverage.
 
 from pathlib import Path
 import shutil
-from unittest.mock import patch
 
 import pytest
 from kugl.util.clock import RealClock, Clock

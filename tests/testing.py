@@ -16,7 +16,6 @@ from pydantic import Field, BaseModel, ConfigDict
 
 from kugl.impl.config import Settings
 from kugl.impl.engine import Engine, Query, ALWAYS_UPDATE
-from kugl.impl.registry import Registry
 from kugl.util import to_utc, UNIT_TEST_TIMEBASE
 
 

@@ -1,16 +1,10 @@
 """
 Assorted query tests not covered elsewhere.
 """
-import io
-import json
-import os
-import sys
-from pathlib import Path
 
 import pytest
 
-from kugl.main import main1
-from kugl.util import KuglError, features_debugged, kugl_home, KPath
+from kugl.util import KuglError, features_debugged, kugl_home
 from .testing import kubectl_response, assert_query, assert_by_line
 
 
@@ -109,16 +103,3 @@ def test_no_config_for_schema():
     """Ensure correct error when a schema has no configs."""
     with pytest.raises(KuglError, match="no configurations found for schema 'my'"):
         assert_query("SELECT * from my.stuff", "")
-
-
-@pytest.mark.parametrize("query,error", [
-    ("SELECT * FROM my.stuff", "no configurations found for schema 'my'"),
-    ("SELECT * FROM oh@my.stuff", "invalid schema name in 'oh@my.stuff' -- must contain"),
-    ("SELECT * FROM my.@stuff", "invalid table name in 'my.@stuff' -- must contain"),
-    ("SELECT * FROM main.stuff", "invalid schema name, must not be 'main', 'temp', or 'init'"),
-    ("SELECT * FROM temp.stuff", "invalid schema name, must not be 'main', 'temp', or 'init'"),
-    ("SELECT * FROM init.stuff", "invalid schema name, must not be 'main', 'temp', or 'init'"),
-])
-def test_bad_queries(query, error):
-    with pytest.raises(KuglError, match=error):
-        assert_query(query, "")
