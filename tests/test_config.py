@@ -85,7 +85,7 @@ def test_config_with_table_creation():
 
 
 def test_unknown_type():
-    errors = parse_model(ExtendTable, yaml.safe_load("""
+    _, errors = parse_model(ExtendTable, yaml.safe_load("""
         table: xyz
         columns:
           - name: foo
@@ -97,7 +97,7 @@ def test_unknown_type():
 
 
 def test_missing_fields_for_create():
-    errors = parse_model(CreateTable, yaml.safe_load("""
+    _, errors = parse_model(CreateTable, yaml.safe_load("""
         table: xyz
         columns:
           - name: foo
@@ -109,7 +109,7 @@ def test_missing_fields_for_create():
 
 
 def test_unexpected_keys():
-    errors = parse_model(ExtendTable, yaml.safe_load("""
+    _, errors = parse_model(ExtendTable, yaml.safe_load("""
         table: xyz
         columns:
           - name: foo
@@ -120,7 +120,7 @@ def test_unexpected_keys():
 
 
 def test_invalid_jmespath():
-    errors = parse_model(ExtendTable, yaml.safe_load("""
+    _, errors = parse_model(ExtendTable, yaml.safe_load("""
         table: xyz
         columns:
           - name: foo
@@ -130,7 +130,7 @@ def test_invalid_jmespath():
 
 
 def test_cannot_have_both_path_and_label():
-    errors = parse_model(ExtendTable, yaml.safe_load("""
+    _, errors = parse_model(ExtendTable, yaml.safe_load("""
         table: xyz
         columns:
           - name: foo
@@ -142,7 +142,7 @@ def test_cannot_have_both_path_and_label():
 
 
 def test_must_specify_path_or_label():
-    errors = parse_model(ExtendTable, yaml.safe_load("""
+    _, errors = parse_model(ExtendTable, yaml.safe_load("""
         table: xyz
         columns:
           - name: foo
