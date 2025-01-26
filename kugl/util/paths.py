@@ -44,10 +44,6 @@ class ConfigPath(KPath):
             debug(f"loading {self}")
         return super().parse_yaml()
 
-    def fail(self, message):
-        """Wrapper on global fail() that adds the pathname."""
-        fail(f"Errors in {self}:\n{message}")
-
 
 def kugl_home() -> KPath:
     # KUGL_HOME override is for unit tests, not users

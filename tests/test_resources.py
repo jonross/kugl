@@ -38,7 +38,7 @@ def test_untypeable_resource(hr):
     # Replace the HR schema's "people" resource with an untypeable one.
     config["resources"][0] = dict(name="people")
     hr.save(config)
-    with pytest.raises(KuglError, match="can't infer type of resource 'people'"):
+    with pytest.raises(KuglError, match="Errors in .*hr.yaml:\ncan't infer type of resource 'people'"):
         assert_query(hr.PEOPLE_QUERY, None)
 
 
@@ -61,7 +61,7 @@ def test_file_resources_not_cacheable(hr):
     # Replace the HR config's "people" resource with a file resource.
     config["resources"][0] = dict(name="people", file="blah", cacheable="true")
     hr.save(config)
-    with pytest.raises(KuglError, match="resource 'people' cannot be cacheable: true"):
+    with pytest.raises(KuglError, match="Errors in .*hr.yaml:\nresource 'people' cannot be cacheable: true"):
         assert_query(hr.PEOPLE_QUERY, None)
 
 
@@ -113,7 +113,7 @@ def test_exec_cacheable_nonkeyed(hr):
     # Like the previous test, but will fail because marked cachable
     config["resources"][0] = dict(name="people", exec="whatever", cacheable="true")
     hr.save(config)
-    with pytest.raises(KuglError, match="exec resource 'people' must have a cache key"):
+    with pytest.raises(KuglError, match="Errors in .*hr.yaml:\nexec resource 'people' must have a cache key"):
         assert_query(hr.PEOPLE_QUERY, None)
 
 
@@ -124,7 +124,7 @@ def test_exec_cacheable_constant_key(hr, cache_key):
     # Like the previous test, but will fail because key doesn't vary with environment.
     config["resources"][0] = dict(name="people", exec="whatever", cacheable="true", cache_key=cache_key)
     hr.save(config)
-    with pytest.raises(KuglError, match="does not contain non-empty environment references"):
+    with pytest.raises(KuglError, match="Errors in .*hr.yaml:\n.*does not contain non-empty environment references"):
         assert_query(hr.PEOPLE_QUERY, None)
 
 

@@ -96,7 +96,7 @@ def test_config_with_missing_resource(test_home):
             resource: stuff
             columns: []
     """)
-    with pytest.raises(KuglError, match="Table 'stuff' needs unknown resource 'stuff'"):
+    with pytest.raises(KuglError, match="Errors in .*kubernetes.yaml:\nTable 'stuff' needs unknown resource 'stuff'"):
         assert_query("SELECT * FROM stuff", "")
 
 

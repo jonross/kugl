@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from kugl.impl.config import UserConfig, parse_file, CreateTable, ExtendTable, ResourceDef, DEFAULT_SCHEMA, parse_model
 from kugl.impl.tables import TableFromCode, TableFromConfig, TableDef, Table
-from kugl.util import fail, debugging, ConfigPath, kugl_home, cleave
+from kugl.util import fail, debugging, ConfigPath, kugl_home, cleave, failure_preamble
 
 _REGISTRY = None
 
@@ -127,10 +127,15 @@ class Schema(BaseModel):
         def _apply(path: ConfigPath):
             if not path.exists():
                 return False
-            config = parse_file(UserConfig, path)
+            with failure_preamble(f"Errors in {path}:"):
+                config = parse_file(UserConfig, path)
+                self._resources.update({r.name: self._find_resource(r) for r in config.resources})
+                # Verify user-defined tables have the needed resources
+                for table in config.create:
+                    if table.resource not in self._resources:
+                        fail(f"Table '{table.table}' needs unknown resource '{table.resource}'")
             self._create.update({c.table: c for c in config.create})
             self._extend.update({e.table: e for e in config.extend})
-            self._resources.update({r.name: self._find_resource(r) for r in config.resources})
             return True
 
         # Reset the non-builtin tables, since these can change during unit tests.
@@ -145,11 +150,6 @@ class Schema(BaseModel):
         if not found and self.name != DEFAULT_SCHEMA:
             # There's a built-in schema for Kubernetes, so no issue if no config files
             fail(f"no configurations found for schema '{self.name}'")
-
-        # Verify user-defined tables have the needed resources
-        for table in self._create.values():
-            if table.resource not in self._resources:
-                fail(f"Table '{table.table}' needs unknown resource '{table.resource}'")
 
         return self
 
