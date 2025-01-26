@@ -34,8 +34,8 @@ def run(args: Union[str, list[str]], error_ok: bool = False) -> Tuple[int, str, 
     return p.returncode, p.stdout, p.stderr
 
 
-def parse_utc(utc_str: str) -> int:
-    return arrow.get(utc_str).int_timestamp
+def parse_utc(utc_str: Optional[str]) -> int:
+    return arrow.get(utc_str).int_timestamp if utc_str else None
 
 
 def to_utc(epoch: int) -> str:

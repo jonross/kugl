@@ -87,6 +87,7 @@ def make_pod(name: str,
              no_name: bool = False,
              is_daemon: bool = False,
              creation_ts: int = UNIT_TEST_TIMEBASE,
+             deletion_ts: int = None,
              namespace: Optional[str] = None,
              node_name: Optional[str] = None,
              containers: List[Container] = [Container()],
@@ -119,6 +120,8 @@ def make_pod(name: str,
         obj["metadata"]["labels"] = labels
     if creation_ts and not no_metadata:
         obj["metadata"]["creationTimestamp"] = to_utc(creation_ts)
+    if deletion_ts and not no_metadata:
+        obj["metadata"]["deletionTimestamp"] = to_utc(deletion_ts)
     obj["spec"]["containers"] = [c.model_dump(by_alias=True, exclude_none=True) for c in containers]
     obj["status"]["phase"] = phase
     return obj

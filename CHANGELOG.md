@@ -1,5 +1,7 @@
 ## 0.4.2
 
+- Configuration errors now show the offending pathname
+- Add `deletion_ts` to `pods` table
 - Fix #130 - suspended jobs with no status will show status "Suspended"
 - Fix #131 - remove resource type ambiguity by requiring `namespaced` field
 - Fix #132 - `label` column extractor works for user-defined tables
