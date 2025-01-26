@@ -110,17 +110,19 @@ class KubernetesResource(Resource):
 @table(schema="kubernetes", name="nodes", resource="nodes")
 class NodesTable:
 
+    _COLUMNS = [
+        column("name", "TEXT", "node name, from metadata.name"),
+        column("uid", "TEXT", "node UID, from metadata.uid"),
+        column("cpu_alloc", "REAL", "allocatable CPUs, from status.allocatable"),
+        column("gpu_alloc", "REAL", "allocatable GPUs, or null if none"),
+        column("mem_alloc", "INTEGER", "allocatable memory, in bytes"),
+        column("cpu_cap", "REAL", "CPU capacity, from status.capacity"),
+        column("gpu_cap", "REAL", "GPU capacity, or null if none"),
+        column("mem_cap", "INTEGER", "memory capacity, in bytes"),
+    ]
+
     def columns(self):
-        return [
-            column("name", "TEXT", "node name, from metadata.name"),
-            column("uid", "TEXT", "node UID, from metadata.uid"),
-            column("cpu_alloc", "REAL", "allocatable CPUs, from status.allocatable"),
-            column("gpu_alloc", "REAL", "allocatable GPUs, or null if none"),
-            column("mem_alloc", "INTEGER", "allocatable memory, in bytes"),
-            column("cpu_cap", "REAL", "CPU capacity, from status.capacity"),
-            column("gpu_cap", "REAL", "GPU capacity, or null if none"),
-            column("mem_cap", "INTEGER", "memory capacity, in bytes"),
-        ]
+        return self._COLUMNS
 
     def make_rows(self, context) -> list[tuple[dict, tuple]]:
         for item in context.data["items"]:
@@ -136,25 +138,27 @@ class NodesTable:
 @table(schema="kubernetes", name="pods", resource="pods")
 class PodsTable:
 
+    _COLUMNS = [
+        column("name", "TEXT", "pod name, from metadata.name"),
+        column("uid", "TEXT", "pod UID, from metadata.uid"),
+        column("namespace", "TEXT", "pod namespace, from metadata.namespace"),
+        column("node_name", "TEXT", "node name, from spec.nodeName, or null"),
+        column("creation_ts", "INTEGER", "creation timestamp in epoch seconds, from metadata.creationTimestamp"),
+        column("deletion_ts", "INTEGER", "deletion timestamp in epoch seconds, from metadata.deletionTimestamp"),
+        column("is_daemon", "INTEGER", "1 if a daemonset pod, 0 otherwise"),
+        column("command", "TEXT", "command from main container"),
+        column("phase", "TEXT", "pod phase, from status.phase"),
+        column("status", "TEXT", "pod STATUS as output by 'kubectl get pod'"),
+        column("cpu_req", "REAL", "sum of CPUs requested across containers"),
+        column("gpu_req", "REAL", "sum of GPUs requested, or null"),
+        column("mem_req", "INTEGER", "sum of memory requested, in bytes"),
+        column("cpu_lim", "REAL", "CPU limit, or null"),
+        column("gpu_lim", "REAL", "GPU limit, or null"),
+        column("mem_lim", "INTEGER", "memory limit, or null"),
+    ]
+
     def columns(self):
-        return [
-            column("name", "TEXT", "pod name, from metadata.name"),
-            column("uid", "TEXT", "pod UID, from metadata.uid"),
-            column("namespace", "TEXT", "pod namespace, from metadata.namespace"),
-            column("node_name", "TEXT", "node name, from spec.nodeName, or null"),
-            column("creation_ts", "INTEGER", "creation timestamp in epoch seconds, from metadata.creationTimestamp"),
-            column("deletion_ts", "INTEGER", "deletion timestamp in epoch seconds, from metadata.deletionTimestamp"),
-            column("is_daemon", "INTEGER", "1 if a daemonset pod, 0 otherwise"),
-            column("command", "TEXT", "command from main container"),
-            column("phase", "TEXT", "pod phase, from status.phase"),
-            column("status", "TEXT", "pod STATUS as output by 'kubectl get pod'"),
-            column("cpu_req", "REAL", "sum of CPUs requested across containers"),
-            column("gpu_req", "REAL", "sum of GPUs requested, or null"),
-            column("mem_req", "INTEGER", "sum of memory requested, in bytes"),
-            column("cpu_lim", "REAL", "CPU limit, or null"),
-            column("gpu_lim", "REAL", "GPU limit, or null"),
-            column("mem_lim", "INTEGER", "memory limit, or null"),
-        ]
+        return self._COLUMNS
 
     def make_rows(self, context) -> list[tuple[dict, tuple]]:
         for item in context.data["items"]:
@@ -178,19 +182,21 @@ class PodsTable:
 @table(schema="kubernetes", name="jobs", resource="jobs")
 class JobsTable:
 
+    _COLUMNS = [
+        column("name", "TEXT", "job name, from metadata.name"),
+        column("uid", "TEXT", "job UID, from metadata.name"),
+        column("namespace", "TEXT", "job namespace,from metadata.namespace"),
+        column("status", "TEXT", "job status, one of 'Running', 'Complete', 'Suspended', 'Failed', 'Unknown'"),
+        column("cpu_req", "REAL", "sum of CPUs requested across containers"),
+        column("gpu_req", "REAL", "sum of GPUs requested, or null"),
+        column("mem_req", "INTEGER", "sum of memory requested, in bytes"),
+        column("cpu_lim", "REAL", "CPU limit, or null"),
+        column("gpu_lim", "REAL", "GPU limit, or null"),
+        column("mem_lim", "INTEGER", "memory limit, or null"),
+    ]
+
     def columns(self):
-        return [
-            column("name", "TEXT", "job name, from metadata.name"),
-            column("uid", "TEXT", "job UID, from metadata.name"),
-            column("namespace", "TEXT", "job namespace,from metadata.namespace"),
-            column("status", "TEXT", "job status, one of 'Running', 'Complete', 'Suspended', 'Failed', 'Unknown'"),
-            column("cpu_req", "REAL", "sum of CPUs requested across containers"),
-            column("gpu_req", "REAL", "sum of GPUs requested, or null"),
-            column("mem_req", "INTEGER", "sum of memory requested, in bytes"),
-            column("cpu_lim", "REAL", "CPU limit, or null"),
-            column("gpu_lim", "REAL", "GPU limit, or null"),
-            column("mem_lim", "INTEGER", "memory limit, or null"),
-        ]
+        return self._COLUMNS
 
     def make_rows(self, context) -> list[tuple[dict, tuple]]:
         for item in context.data["items"]:

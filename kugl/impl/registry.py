@@ -3,6 +3,7 @@ Registry of resources and tables, independent of configuration file format.
 """
 
 from argparse import ArgumentParser
+from collections import defaultdict
 from itertools import chain
 from typing import Type, Optional
 
@@ -124,23 +125,58 @@ class Schema(BaseModel):
 
     def read_configs(self):
         """Apply the built-in and user configuration files for the schema, if present."""
+
+        # Reset the non-builtin tables, since these can change during unit tests.
+        self._create.clear()
+        self._extend.clear()
+        self._resources.clear()
+
+        # Establish the columns known per table, in order to detect duplicates
+        tables_known = defaultdict(set)
+        for table_def in self.builtin.values():
+            columns_known = tables_known[table_def.name]
+            for column in table_def.cls().columns():
+                columns_known.add(column.name)
+
+        def _check_column(table_name, column_name):
+            # Detect duplicate columns
+            columns_known = tables_known[table_name]
+            if column_name in columns_known:
+                fail(f"Column '{column_name}' is already defined in table '{table_name}'")
+            columns_known.add(column_name)
+
         def _apply(path: ConfigPath):
+            # Merge one UserConfig into the schema.
             if not path.exists():
                 return False
             with failure_preamble(f"Errors in {path}:"):
                 config = parse_file(UserConfig, path)
-                self._resources.update({r.name: self._find_resource(r) for r in config.resources})
-                # Verify user-defined tables have the needed resources
-                for table in config.create:
-                    if table.resource not in self._resources:
-                        fail(f"Table '{table.table}' needs unknown resource '{table.resource}'")
-            self._create.update({c.table: c for c in config.create})
-            self._extend.update({e.table: e for e in config.extend})
+                for r in config.resources:
+                    # Detect duplicate resource
+                    if r.name in self._resources:
+                        fail(f"Resource '{r.name}' is already defined in schema '{self.name}'")
+                    # Infer resource type
+                    self._resources[r.name] = self._find_resource(r)
+                for c in config.create:
+                    # Detect duplicate table
+                    if c.table in tables_known:
+                        fail(f"Table '{c.table}' is already defined in schema '{self.name}'")
+                    # Detect unknown resource
+                    if c.resource not in self._resources:
+                        fail(f"Table '{c.table}' needs undefined resource '{c.resource}'")
+                    # Detect duplicate column
+                    for column in c.columns:
+                        _check_column(c.table, column.name)
+                    self._create[c.table] = c
+                for e in config.extend:
+                    # Detect unknown table
+                    if e.table not in tables_known:
+                        fail(f"Table '{e.table}' is not defined in schema '{self.name}'")
+                    # Detect duplicate column
+                    for column in e.columns:
+                        _check_column(e.table, column.name)
+                    self._extend[e.table] = e
             return True
-
-        # Reset the non-builtin tables, since these can change during unit tests.
-        for mapping in [self._create, self._extend, self._resources]:
-            mapping.clear()
 
         # Apply builtin config and user config
         found = any([_apply(path) for path in [
