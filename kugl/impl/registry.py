@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from kugl.impl.config import UserConfig, parse_file, CreateTable, ExtendTable, ResourceDef, DEFAULT_SCHEMA, parse_model
 from kugl.impl.tables import TableFromCode, TableFromConfig, TableDef, Table
-from kugl.util import fail, debugging, ConfigPath, kugl_home, cleave, failure_preamble
+from kugl.util import fail, debugging, ConfigPath, kugl_home, cleave, failure_preamble, KPath
 
 _REGISTRY = None
 
@@ -85,9 +85,9 @@ class Registry:
             if hasattr(resource_class, "add_cli_options"):
                 resource_class.add_cli_options(ap)
 
-    def printable_schema(self, arg: str):
+    def printable_schema(self, arg: str, init_path: list[str]):
         schema_name, table_name = cleave(arg, ".")
-        schema = self.get_schema(schema_name).read_configs()
+        schema = self.get_schema(schema_name).read_configs(init_path)
         if table_name:
             return schema.table_builder(table_name, missing_ok=False).printable_schema()
         return "\n\n".join(schema.table_builder(name).printable_schema()
@@ -123,8 +123,13 @@ class Schema(BaseModel):
     _extend: dict[str, ExtendTable] = {}
     _resources: dict[str, Resource] = {}
 
-    def read_configs(self):
+    def read_configs(self, init_path: list[str]):
         """Apply the built-in and user configuration files for the schema, if present."""
+
+        init_path = [ConfigPath(p) for p in init_path]
+        if not init_path:
+            init_path = [ConfigPath(kugl_home())]
+        init_path.insert(0, ConfigPath(__file__).parent.parent / "builtins" / "schemas")
 
         # Reset the non-builtin tables, since these can change during unit tests.
         self._create.clear()
@@ -145,8 +150,9 @@ class Schema(BaseModel):
                 fail(f"Column '{column_name}' is already defined in table '{table_name}'")
             columns_known.add(column_name)
 
-        def _apply(path: ConfigPath):
+        def _apply(folder: ConfigPath):
             # Merge one UserConfig into the schema.
+            path = folder / f"{self.name}.yaml"
             if not path.exists():
                 return False
             with failure_preamble(f"Errors in {path}:"):
@@ -178,11 +184,8 @@ class Schema(BaseModel):
                     self._extend[e.table] = e
             return True
 
-        # Apply builtin config and user config
-        found = any([_apply(path) for path in [
-            ConfigPath(__file__).parent.parent / "builtins" / "schemas" / f"{self.name}.yaml",
-            ConfigPath(kugl_home() / f"{self.name}.yaml"),
-        ]])
+        # Apply builtin config and user config.
+        found = any([_apply(folder) for folder in init_path])
         if not found and self.name != DEFAULT_SCHEMA:
             # There's a built-in schema for Kubernetes, so no issue if no config files
             fail(f"no configurations found for schema '{self.name}'")

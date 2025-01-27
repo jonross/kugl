@@ -81,7 +81,7 @@ class Engine:
             schemas_named = {"kubernetes"}
             multi_schema = False
         registry = Registry.get()
-        schemas = {name: registry.get_schema(name).read_configs() for name in schemas_named}
+        schemas = {name: registry.get_schema(name).read_configs(self.settings.init_path) for name in schemas_named}
 
         # Reconcile tables created / extended in the config file with tables defined in code,
         # generate the table builders, and identify the required resources. Note: some of the

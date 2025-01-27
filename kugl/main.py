@@ -63,7 +63,7 @@ def main2(argv: List[str]):
     args, cache_flag = parse_args(argv, ap, init.settings)
 
     if args.schema:
-        print(Registry.get().printable_schema(args.sql))
+        print(Registry.get().printable_schema(args.sql, init.settings.init_path))
         return
 
     # Check for shortcut and reparse, because they can contain command-line options.
