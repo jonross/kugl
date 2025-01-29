@@ -11,6 +11,18 @@ from kugl.util import KuglError, kugl_home, features_debugged, kugl_cache, fail
 from tests.testing import assert_query, assert_by_line
 
 
+def test_config_with_missing_resource(test_home):
+    """Ensure correct error when an undefined resource is used."""
+    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
+        create:
+          - table: stuff
+            resource: stuff
+            columns: []
+    """)
+    with pytest.raises(KuglError, match="Errors in .*kubernetes.yaml:\nTable 'stuff' needs undefined resource 'stuff'"):
+        assert_query("SELECT * FROM stuff", "")
+
+        
 def test_data_resource(hr):
     """Test an inline data resource."""
     # The HR config defines one as-is.

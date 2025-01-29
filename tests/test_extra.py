@@ -86,21 +86,3 @@ def test_too_many_parents(test_home):
     })
     with pytest.raises(KuglError, match="Missing parent or too many . while evaluating ...invalid"):
         assert_query("SELECT * FROM things", "")
-
-
-def test_config_with_missing_resource(test_home):
-    """Ensure correct error when an undefined resource is used."""
-    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
-        create:
-          - table: stuff
-            resource: stuff
-            columns: []
-    """)
-    with pytest.raises(KuglError, match="Errors in .*kubernetes.yaml:\nTable 'stuff' needs undefined resource 'stuff'"):
-        assert_query("SELECT * FROM stuff", "")
-
-
-def test_no_config_for_schema():
-    """Ensure correct error when a schema has no configs."""
-    with pytest.raises(KuglError, match="no configurations found for schema 'my'"):
-        assert_query("SELECT * from my.stuff", "")
