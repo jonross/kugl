@@ -19,3 +19,7 @@ If your cluster is small, you could also (for instance) `alias kg="kugl -a"` and
 * `-r, --reckless` - Don't print stale data warnings
 * `-t, --timeout AGE` - Change the expiration time for cached data, e.g. `5m`, `1h`; the default is `2m` (two minutes)
 * `-u, --update` - Always updated from `kubectl`, regardless of data age
+
+## Other
+
+* `-H, --no-header` -- Suppress column headers

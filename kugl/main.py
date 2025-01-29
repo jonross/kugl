@@ -85,6 +85,7 @@ def parse_args(argv: list[str], ap: ArgumentParser, settings: Settings) -> tuple
     """Add stock arguments to parser, parse the command line, and override settings."""
     ap.add_argument("-D", "--debug", type=str)
     ap.add_argument("-c", "--cache", default=False, action="store_true")
+    ap.add_argument("-H", "--no-headers", default=False, action="store_true")
     ap.add_argument("-r", "--reckless", default=False, action="store_true")
     ap.add_argument("--schema", default=False, action="store_true")
     ap.add_argument("-t", "--timeout", type=str)
@@ -97,6 +98,8 @@ def parse_args(argv: list[str], ap: ArgumentParser, settings: Settings) -> tuple
         settings.cache_timeout = Age(args.timeout)
     if args.reckless:
         settings.reckless = True
+    if args.no_headers:
+        settings.no_headers = True
     return args, (ALWAYS_UPDATE if args.update else NEVER_UPDATE if args.cache else CHECK)
 
 

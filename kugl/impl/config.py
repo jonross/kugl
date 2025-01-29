@@ -47,6 +47,7 @@ class Settings(BaseModel):
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     cache_timeout: Age = Age(120)
     reckless: bool = False
+    no_headers: bool = False
     init_path: list[str] = []
 
 

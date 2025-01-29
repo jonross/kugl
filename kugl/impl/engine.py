@@ -62,7 +62,8 @@ class Engine:
     def query_and_format(self, query: Query) -> str:
         """Execute a Kugl query and format the rsults for stdout."""
         rows, headers = self.query(query)
-        return tabulate(rows, tablefmt="plain", floatfmt=".1f", headers=headers)
+        return tabulate(rows, tablefmt="plain", floatfmt=".1f",
+                        headers=(() if self.settings.no_headers else headers))
 
     def query(self, query: Query) -> Tuple[list[Tuple], list[str]]:
         """Execute a Kugl query but don't format the results.
