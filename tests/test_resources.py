@@ -22,7 +22,7 @@ def test_config_with_missing_resource(test_home):
     with pytest.raises(KuglError, match="Errors in .*kubernetes.yaml:\nTable 'stuff' needs undefined resource 'stuff'"):
         assert_query("SELECT * FROM stuff", "")
 
-        
+
 def test_data_resource(hr):
     """Test an inline data resource."""
     # The HR config defines one as-is.
