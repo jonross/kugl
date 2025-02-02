@@ -1,7 +1,8 @@
 """
 Pydantic models for configuration files.
 """
-import json
+
+from os.path import expandvars, expanduser
 import re
 from typing import Literal, Optional, Tuple, Callable, Union
 
@@ -46,10 +47,18 @@ class ConfigContent(BaseModel):
 class Settings(BaseModel):
     """Holds the settings: entry from a user config file."""
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
-    cache_timeout: Age = Age(120)
+    cache_timeout: Union[Age, int] = Age(120)
     reckless: bool = False
     no_headers: bool = False
     init_path: list[str] = []
+
+    @model_validator(mode="before")
+    @classmethod
+    def preconvert_timeout(cls, model: dict) -> dict:
+        # Pydantic doesn't handle Age objects in the config file, so we convert them to seconds here.
+        if "cache_timeout" in model and isinstance(model["cache_timeout"], str):
+            model["cache_timeout"] = parse_age(model["cache_timeout"])
+        return model
 
     @model_validator(mode="after")
     @classmethod
@@ -57,6 +66,15 @@ class Settings(BaseModel):
         home_resolved = kugl_home().resolve()
         if any(KPath(x).resolve() == home_resolved for x in settings.init_path):
             fail("~/.kugl should not be listed in init_path")
+        settings.init_path = [expandvars(expanduser(x)) for x in settings.init_path]
+        return settings
+
+    @model_validator(mode="after")
+    @classmethod
+    def convert_timeout(cls, settings: 'Settings') -> 'Settings':
+        # If timeout specified in config, convert back to Age
+        if isinstance(settings.cache_timeout, int):
+            settings.cache_timeout = Age(settings.cache_timeout)
         return settings
 
 

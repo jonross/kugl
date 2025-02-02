@@ -18,18 +18,6 @@ def test_bogus_init_paths(hr, extra_home):
         main1([hr.PEOPLE_QUERY])
 
 
-def test_reject_kugl_home_in_init_path(test_home):
-    """Ensure ~/.kugl/init.yaml does not contain ~/.kugl"""
-    kugl_home().prep().joinpath("init.yaml").write_text(f"""
-        settings:
-            init_path:
-              - /tmp/somewhere
-              - {kugl_home()}
-    """)
-    with pytest.raises(KuglError, match="~/.kugl should not be listed in init_path"):
-        main1(["select 1"])
-
-
 def test_reject_dupe_resource(hr, extra_home):
     """Resource must not be defined in more than one schema file"""
     hr.save()

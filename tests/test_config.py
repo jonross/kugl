@@ -15,12 +15,25 @@ def test_settings_defaults():
     s = Settings()
     assert s.cache_timeout == Age(120)
     assert s.reckless == False
+    assert s.no_headers == False
+    assert s.init_path == []
 
 
-def test_settings_custom():
-    s = Settings(cache_timeout=Age(5), reckless=True)
+def test_settings_custom(monkeypatch):
+    monkeypatch.setenv("FOO", "/tmp")
+    s = parse_model(Settings, yaml.safe_load("""
+        cache_timeout: 5s
+        reckless: true
+        no_headers: true
+        init_path:
+          - $FOO/abc
+          - $FOO/xyz
+          - $BAR/xyz
+    """))
     assert s.cache_timeout == Age(5)
     assert s.reckless == True
+    assert s.no_headers == True
+    assert s.init_path == ["/tmp/abc", "/tmp/xyz", "$BAR/xyz"]
 
 
 def test_empty_config():
