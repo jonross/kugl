@@ -7,11 +7,11 @@ from argparse import ArgumentParser
 import sys
 from sqlite3 import DatabaseError
 from types import SimpleNamespace
-from typing import List, Union, Optional
+from typing import List, Union, Optional, Type
 
 from kugl.impl.registry import Registry
 from kugl.impl.engine import Engine, CHECK, NEVER_UPDATE, ALWAYS_UPDATE, CacheFlag
-from kugl.impl.config import UserInit, parse_file, Settings
+from kugl.impl.config import UserInit, parse_file, Settings, Shortcut, SecondaryUserInit
 from kugl.util import Age, fail, debug_features, kugl_home, kube_home, ConfigPath, debugging, KuglError, kube_context, \
     Query, failure_preamble
 
@@ -54,10 +54,8 @@ def main2(argv: List[str], init: Optional[UserInit] = None):
     if not argv:
         fail("Missing sql query")
 
-    init_path = ConfigPath(kugl_home() / "init.yaml")
     if init is None:
-        with failure_preamble(f"Errors in {init_path}:"):
-            init = parse_file(UserInit, init_path)
+        init, shortcuts = _merge_init_files()
 
     ap = ArgumentParser()
     Registry.get().augment_cli(ap)
@@ -70,7 +68,7 @@ def main2(argv: List[str], init: Optional[UserInit] = None):
     # Check for shortcut and reparse, because they can contain command-line options.
     if " " not in args.sql:
         if not (shortcut := next((s for s in init.shortcuts if s.name == args.sql), None)):
-            fail(f"No shortcut named '{args.sql}' is defined in {init_path}")
+            fail(f"No shortcut named '{args.sql}' is defined")
         return main2(argv[:-1] + shortcut.args, init)
 
     if args.debug:
@@ -102,6 +100,34 @@ def parse_args(argv: list[str], ap: ArgumentParser, settings: Settings) -> tuple
     if args.no_headers:
         settings.no_headers = True
     return args, (ALWAYS_UPDATE if args.update else NEVER_UPDATE if args.cache else CHECK)
+
+
+def _merge_init_files() -> tuple[UserInit, dict[str, Shortcut]]:
+    """Read the primary init.yaml, then add shortcuts from other init.yaml on the init_path"""
+
+    shortcuts = {}
+
+    def _parse_init(path: ConfigPath, model_class: Type):
+        with failure_preamble(f"Errors in {path}:"):
+            return parse_file(model_class, path)
+
+    def _merge_init(init: SecondaryUserInit):
+        with failure_preamble(f"Errors in {init._source}:"):
+            for shortcut in init.shortcuts:
+                if shortcut.name in shortcuts:
+                    fail(f"Duplicate shortcut '{shortcut.name}'")
+                shortcuts[shortcut.name] = shortcut
+
+    primary_file = ConfigPath(kugl_home() / "init.yaml")
+    primary_resolved = primary_file.resolve()
+    init = _parse_init(primary_file, UserInit)
+    for folder in init.settings.init_path:
+        secondary_file = ConfigPath(folder) / "init.yaml"
+        if secondary_file.resolve() != primary_resolved:
+            secondary = _parse_init(secondary_file, SecondaryUserInit)
+            _merge_init(secondary)
+    _merge_init(init)
+    return init, shortcuts
 
 
 if __name__ == "__main__":

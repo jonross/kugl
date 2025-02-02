@@ -1,6 +1,7 @@
 ## 0.5.0
 
 - Shortcut syntax in `init.yaml` has changed, but old syntax is still supported (a warning will be printed)
+- Multiple configuration folders are supported via the `init_path` setting in `init.yaml`
 
 ## 0.4.2
 

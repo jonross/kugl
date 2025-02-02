@@ -39,7 +39,7 @@ KUGL_TYPE_TO_SQL_TYPE = {
 
 class ConfigContent(BaseModel):
     """Base class for the top-level classes of configuration files; this just tracks the source file."""
-    _source: ConfigPath  # set by parse_config()
+    _source: ConfigPath  # set by parse_file()
 
 
 class Settings(BaseModel):
@@ -230,7 +230,11 @@ def parse_model(model_class, root: dict, return_errors: bool = False) -> Union[o
 def parse_file(model_class, path: ConfigPath) -> object:
     """Parse a configuration file into a model instance, handling edge cases."""
     if not path.exists():
-        return model_class()
-    if path.is_world_writeable():
-        fail(f"{path} is world writeable, refusing to run")
-    return parse_model(model_class, path.parse_yaml() or {})
+        result = model_class()
+    else:
+        if path.is_world_writeable():
+            fail(f"{path} is world writeable, refusing to run")
+        result = parse_model(model_class, path.parse_yaml() or {})
+    if isinstance(result, ConfigContent):
+        result._source = path
+    return result
