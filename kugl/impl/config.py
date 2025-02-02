@@ -9,7 +9,8 @@ import jmespath
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
-from kugl.util import Age, parse_utc, parse_size, ConfigPath, parse_age, parse_cpu, fail, abbreviate, warn
+from kugl.util import Age, parse_utc, parse_size, ConfigPath, parse_age, parse_cpu, fail, abbreviate, warn, kugl_home, \
+    KPath
 
 PARENTED_PATH = re.compile(r"^(\^*)(.*)")
 DEFAULT_SCHEMA = "kubernetes"
@@ -49,6 +50,14 @@ class Settings(BaseModel):
     reckless: bool = False
     no_headers: bool = False
     init_path: list[str] = []
+
+    @model_validator(mode="after")
+    @classmethod
+    def validate_init_path(cls, settings: 'Settings') -> 'Settings':
+        home_resolved = kugl_home().resolve()
+        if any(KPath(x).resolve() == home_resolved for x in settings.init_path):
+            fail("~/.kugl should not be listed in init_path")
+        return settings
 
 
 class Shortcut(BaseModel):

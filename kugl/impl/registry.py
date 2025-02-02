@@ -126,10 +126,11 @@ class Schema(BaseModel):
     def read_configs(self, init_path: list[str]):
         """Apply the built-in and user configuration files for the schema, if present."""
 
-        init_path = [ConfigPath(p) for p in init_path]
-        if not init_path:
-            init_path = [ConfigPath(kugl_home())]
-        init_path.insert(0, ConfigPath(__file__).parent.parent / "builtins" / "schemas")
+        init_path = [
+            ConfigPath(__file__).parent.parent / "builtins" / "schemas",
+            *[ConfigPath(p) for p in init_path],
+            ConfigPath(kugl_home())
+        ]
 
         # Reset the non-builtin tables, since these can change during unit tests.
         self._create.clear()

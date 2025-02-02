@@ -118,14 +118,11 @@ def _merge_init_files() -> tuple[UserInit, dict[str, Shortcut]]:
                     fail(f"Duplicate shortcut '{shortcut.name}'")
                 shortcuts[shortcut.name] = shortcut
 
-    primary_file = ConfigPath(kugl_home() / "init.yaml")
-    primary_resolved = primary_file.resolve()
-    init = _parse_init(primary_file, UserInit)
+    init = _parse_init(ConfigPath(kugl_home() / "init.yaml"), UserInit)
     for folder in init.settings.init_path:
-        secondary_file = ConfigPath(folder) / "init.yaml"
-        if secondary_file.resolve() != primary_resolved:
-            secondary = _parse_init(secondary_file, SecondaryUserInit)
-            _merge_init(secondary)
+        # Don't worry about dupes, config.py prevents ~/.kugl from appearing in init_path
+        secondary = _parse_init(ConfigPath(folder) / "init.yaml", SecondaryUserInit)
+        _merge_init(secondary)
     _merge_init(init)
     return init, shortcuts
 
