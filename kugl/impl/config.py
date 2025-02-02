@@ -9,7 +9,7 @@ import jmespath
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
-from kugl.util import Age, parse_utc, parse_size, KPath, ConfigPath, parse_age, parse_cpu, fail, abbreviate
+from kugl.util import Age, parse_utc, parse_size, ConfigPath, parse_age, parse_cpu, fail, abbreviate
 
 PARENTED_PATH = re.compile(r"^(\^*)(.*)")
 DEFAULT_SCHEMA = "kubernetes"
@@ -37,14 +37,21 @@ KUGL_TYPE_TO_SQL_TYPE = {
 }
 
 
+class ConfigContent(BaseModel):
+    """Base class for the top-level classes of configuration files; this just tracks the source file."""
+    _source: ConfigPath  # set by parse_config()
+
+
 class Settings(BaseModel):
     """Holds the settings: entry from a user config file."""
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     cache_timeout: Age = Age(120)
     reckless: bool = False
+    no_headers: bool = False
+    init_path: list[str] = []
 
 
-class UserInit(BaseModel):
+class UserInit(ConfigContent):
     """The root model for init.yaml; holds the entire file content."""
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     settings: Optional[Settings] = Settings()
@@ -168,7 +175,7 @@ class CreateTable(ExtendTable):
     row_source: Optional[list[str]] = None
 
 
-class UserConfig(BaseModel):
+class UserConfig(ConfigContent):
     """The root model for a user config file; holds the complete file content."""
     model_config = ConfigDict(extra="forbid")
     resources: list[ResourceDef] = []
@@ -179,26 +186,28 @@ class UserConfig(BaseModel):
 
 
 # FIXME use typevars
-def parse_model(model_class, root: dict) -> Tuple[object, list[str]]:
+def parse_model(model_class, root: dict, return_errors: bool = False) -> Union[object, Tuple[Optional[object], Optional[list[str]]]]:
     """Parse a dict into a model instance (typically a UserConfig).
 
-    :return: A tuple of (parsed object, list of errors).  On success, the error list is None.
-        On failure, the parsed object is None.
-    """
+    :param model_class: The Pydantic model class to use for validation.
+    :param source: The dict to parse
+    :param return_errors: If True, return a tuple of (result, errors) instead of failing on errors."""
     try:
-        return model_class.model_validate(root), None
+        result = model_class.model_validate(root)
+        return (result, None) if return_errors else result
     except ValidationError as e:
         error_location = lambda err: '.'.join(str(x) for x in err['loc'])
-        return None, [f"{error_location(err)}: {err['msg']}" for err in e.errors()]
+        errors = [f"{error_location(err)}: {err['msg']}" for err in e.errors()]
+        if return_errors:
+            return None, errors
+        fail("\n".join(errors))
+
 
 # FIXME use typevars
-def parse_file(model_class, path: ConfigPath) -> Tuple[object, list[str]]:
-    """Parse a configuration file into a model instance, handling edge cases.
-
-    :return: Same as parse_model."""
+def parse_file(model_class, path: ConfigPath) -> object:
+    """Parse a configuration file into a model instance, handling edge cases."""
     if not path.exists():
-        return model_class(), None
+        return model_class()
     if path.is_world_writeable():
-        return None, [f"{path} is world writeable, refusing to run"]
+        fail(f"{path} is world writeable, refusing to run")
     return parse_model(model_class, path.parse_yaml() or {})
-

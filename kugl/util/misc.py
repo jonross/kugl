@@ -5,6 +5,7 @@ import json
 import re
 import subprocess as sp
 import sys
+from contextlib import contextmanager
 from typing import Optional, Union, Callable, Tuple
 
 import arrow
@@ -13,6 +14,7 @@ from .debug import debugging
 
 WHITESPACE_RE = re.compile(r"\s+")
 TABLE_NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+FAILURE_PREAMBLE = None
 
 
 def run(args: Union[str, list[str]], error_ok: bool = False) -> Tuple[int, str, str]:
@@ -32,8 +34,8 @@ def run(args: Union[str, list[str]], error_ok: bool = False) -> Tuple[int, str, 
     return p.returncode, p.stdout, p.stderr
 
 
-def parse_utc(utc_str: str) -> int:
-    return arrow.get(utc_str).int_timestamp
+def parse_utc(utc_str: Optional[str]) -> int:
+    return arrow.get(utc_str).int_timestamp if utc_str else None
 
 
 def to_utc(epoch: int) -> str:
@@ -45,9 +47,23 @@ def warn(message: str):
 
 
 def fail(message: str, e: Optional[Exception] = None):
+    if FAILURE_PREAMBLE is not None:
+        message = FAILURE_PREAMBLE + "\n" + message
     if e is not None:
         raise KuglError(message) from e
     raise KuglError(message)
+
+
+@contextmanager
+def failure_preamble(preamble: str):
+    """Within this context, all calls to fail() will prepend the preamble to the message."""
+    global FAILURE_PREAMBLE
+    old_preamble = FAILURE_PREAMBLE
+    FAILURE_PREAMBLE = preamble
+    try:
+        yield
+    finally:
+        FAILURE_PREAMBLE = old_preamble
 
 
 class KuglError(Exception):

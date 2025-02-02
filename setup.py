@@ -4,7 +4,7 @@ from textwrap import dedent
 
 setup(
     name="kugl",
-    version="0.4.1",
+    version="0.4.2",
     description="Explore Kubernetes resources using SQLite",
     long_description=dedent("""
     PyPI readme goes here.

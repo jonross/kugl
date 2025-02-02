@@ -130,12 +130,17 @@ class TableFromConfig(Table):
                 found = finder.search(item)
                 if isinstance(found, list):
                     for child in found:
-                        context.set_parent(child, item)
+                        if index > 0:
+                            # Fix #132 -- don't do this at pass 0, or it sets the parent to the entire
+                            # response object, breaking self.get_root()
+                            context.set_parent(child, item)
                         new_items.append(child)
                         if debug:
                             debug("add " + abbreviate(child))
                 elif found is not None:
-                    context.set_parent(found, item)
+                    if index > 0:
+                        # See comment above.
+                        context.set_parent(found, item)
                     new_items.append(found)
                     if debug:
                         debug("add " + abbreviate(found))

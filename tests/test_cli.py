@@ -77,6 +77,13 @@ def test_simple_shortcut(test_home, capsys):
     assert out == "  1    2\n" * 2
 
 
+def test_no_headers(test_home, capsys):
+    main1(["-H", "select 1, 2"])
+    out, _ = capsys.readouterr()
+    # Not sure why the output format is different with no headers...
+    assert out == "1  2\n"
+
+
 @pytest.mark.parametrize("argv,expected_flag,age,reckless,error", [
     (["-u", "select 1"], ALWAYS_UPDATE, Age(120), False, None),
     (["-t", "5", "select 1"], CHECK, Age(5), False, None),

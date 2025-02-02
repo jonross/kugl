@@ -3,6 +3,7 @@ from typing import Optional
 import pytest
 
 from kugl.util import KuglError, SqliteDb, Query
+from tests.testing import assert_query
 
 
 @pytest.mark.parametrize("sql,refs,error", [
@@ -44,3 +45,16 @@ def test_multiple_sqlite_dbs():
             JOIN a.t AS a ON a.name = t.name
             JOIN b.t AS b ON b.name = t.name
     """, one_row=True)
+
+
+@pytest.mark.parametrize("query,error", [
+    ("SELECT * FROM my.stuff", "no configurations found for schema 'my'"),
+    ("SELECT * FROM oh@my.stuff", "invalid schema name in 'oh@my.stuff' -- must contain"),
+    ("SELECT * FROM my.@stuff", "invalid table name in 'my.@stuff' -- must contain"),
+    ("SELECT * FROM main.stuff", "invalid schema name, must not be 'main', 'temp', or 'init'"),
+    ("SELECT * FROM temp.stuff", "invalid schema name, must not be 'main', 'temp', or 'init'"),
+    ("SELECT * FROM init.stuff", "invalid schema name, must not be 'main', 'temp', or 'init'"),
+])
+def test_invalid_queries(query, error):
+    with pytest.raises(KuglError, match=error):
+        assert_query(query, "")
