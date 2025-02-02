@@ -7,7 +7,7 @@ from argparse import ArgumentParser
 import sys
 from sqlite3 import DatabaseError
 from types import SimpleNamespace
-from typing import List, Union
+from typing import List, Union, Optional
 
 from kugl.impl.registry import Registry
 from kugl.impl.engine import Engine, CHECK, NEVER_UPDATE, ALWAYS_UPDATE, CacheFlag
@@ -48,15 +48,16 @@ def main1(argv: List[str]):
     sys.exit(1)
 
 
-def main2(argv: List[str]):
+def main2(argv: List[str], init: Optional[UserInit] = None):
 
     kugl_home().mkdir(exist_ok=True)
     if not argv:
         fail("Missing sql query")
 
     init_path = ConfigPath(kugl_home() / "init.yaml")
-    with failure_preamble(f"Errors in {init_path}:"):
-        init = parse_file(UserInit, init_path)
+    if init is None:
+        with failure_preamble(f"Errors in {init_path}:"):
+            init = parse_file(UserInit, init_path)
 
     ap = ArgumentParser()
     Registry.get().augment_cli(ap)
@@ -68,9 +69,9 @@ def main2(argv: List[str]):
 
     # Check for shortcut and reparse, because they can contain command-line options.
     if " " not in args.sql:
-        if not (new_argv := init.shortcuts.get(argv[-1])):
-            fail(f"No shortcut named '{argv[-1]}' is defined in {init_path}")
-        return main1(argv[:-1] + new_argv)
+        if not (shortcut := next((s for s in init.shortcuts if s.name == args.sql), None)):
+            fail(f"No shortcut named '{args.sql}' is defined in {init_path}")
+        return main2(argv[:-1] + shortcut.args, init)
 
     if args.debug:
         debug_features(args.debug.split(","))

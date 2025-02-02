@@ -1,8 +1,3 @@
-"""
-Process Kugl queries.
-If you're looking for Kugl's "brain", you've found it.
-See also tables.py
-"""
 import os
 from concurrent.futures import ThreadPoolExecutor
 import json
@@ -45,9 +40,12 @@ class ResourceRef:
 
 
 class Engine:
+    """Entry point for executing Kugl queries."""
 
     def __init__(self, args, cache_flag: CacheFlag, settings: Settings):
         """
+        :param args: the parsed command line arguments, from argparse
+        :param cache_flag: the cache behavior, from -c or -u option
         :param config: the parsed user settings file
         """
         self.args = args
@@ -60,7 +58,7 @@ class Engine:
         add_custom_functions(self.db.conn)
 
     def query_and_format(self, query: Query) -> str:
-        """Execute a Kugl query and format the rsults for stdout."""
+        """Execute a Kugl query and format the results for stdout."""
         rows, headers = self.query(query)
         return tabulate(rows, tablefmt="plain", floatfmt=".1f",
                         headers=(() if self.settings.no_headers else headers))

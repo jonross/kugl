@@ -67,14 +67,27 @@ def test_enforce_one_cache_option_via_shortcut(test_home, capsys):
         main1(["-c", "foo"])
 
 
-def test_simple_shortcut(test_home, capsys):
-    kugl_home().prep().joinpath("init.yaml").write_text("""
-        shortcuts:
-          foo: ["select 1, 2"]
-    """)
+@pytest.mark.parametrize("use_old_syntax", [True, False])
+def test_simple_shortcut(test_home, capsys, use_old_syntax):
+    if use_old_syntax:
+        content = """
+            shortcuts:
+              foo: ["select 1, 2"]
+        """
+    else:
+        content = """
+            shortcuts:
+              - name: foo
+                args: ["select 1, 2"]
+        """
+    kugl_home().prep().joinpath("init.yaml").write_text(content)
     main1(["foo"])
-    out, _ = capsys.readouterr()
+    out, err = capsys.readouterr()
     assert out == "  1    2\n" * 2
+    if use_old_syntax:
+        assert "Shortcuts format has changed" in err
+    else:
+        assert "Shortcuts format has changed" not in err
 
 
 def test_no_headers(test_home, capsys):

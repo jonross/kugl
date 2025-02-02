@@ -9,7 +9,7 @@ import jmespath
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
-from kugl.util import Age, parse_utc, parse_size, ConfigPath, parse_age, parse_cpu, fail, abbreviate
+from kugl.util import Age, parse_utc, parse_size, ConfigPath, parse_age, parse_cpu, fail, abbreviate, warn
 
 PARENTED_PATH = re.compile(r"^(\^*)(.*)")
 DEFAULT_SCHEMA = "kubernetes"
@@ -51,11 +51,29 @@ class Settings(BaseModel):
     init_path: list[str] = []
 
 
+class Shortcut(BaseModel):
+    """Holds one entry from the shortcuts: section of a user config file."""
+    model_config = ConfigDict(extra="forbid")
+    name: str
+    args: list[str]
+    comment: Optional[str] = None
+
+
 class UserInit(ConfigContent):
     """The root model for init.yaml; holds the entire file content."""
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     settings: Optional[Settings] = Settings()
-    shortcuts: dict[str, list[str]] = {}
+    shortcuts: list[Shortcut] = []
+
+    @model_validator(mode="before")
+    @classmethod
+    def _rewrite_shorcuts(cls, model: dict) -> dict:
+        """Handle the old form of shorcuts, which is just a dict of lists."""
+        shortcuts = model.get("shortcuts")
+        if isinstance(shortcuts, dict):
+            warn("Shortcuts format has changed, please see https://github.com/jonross/kugl/blob/main/docs-tmp/shortcuts.md")
+            model["shortcuts"] = [Shortcut(name=name, args=args) for name, args in shortcuts.items()]
+        return model
 
 
 class Column(BaseModel):

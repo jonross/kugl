@@ -1,3 +1,7 @@
+## 0.5.0
+
+- Shortcut syntax in `init.yaml` has changed, but old syntax is still supported (a warning will be printed)
+
 ## 0.4.2
 
 - Configuration errors now show the offending pathname

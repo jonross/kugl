@@ -33,7 +33,7 @@ def test_empty_init():
     c = UserInit()
     assert c.settings.cache_timeout == Age(120)
     assert c.settings.reckless == False
-    assert c.shortcuts == {}
+    assert c.shortcuts == []
 
 
 def test_config_with_table_extension():
