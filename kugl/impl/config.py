@@ -59,21 +59,26 @@ class Shortcut(BaseModel):
     comment: Optional[str] = None
 
 
-class UserInit(ConfigContent):
-    """The root model for init.yaml; holds the entire file content."""
+class SecondaryUserInit(ConfigContent):
+    """The root model for init.yaml in folders other than kugl_home()"""
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
-    settings: Optional[Settings] = Settings()
     shortcuts: list[Shortcut] = []
 
     @model_validator(mode="before")
     @classmethod
-    def _rewrite_shorcuts(cls, model: dict) -> dict:
-        """Handle the old form of shorcuts, which is just a dict of lists."""
+    def _rewrite_shortcuts(cls, model: dict) -> dict:
+        """Handle the old form of shortcuts, which is just a dict of lists."""
         shortcuts = model.get("shortcuts")
         if isinstance(shortcuts, dict):
             warn("Shortcuts format has changed, please see https://github.com/jonross/kugl/blob/main/docs-tmp/shortcuts.md")
             model["shortcuts"] = [Shortcut(name=name, args=args) for name, args in shortcuts.items()]
         return model
+
+
+class UserInit(SecondaryUserInit):
+    """The root model for init.yaml; holds the entire file content."""
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+    settings: Optional[Settings] = Settings()
 
 
 class Column(BaseModel):
