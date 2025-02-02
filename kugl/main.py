@@ -12,7 +12,8 @@ from typing import List, Union
 from kugl.impl.registry import Registry
 from kugl.impl.engine import Engine, CHECK, NEVER_UPDATE, ALWAYS_UPDATE, CacheFlag
 from kugl.impl.config import UserInit, parse_file, Settings
-from kugl.util import Age, fail, debug_features, kugl_home, kube_home, ConfigPath, debugging, KuglError, kube_context, Query
+from kugl.util import Age, fail, debug_features, kugl_home, kube_home, ConfigPath, debugging, KuglError, kube_context, \
+    Query, failure_preamble
 
 # Register built-ins immediately because they're needed for command-line parsing
 import kugl.builtins.resources
@@ -53,24 +54,22 @@ def main2(argv: List[str]):
     if not argv:
         fail("Missing sql query")
 
-    # Load init file.
-    init_file = ConfigPath(kugl_home() / "init.yaml")
-    init, errors = parse_file(UserInit, init_file)
-    if errors:
-        fail("\n".join(errors))
+    init_path = ConfigPath(kugl_home() / "init.yaml")
+    with failure_preamble(f"Errors in {init_path}:"):
+        init = parse_file(UserInit, init_path)
 
     ap = ArgumentParser()
     Registry.get().augment_cli(ap)
     args, cache_flag = parse_args(argv, ap, init.settings)
 
     if args.schema:
-        print(Registry.get().printable_schema(args.sql))
+        print(Registry.get().printable_schema(args.sql, init.settings.init_path))
         return
 
     # Check for shortcut and reparse, because they can contain command-line options.
     if " " not in args.sql:
         if not (new_argv := init.shortcuts.get(argv[-1])):
-            fail(f"No shortcut named '{argv[-1]}' is defined in ~/.kugl/init.yaml")
+            fail(f"No shortcut named '{argv[-1]}' is defined in {init_path}")
         return main1(argv[:-1] + new_argv)
 
     if args.debug:
@@ -86,6 +85,7 @@ def parse_args(argv: list[str], ap: ArgumentParser, settings: Settings) -> tuple
     """Add stock arguments to parser, parse the command line, and override settings."""
     ap.add_argument("-D", "--debug", type=str)
     ap.add_argument("-c", "--cache", default=False, action="store_true")
+    ap.add_argument("-H", "--no-headers", default=False, action="store_true")
     ap.add_argument("-r", "--reckless", default=False, action="store_true")
     ap.add_argument("--schema", default=False, action="store_true")
     ap.add_argument("-t", "--timeout", type=str)
@@ -98,6 +98,8 @@ def parse_args(argv: list[str], ap: ArgumentParser, settings: Settings) -> tuple
         settings.cache_timeout = Age(args.timeout)
     if args.reckless:
         settings.reckless = True
+    if args.no_headers:
+        settings.no_headers = True
     return args, (ALWAYS_UPDATE if args.update else NEVER_UPDATE if args.cache else CHECK)
 
 

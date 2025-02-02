@@ -3,14 +3,15 @@ Registry of resources and tables, independent of configuration file format.
 """
 
 from argparse import ArgumentParser
+from collections import defaultdict
 from itertools import chain
 from typing import Type, Optional
 
 from pydantic import BaseModel
 
-from kugl.impl.config import UserConfig, parse_file, CreateTable, ExtendTable, ResourceDef, DEFAULT_SCHEMA
+from kugl.impl.config import UserConfig, parse_file, CreateTable, ExtendTable, ResourceDef, DEFAULT_SCHEMA, parse_model
 from kugl.impl.tables import TableFromCode, TableFromConfig, TableDef, Table
-from kugl.util import fail, debugging, ConfigPath, kugl_home, cleave
+from kugl.util import fail, debugging, ConfigPath, kugl_home, cleave, failure_preamble, KPath
 
 _REGISTRY = None
 
@@ -84,9 +85,9 @@ class Registry:
             if hasattr(resource_class, "add_cli_options"):
                 resource_class.add_cli_options(ap)
 
-    def printable_schema(self, arg: str):
+    def printable_schema(self, arg: str, init_path: list[str]):
         schema_name, table_name = cleave(arg, ".")
-        schema = self.get_schema(schema_name).read_configs()
+        schema = self.get_schema(schema_name).read_configs(init_path)
         if table_name:
             return schema.table_builder(table_name, missing_ok=False).printable_schema()
         return "\n\n".join(schema.table_builder(name).printable_schema()
@@ -122,36 +123,72 @@ class Schema(BaseModel):
     _extend: dict[str, ExtendTable] = {}
     _resources: dict[str, Resource] = {}
 
-    def read_configs(self):
+    def read_configs(self, init_path: list[str]):
         """Apply the built-in and user configuration files for the schema, if present."""
-        def _apply(path: ConfigPath):
-            if not path.exists():
-                return False
-            config, errors = parse_file(UserConfig, path)
-            if errors:
-                fail("\n".join(errors))
-            self._create.update({c.table: c for c in config.create})
-            self._extend.update({e.table: e for e in config.extend})
-            self._resources.update({r.name: self._find_resource(r) for r in config.resources})
-            return True
+
+        init_path = [ConfigPath(p) for p in init_path]
+        if not init_path:
+            init_path = [ConfigPath(kugl_home())]
+        init_path.insert(0, ConfigPath(__file__).parent.parent / "builtins" / "schemas")
 
         # Reset the non-builtin tables, since these can change during unit tests.
-        for mapping in [self._create, self._extend, self._resources]:
-            mapping.clear()
+        self._create.clear()
+        self._extend.clear()
+        self._resources.clear()
 
-        # Apply builtin config and user config
-        found = any([_apply(path) for path in [
-            ConfigPath(__file__).parent.parent / "builtins" / "schemas" / f"{self.name}.yaml",
-            ConfigPath(kugl_home() / f"{self.name}.yaml"),
-        ]])
+        # Establish the columns known per table, in order to detect duplicates
+        tables_known = defaultdict(set)
+        for table_def in self.builtin.values():
+            columns_known = tables_known[table_def.name]
+            for column in table_def.cls().columns():
+                columns_known.add(column.name)
+
+        def _check_column(table_name, column_name):
+            # Detect duplicate columns
+            columns_known = tables_known[table_name]
+            if column_name in columns_known:
+                fail(f"Column '{column_name}' is already defined in table '{table_name}'")
+            columns_known.add(column_name)
+
+        def _apply(folder: ConfigPath):
+            # Merge one UserConfig into the schema.
+            path = folder / f"{self.name}.yaml"
+            if not path.exists():
+                return False
+            with failure_preamble(f"Errors in {path}:"):
+                config = parse_file(UserConfig, path)
+                for r in config.resources:
+                    # Detect duplicate resource
+                    if r.name in self._resources:
+                        fail(f"Resource '{r.name}' is already defined in schema '{self.name}'")
+                    # Infer resource type
+                    self._resources[r.name] = self._find_resource(r)
+                for c in config.create:
+                    # Detect duplicate table
+                    if c.table in tables_known:
+                        fail(f"Table '{c.table}' is already defined in schema '{self.name}'")
+                    # Detect unknown resource
+                    if c.resource not in self._resources:
+                        fail(f"Table '{c.table}' needs undefined resource '{c.resource}'")
+                    # Detect duplicate column
+                    for column in c.columns:
+                        _check_column(c.table, column.name)
+                    self._create[c.table] = c
+                for e in config.extend:
+                    # Detect unknown table
+                    if e.table not in tables_known:
+                        fail(f"Table '{e.table}' is not defined in schema '{self.name}'")
+                    # Detect duplicate column
+                    for column in e.columns:
+                        _check_column(e.table, column.name)
+                    self._extend[e.table] = e
+            return True
+
+        # Apply builtin config and user config.
+        found = any([_apply(folder) for folder in init_path])
         if not found and self.name != DEFAULT_SCHEMA:
             # There's a built-in schema for Kubernetes, so no issue if no config files
             fail(f"no configurations found for schema '{self.name}'")
-
-        # Verify user-defined tables have the needed resources
-        for table in self._create.values():
-            if table.resource not in self._resources:
-                fail(f"Table '{table.table}' needs unknown resource '{table.resource}'")
 
         return self
 
@@ -159,13 +196,15 @@ class Schema(BaseModel):
         """Return a Resource subclass instance for a table's resource name."""
         rgy = Registry.get()
         fields = r.model_dump()
+        if "namespaced" in fields:
+            return parse_model(rgy.get_resource_by_family("kubernetes"), fields)
         for family in ["file", "exec", "data"]:
             if family in fields:
-                return rgy.get_resource_by_family(family)(**fields)
+                return parse_model(rgy.get_resource_by_family(family), fields)
         # If no family is specified, the schema may have a default one
         if (impl := rgy.get_resource_by_schema(self.name)):
-            return impl(**fields)
-        fail(f"can't determine type of resource '{r.name}'")
+            return parse_model(impl, fields)
+        fail(f"can't infer type of resource '{r.name}' -- need one of 'file', 'data', 'namespaced' etc")
 
     def table_builder(self, name, missing_ok=True):
         """Return the Table builder subclass (see tables.py) for a table name.

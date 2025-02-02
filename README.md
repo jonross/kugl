@@ -42,7 +42,7 @@ jq -r --argjson nodes "$(kubectl get nodes -o json | jq '[.items[]
 
 Kugl requires Python 3.9 or later, and kubectl.
 
-**This is an alpha release.**  Please expect bugs and backward-incompatible changes.
+**This is an alpha release.**  Please expect bugs and [backward-incompatible changes](./docs-tmp/breaking.md)
 
 If you don't mind Kugl cluttering your Python with its [dependencies](./reqs_public.txt):
 
@@ -116,6 +116,8 @@ In any case, please be mindful of stale data and server load.
 * Beyond Kubernetes and kubectl
     * [Other resource types](./docs-tmp/resources.md)
     * [Additional schemas](./docs-tmp/multi.md)
+* [Release notes](./CHANGELOG.md)
+* [Breaking changes](./docs-tmp/breaking.md)
 * [License](./LICENSE)
 
 ### Pronunciation

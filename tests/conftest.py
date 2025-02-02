@@ -52,8 +52,10 @@ class HRData:
               items:
                 - name: Jim
                   age: 42
+                  sex: m
                 - name: Jill
                   age: 43
+                  sex: f
         create:
           - table: people
             resource: people

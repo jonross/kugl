@@ -75,9 +75,13 @@ create:
 
 You've seen how the `path` extractor works, using JMESPath to identify an element in
 the response JSON.  You can also use the `label` extractor, which is a shortcut to
-`metadata.labels`.
+`metadata.labels`, and can either be a single string or a list of labels to check in order
 
-In addition, resources are namespaced by default, and the default column type is `text`.
+There are some useful defaults as well:
+* resources are namespaced by default
+* resources in `kubernetes.yaml` default to type `kubernetes`
+* the default column type is `text`
+
 Here's a more concise way of defining the `workflows` table, above
 
 ```yaml
@@ -140,6 +144,12 @@ Each `"^"` at the start of a `path` refers to the part of the response one level
 
 * `^metadata.uid` means the `.metadata.uid` in each element of the response `items` array
 * `key` and `effect` refer to each taint in the `spec.taints` array
+
+The default `row_source` is just `items`, which is why the example `workflows` table shown earlier doesn't
+need to specify it.
+
+The `label` column type always looks for `metadata` at the top level of a response item, so doesn't
+need these back-references.
 
 ### More about row_source
 
