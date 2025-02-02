@@ -1,5 +1,5 @@
 """
-Unit tests for multiple config files on init_path.
+Unit tests for multiple schema config files on init_path.
 """
 
 import sqlite3
