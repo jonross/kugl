@@ -18,10 +18,10 @@ ALWAYS_UPDATE, CHECK, NEVER_UPDATE = 1, 2, 3
 CacheFlag = Literal[ALWAYS_UPDATE, CHECK, NEVER_UPDATE]
 
 
-# FIXME maybe just fully qualify resource names in schema dict
 @dataclass
 class ResourceRef:
-    """The Engine needs to associate a Resource with a Schema in a hashable type, so this captures that."""
+    """Associate a Resource with a Schema in a hashable type (for set memberhip).
+    This avoids having Resource itself be hashable, which is an unnecessary constraint."""
     schema: Schema
     resource: Resource
 
