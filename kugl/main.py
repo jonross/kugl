@@ -67,7 +67,7 @@ def main2(argv: List[str], init: Optional[UserInit] = None):
 
     # Check for shortcut and reparse, because they can contain command-line options.
     if " " not in args.sql:
-        if not (shortcut := next((s for s in init.shortcuts if s.name == args.sql), None)):
+        if not (shortcut := shortcuts.get(args.sql)):
             fail(f"No shortcut named '{args.sql}' is defined")
         return main2(argv[:-1] + shortcut.args, init)
 
@@ -120,7 +120,7 @@ def _merge_init_files() -> tuple[UserInit, dict[str, Shortcut]]:
 
     init = _parse_init(ConfigPath(kugl_home() / "init.yaml"), UserInit)
     for folder in init.settings.init_path:
-        # Don't worry about dupes, config.py prevents ~/.kugl from appearing in init_path
+        # Note: config.py prevents ~/.kugl from appearing in init_path
         secondary = _parse_init(ConfigPath(folder) / "init.yaml", SecondaryUserInit)
         _merge_init(secondary)
     _merge_init(init)

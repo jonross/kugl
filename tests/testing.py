@@ -6,6 +6,7 @@ import json
 import os
 import re
 import textwrap
+from contextlib import contextmanager
 from functools import cache
 from pathlib import Path
 from types import SimpleNamespace
@@ -16,7 +17,7 @@ from pydantic import Field, BaseModel, ConfigDict
 
 from kugl.impl.config import Settings
 from kugl.impl.engine import Engine, Query, ALWAYS_UPDATE
-from kugl.util import to_utc, UNIT_TEST_TIMEBASE
+from kugl.util import to_utc, UNIT_TEST_TIMEBASE, KPath
 
 
 def kubectl_response(kind: str, output: Union[str, dict]):
@@ -207,3 +208,13 @@ def assert_by_line(lines: Union[str, list[str]], expected: Union[str, list[Union
 @cache
 def _resource_content(filename: str):
     return Path(__file__).parent.joinpath("resources", filename).read_text()
+
+
+@contextmanager
+def augment_file(path: KPath):
+    """A context manager that lets the caller easily alter a JSON or YAML file."""
+    path.parent.prep()
+    is_yaml = str(path).endswith(".yaml")
+    content = {} if not path.exists() else path.parse_yaml() if is_yaml else path.parse_json()
+    yield content
+    path.write_text(yaml.dump(content) if is_yaml else json.dumps(content))
