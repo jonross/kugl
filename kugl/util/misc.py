@@ -83,3 +83,14 @@ def cleave(s: str, sep: str, flip: bool = False):
         parts = s.split(sep, 1)
         return parts[0], parts[1]
     return (None, s) if flip else (s, None)
+
+
+def friendlier_errors(errors: list) -> list[str]:
+    """Improve upon Pydantic's error messages."""
+    location_str = lambda loc: ".".join(map(str, loc))
+    def _improve(error):
+        message, location = error['msg'], error['loc']
+        if "Extra inputs are not permitted" in message:
+            return f"At {location_str(location[:-1])}: '{location[-1]}' is not allowed here"
+        return location_str(location) + ": " + message
+    return [_improve(e) for e in errors]

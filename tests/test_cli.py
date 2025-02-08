@@ -59,9 +59,10 @@ def test_unknown_option(test_home, capsys):
 def test_enforce_one_cache_option_via_shortcut(test_home, capsys):
     kugl_home().prep().joinpath("init.yaml").write_text("""
         shortcuts:
-          foo:
-          - -u
-          - "select 1"
+          - name: foo
+            args:
+              - -u
+              - "select 1"
     """)
     with pytest.raises(KuglError, match="Cannot use both -c/--cache and -u/--update"):
         main1(["-c", "foo"])

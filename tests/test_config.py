@@ -129,7 +129,7 @@ def test_unexpected_keys():
             path: metadata.name
             unexpected: 42
     """), return_errors=True)
-    assert errors == ["columns.0.unexpected: Extra inputs are not permitted"]
+    assert errors == ["At columns.0: 'unexpected' is not allowed here"]
 
 
 def test_invalid_jmespath():

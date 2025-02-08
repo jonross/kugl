@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
 from kugl.util import Age, parse_utc, parse_size, ConfigPath, parse_age, parse_cpu, fail, abbreviate, warn, kugl_home, \
-    KPath
+    KPath, friendlier_errors
 
 PARENTED_PATH = re.compile(r"^(\^*)(.*)")
 DEFAULT_SCHEMA = "kubernetes"
@@ -246,8 +246,7 @@ def parse_model(model_class, root: dict, return_errors: bool = False) -> Union[o
         result = model_class.model_validate(root)
         return (result, None) if return_errors else result
     except ValidationError as e:
-        error_location = lambda err: '.'.join(str(x) for x in err['loc'])
-        errors = [f"{error_location(err)}: {err['msg']}" for err in e.errors()]
+        errors = friendlier_errors(e.errors())
         if return_errors:
             return None, errors
         fail("\n".join(errors))
