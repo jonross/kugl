@@ -2,12 +2,13 @@ from functools import cache
 import json
 import os
 from pathlib import Path
+from typing import Literal, Optional
 
 import yaml
 
 from .age import Age
 from .debug import debugging
-from .misc import fail
+from .misc import best_guess_parse, fail
 from ..util import clock as clock
 
 
@@ -17,11 +18,14 @@ class KPath(type(Path())):
     def is_world_writeable(self) -> bool:
         return self.stat().st_mode & 0o2 == 0o2
 
-    def parse_json(self):
-        return json.loads(self.read_text())
-
-    def parse_yaml(self):
-        return yaml.safe_load(self.read_text())
+    def parse(self, hint: Optional[Literal["json", "yaml"]] = None):
+        """Attempt to parse a file base on its extension or the supplied hint."""
+        content = self.read_text()
+        if hint == "json" or (hint is None and self.suffix == ".json"):
+            return json.loads(content)
+        if hint == "yaml" or (hint is None and self.suffix == ".yaml"):
+            return yaml.safe_load(content)
+        return best_guess_parse(content)
 
     def set_age(self, age: Age):
         time = clock.CLOCK.now() - age.value
@@ -35,15 +39,10 @@ class KPath(type(Path())):
 class ConfigPath(KPath):
     """Same as a KPath but adds debug statements"""
 
-    def parse_json(self):
+    def parse(self, *args, **kwargs):
         if debug := debugging("config"):
             debug(f"loading {self}")
-        return super().parse_json()
-
-    def parse_yaml(self):
-        if debug := debugging("config"):
-            debug(f"loading {self}")
-        return super().parse_yaml()
+        return super().parse(*args, **kwargs)
 
 
 def kugl_home() -> KPath:

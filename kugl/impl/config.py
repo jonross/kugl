@@ -260,7 +260,7 @@ def parse_file(model_class, path: ConfigPath) -> object:
     else:
         if path.is_world_writeable():
             fail(f"{path} is world writeable, refusing to run")
-        result = parse_model(model_class, path.parse_yaml() or {})
+        result = parse_model(model_class, path.parse() or {})
     if isinstance(result, ConfigContent):
         result._source = path
     return result

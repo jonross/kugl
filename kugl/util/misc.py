@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from typing import Optional, Union, Callable, Tuple
 
 import arrow
+import yaml
 
 from .debug import debugging
 
@@ -94,3 +95,12 @@ def friendlier_errors(errors: list) -> list[str]:
             return f"At {location_str(location[:-1])}: '{location[-1]}' is not allowed here"
         return location_str(location) + ": " + message
     return [_improve(e) for e in errors]
+
+
+def best_guess_parse(text):
+    if not text:
+        return {}
+    if text[0] in "{[":
+        return json.loads(text)
+    return yaml.safe_load(text)
+

@@ -215,6 +215,6 @@ def augment_file(path: KPath):
     """A context manager that lets the caller easily alter a JSON or YAML file."""
     path.parent.prep()
     is_yaml = str(path).endswith(".yaml")
-    content = {} if not path.exists() else path.parse_yaml() if is_yaml else path.parse_json()
+    content = (path.exists() and path.parse()) or {}
     yield content
     path.write_text(yaml.dump(content) if is_yaml else json.dumps(content))

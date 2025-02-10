@@ -8,6 +8,7 @@ import yaml
 from pydantic import model_validator
 
 from kugl.api import resource, fail, run, Resource
+from kugl.util import best_guess_parse, KPath
 
 
 class NonCacheableResource(Resource):
@@ -41,10 +42,10 @@ class FileResource(NonCacheableResource):
 
     def get_objects(self):
         if self.file == "stdin":
-            return _parse(sys.stdin.read())
+            return best_guess_parse(sys.stdin.read())
         try:
             file = expandvars(expanduser(self.file))
-            return _parse(Path(file).read_text())
+            return KPath(file).parse()
         except OSError as e:
             fail(f"failed to read {self.file}", e)
 
@@ -70,17 +71,8 @@ class ExecResource(Resource):
 
     def get_objects(self):
         _, out, _ = run(self.exec)
-        return _parse(out)
+        return best_guess_parse(out)
 
     def cache_path(self):
         assert self.cache_key is not None  # should be covered by validator
         return f"{expandvars(self.cache_key)}/{self.name}.exec.json"
-
-
-def _parse(text):
-    if not text:
-        return {}
-    if text[0] in "{[":
-        return json.loads(text)
-    return yaml.safe_load(text)
-
