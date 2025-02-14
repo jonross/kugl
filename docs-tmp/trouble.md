@@ -11,11 +11,12 @@ Debug `row_source` and `path` problems by installing [jp](https://github.com/jme
 it examples of your JSON data.  JMESPath and `jq` don't behave the same.
 
 Several flags are available for the `--debug` option, try whatever seems relevant:
-* `--debug cache` will print the cache files consulted and what resources will be refreshed
-* `--debug fetch` will print each invocation of `kubectl`
-* `--debug itemize` will summarize the item generated for each step in a `row_source` (verbose)
-* `--debug extract` will print the source and value of every row, by column (verbose)
-* `--debug sqlite` will show the SQL for all statements executed, including table creation
+* `--debug cache` prints the cache files consulted and what resources will be refreshed
+* `--debug fetch` prints each invocation of `kubectl`
+* `--debug folder` prints each file considered for a `folder` resource
+* `--debug itemize` summarizes the item generated for each step in a `row_source` (verbose)
+* `--debug extract` prints the source and value of every row, by column (verbose)
+* `--debug sqlite` shows the SQL for all statements executed, including table creation
 
 These can be combined, e.g. `--debug fetch,itemize`.  To turn on all debugging options, use `--debug all`.
 

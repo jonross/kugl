@@ -1,4 +1,5 @@
 import json
+import re
 import sys
 from os.path import expandvars, expanduser
 from pathlib import Path
@@ -8,7 +9,7 @@ import yaml
 from pydantic import model_validator
 
 from kugl.api import resource, fail, run, Resource
-from kugl.util import best_guess_parse, KPath
+from kugl.util import best_guess_parse, KPath, debugging
 
 
 class NonCacheableResource(Resource):
@@ -47,7 +48,48 @@ class FileResource(NonCacheableResource):
             file = expandvars(expanduser(self.file))
             return KPath(file).parse()
         except OSError as e:
-            fail(f"failed to read {self.file}", e)
+            fail(f"failed to read {self.file} in resource {self.name}", e)
+
+
+@resource("folder")
+class FolderResource(NonCacheableResource):
+    """A resource that reads selectively from a folder tree.
+
+    These are non-cacheable for the same reason as FileResource."""
+    folder: Union[str, Path]
+    glob: str
+    match: str
+
+    @model_validator(mode="after")
+    @classmethod
+    def validate_folder(cls, folder: "FolderResource"):
+        try:
+            folder._pattern = re.compile(folder.match)
+        except Exception as e:  # re.compile can raise anything
+            fail(f"Invalid regex {folder.match} in resource {folder.name}")
+        return folder
+
+    def get_objects(self):
+        folder = KPath(expandvars(expanduser(str(self.folder))))
+        if not folder.exists():
+            fail(f"Missing resource folder {folder}")
+        files = [p.relative_to(folder) for p in folder.glob(self.glob)]
+        if not files:
+            fail(f"Glob {self.glob} in {folder} produced no files")
+        result = []
+        debug = debugging("folder")
+        if debug:
+            debug(f"Reviewing files for {self.glob} in {folder}")
+        for file in files:
+            m = self._pattern.search(str(file))
+            if m:
+                if debug:
+                    debug(f"Adding {file} with match {m.groupdict()}")
+                result.append(dict(content=folder.joinpath(file).parse(), match=m.groupdict()))
+            else:
+                if debug:
+                    debug(f"Skipping {file}, did not match regex")
+        return result
 
 
 @resource("exec")

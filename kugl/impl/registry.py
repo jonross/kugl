@@ -199,7 +199,7 @@ class Schema(BaseModel):
         fields = r.model_dump()
         if "namespaced" in fields:
             return parse_model(rgy.get_resource_by_family("kubernetes"), fields)
-        for family in ["file", "exec", "data"]:
+        for family in ["file", "folder", "exec", "data"]:
             if family in fields:
                 return parse_model(rgy.get_resource_by_family(family), fields)
         # If no family is specified, the schema may have a default one
