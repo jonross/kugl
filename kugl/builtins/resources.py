@@ -62,17 +62,19 @@ class FolderResource(NonCacheableResource):
 
     @model_validator(mode="after")
     @classmethod
-    def validate_folder(cls, folder: "FolderResource"):
+    def validate_folder(cls, resource: "FolderResource"):
         try:
-            folder._pattern = re.compile(folder.match)
+            resource._pattern = re.compile(resource.match)
         except Exception as e:  # re.compile can raise anything
-            fail(f"Invalid regex {folder.match} in resource {folder.name}")
-        return folder
+            fail(f"Invalid regex {resource.match} in resource {resource.name}")
+        if isinstance(resource.folder, str):
+            resource.folder = KPath(expandvars(expanduser(resource.folder)))
+        if not resource.folder.exists():
+            fail(f"Missing resource folder {resource.folder}")
+        return resource
 
     def get_objects(self):
         folder = KPath(expandvars(expanduser(str(self.folder))))
-        if not folder.exists():
-            fail(f"Missing resource folder {folder}")
         files = [p.relative_to(folder) for p in folder.glob(self.glob)]
         if not files:
             fail(f"Glob {self.glob} in {folder} produced no files")
