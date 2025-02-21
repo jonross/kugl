@@ -2,10 +2,11 @@
 This is separate from engine.py for maintainability.
 SQLite tables are defined and populated here.
 """
-
+from dataclasses import dataclass
 from typing import Optional, Type
 
 import jmespath
+from jmespath.parser import ParsedResult
 from pydantic import Field, BaseModel
 from tabulate import tabulate
 
@@ -95,17 +96,17 @@ class TableFromConfig(Table):
         """
         super().__init__(name, schema_name, creator.resource, [],
                          creator.columns + (extender.columns if extender else []))
-        self.row_source = creator.row_source or ["items"]
+        self.row_source = [Itemizer.parse(x, name) for x in (creator.row_source or ["items"])]
 
     def make_rows(self, context: "RowContext") -> list[tuple[dict, tuple]]:
         """
         Itemize the data according to the configuration, but return empty rows; all the
         columns will be added by Table.build.
         """
-        items = self._itemize(self.row_source, context)
+        items = self._itemize(context)
         return [(item, tuple()) for item in items]
 
-    def _itemize(self, row_source: list[str], context: "RowContext") -> list[dict]:
+    def _itemize(self, context: "RowContext") -> list[dict]:
         """
         Given a row_source like
           row_source:
@@ -118,16 +119,14 @@ class TableFromConfig(Table):
         debug = debugging("itemize")
         if debug:
             debug("begin itemization with " + abbreviate(items))
-        for index, source in enumerate(row_source):
+        for index, source in enumerate(self.row_source):
             if debug:
-                debug(f"pass {index + 1}, row_source selector = {source}")
-            try:
-                finder = jmespath.compile(source)
-            except jmespath.exceptions.ParseError as e:
-                fail(f"invalid row_source {source} for {self.name} table", e)
+                debug(f"pass {index + 1}, row_source selector = {source.expr}")
             new_items = []
             for item in items:
-                found = finder.search(item)
+                found = source.finder.search(item)
+                if isinstance(found, dict) and source.unpack:
+                    found = [{"key": k, "value": v} for k, v in found.items()]
                 if isinstance(found, list):
                     for child in found:
                         if index > 0:
@@ -173,4 +172,30 @@ class RowContext:
         while (parent := self._parents.get(id(child))) is not None:
             child = parent
         return child
+
+
+@dataclass
+class Itemizer:
+    """Helper class to hold information parsed from one line of a row_source"""
+    # Original row_source expression
+    expr: str
+    # JMESPath expression to find the items
+    finder: ParsedResult
+    # Should dictionaries be unpacked to a key/value array
+    unpack: bool
+
+    @classmethod
+    def parse(cls, s: str, table_name: str):
+        """Parse a line from the row_source section of a config file"""
+        parts = s.split(";")
+        if len(parts) == 1:
+            unpack = False
+        elif len(parts) == 2 and parts[1].strip() == "kv":
+            unpack = True
+        else:
+            fail(f"Invalid row_source options: {s}")
+        try:
+            return Itemizer(s, jmespath.compile(parts[0]), unpack)
+        except jmespath.exceptions.ParseError as e:
+            fail(f"invalid row_source {parts[0]} for table {table_name}", e)
 
