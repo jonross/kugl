@@ -14,3 +14,10 @@ settings:
   cache_timeout: 5m
   reckless: true
 ```
+
+The `init_path` section of `settings` can be used to specify multiple configuration folders.
+This is useful for team configuration files.  [Shortcuts|./shortcuts.md] in `init.yaml` and
+schema configurations in those folders will be applied before entries in `~/.kugl`.
+
+NOTE: other `init.yaml` fils can contain only shortcuts; the `settings` section of `init.yaml`
+is valid only in `~/.kugl/init.yaml`.
