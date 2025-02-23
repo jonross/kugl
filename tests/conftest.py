@@ -9,8 +9,8 @@ import yaml
 
 from kugl.util import UNIT_TEST_TIMEBASE, kube_home, clock, KPath, kube_context, kugl_home
 
-# Add tests/ folder to $PATH so running 'kubectl ...' invokes our mock, not the real kubectl.
-os.environ["PATH"] = f"{Path(__file__).parent}:{os.environ['PATH']}"
+# Add tests/k8s folder to $PATH so running 'kubectl ...' invokes our mock, not the real kubectl.
+os.environ["PATH"] = f"{Path(__file__).parent / 'k8s'}:{os.environ['PATH']}"
 
 # Some behaviors have to change in tests, sorry
 os.environ["KUGL_UNIT_TESTING"] = "true"
