@@ -3,8 +3,9 @@ Tests for the nodes and taints tables.
 """
 import pytest
 
-from kugl.util import features_debugged, kugl_home, fail
-from ..testing import make_node, kubectl_response, assert_query, Taint, assert_by_line
+from kugl.util import features_debugged, kugl_home
+from .k8s_mocks import kubectl_response, make_node, Taint
+from ..testing import assert_query, assert_by_line
 
 
 @pytest.mark.parametrize("table_name", ["nodes", "xnodes"])

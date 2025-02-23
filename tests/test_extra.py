@@ -5,7 +5,8 @@ Assorted query tests not covered elsewhere.
 import pytest
 
 from kugl.util import KuglError, features_debugged, kugl_home
-from .testing import kubectl_response, assert_query, assert_by_line
+from .testing import assert_query, assert_by_line
+from .k8s.k8s_mocks import kubectl_response
 
 
 def test_non_sql_types(test_home, capsys):

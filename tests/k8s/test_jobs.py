@@ -2,7 +2,8 @@
 Tests for the jobs table.
 """
 
-from ..testing import make_job, kubectl_response, assert_query
+from .k8s_mocks import make_job, kubectl_response
+from ..testing import assert_query
 
 
 def test_job_status(test_home):
