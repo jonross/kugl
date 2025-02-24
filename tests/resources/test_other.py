@@ -1,11 +1,11 @@
 """
-Unit tests for the different built-in resource types.
+Non-source-specific resource tests -- errors & edge cases.
 """
 
 import pytest
 
 from kugl.util import KuglError, kugl_home
-from tests.testing import assert_query
+from ..testing import assert_query
 
 
 def test_config_with_missing_resource(test_home):

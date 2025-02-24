@@ -2,9 +2,7 @@
 Assorted query tests not covered elsewhere.
 """
 
-import pytest
-
-from kugl.util import KuglError, features_debugged, kugl_home
+from kugl.util import features_debugged, kugl_home
 from .testing import assert_query, assert_by_line
 from .k8s.k8s_mocks import kubectl_response
 
@@ -64,53 +62,3 @@ def test_non_sql_types(test_home, capsys):
             extract: get date path=date from {"size": "2Gi", "cpu": "300m", "age": "4h", "date": "2021-12-31T23:59:59Z"}
             extract: got 1640995199
         """)
-
-
-def test_too_many_parents(test_home):
-    """Ensure correct error when a parent field reference is too long."""
-    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
-      resources:
-        - name: things
-          namespaced: true
-      create:
-        - table: things
-          resource: things
-          columns:
-            - name: something
-              path: ^^^invalid
-    """)
-    kubectl_response("things", {
-        "items": [
-            {"something": "foo"},
-            {"something": "foo"},
-        ]
-    })
-    with pytest.raises(KuglError, match="Missing parent or too many . while evaluating ...invalid"):
-        assert_query("SELECT * FROM things", "")
-
-
-def test_data_dict_expansion(test_home):
-    """Verify the behavior of the '; kv' option in row_source"""
-    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
-      resources:
-        - name: things
-          data:
-            env:
-              foo: bar
-              baz: glig
-      create:
-        - table: things
-          resource: things
-          row_source:
-            - env; kv
-          columns:
-            - name: key
-              path: key
-            - name: value
-              path: value
-    """)
-    assert_query("SELECT * FROM things ORDER BY key", """
-        key    value
-        baz    glig
-        foo    bar
-    """)
