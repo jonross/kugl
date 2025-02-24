@@ -87,3 +87,30 @@ def test_too_many_parents(test_home):
     })
     with pytest.raises(KuglError, match="Missing parent or too many . while evaluating ...invalid"):
         assert_query("SELECT * FROM things", "")
+
+
+def test_data_dict_expansion(test_home):
+    """Verify the behavior of the '; kv' option in row_source"""
+    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
+      resources:
+        - name: things
+          data:
+            env:
+              foo: bar
+              baz: glig
+      create:
+        - table: things
+          resource: things
+          row_source:
+            - env; kv
+          columns:
+            - name: key
+              path: key
+            - name: value
+              path: value
+    """)
+    assert_query("SELECT * FROM things ORDER BY key", """
+        key    value
+        baz    glig
+        foo    bar
+    """)
