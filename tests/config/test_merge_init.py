@@ -6,7 +6,7 @@ import pytest
 
 from kugl.main import main1
 from kugl.util import kugl_home, KuglError
-from tests.testing import augment_file
+from ..testing import augment_file
 
 
 def test_reject_kugl_home_in_init_path(test_home):

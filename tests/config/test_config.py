@@ -7,8 +7,7 @@ from kugl.impl.config import Settings, UserConfig, parse_model, ExtendTable, Cre
 
 import yaml
 
-from kugl.main import main1
-from kugl.util import Age, kugl_home, KuglError
+from kugl.util import Age
 
 
 def test_settings_defaults():

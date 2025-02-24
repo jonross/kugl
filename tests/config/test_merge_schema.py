@@ -2,13 +2,11 @@
 Unit tests for multiple schema config files on init_path.
 """
 
-import sqlite3
-
 import pytest
 
 from kugl.main import main1
-from kugl.util import KPath, kugl_home, KuglError
-from tests.testing import assert_by_line
+from kugl.util import kugl_home, KuglError
+from ..testing import assert_by_line
 
 
 def test_bogus_init_paths(hr, extra_home):
