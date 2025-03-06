@@ -187,8 +187,8 @@ As noted in [Troubleshooting](./trouble.md), running with `--debug itemize` will
 
 ### Extracting from dicts
 
-JMESPath notoriously lacks support for extracting dict keys.  For example, if you want to build a table of
-keys an values from environmet settings in YAML, there is no construct that will give you key value pairs
+JMESPath lacks adequate support for addressing dictionaries.  For example, if you want to build a table of
+keys and values from environmet settings in YAML, there is no construct that will give you key-value pairs
 from the fragment below.  You can get the keys, or the values, but not both.
 
 ```yaml
@@ -225,7 +225,7 @@ env:
     value: us-east-1
 ```
 
-It's then trivially simple to take columns from these items with
+It's then straightforward to take columns from these items with
 
 ```yaml
 columns:

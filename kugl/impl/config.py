@@ -3,41 +3,16 @@ Pydantic models for configuration files.
 """
 
 from os.path import expandvars, expanduser
-import re
-from typing import Literal, Optional, Tuple, Callable, Union
+from typing import Optional, Tuple, Callable, Union
 
 import jmespath
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
-from kugl.util import Age, parse_utc, parse_size, ConfigPath, parse_age, parse_cpu, fail, abbreviate, warn, kugl_home, \
-    KPath, friendlier_errors
+from .extract import ColumnType, KUGL_TYPE_TO_SQL_TYPE, LabelExtractor, PathExtractor
+from kugl.util import Age, ConfigPath, parse_age, fail, abbreviate, warn, kugl_home, KPath, friendlier_errors
 
-PARENTED_PATH = re.compile(r"^(\^*)(.*)")
 DEFAULT_SCHEMA = "kubernetes"
-
-KUGL_TYPE_CONVERTERS = {
-    # Valid choices for column type in config -> function to extract that from a string
-    "integer": int,
-    "real" : float,
-    "text": str,
-    "date": parse_utc,
-    "age": parse_age,
-    "size": parse_size,
-    "cpu": parse_cpu,
-}
-
-KUGL_TYPE_TO_SQL_TYPE = {
-    # Valid choices for column type in config -> SQLite type to hold it
-    "integer": "integer",
-    "real": "real",
-    "text": "text",
-    "date": "integer",
-    "age": "integer",
-    "size": "integer",
-    "cpu": "real",
-}
-
 
 class ConfigContent(BaseModel):
     """Base class for the top-level classes of configuration files; this just tracks the source file."""
@@ -113,7 +88,7 @@ class Column(BaseModel):
     config files use UserColumn, a subclass."""
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     name: str
-    type: Literal["text", "integer", "real", "date", "age", "size", "cpu"] = "text"
+    type: ColumnType = "text"
     comment: Optional[str] = None
     # SQL type for this column
     _sqltype: str
@@ -143,62 +118,23 @@ class UserColumn(Column):
     @classmethod
     def gen_extractor(cls, column: 'UserColumn') -> 'UserColumn':
         """
-        Generate the extract function for a column definition; given an object, it will
-        return a column value of the appropriate type.
+        Generate the Extractor instance for a column definition; given an object, it will return
+        a column value of the appropriate type.
         """
         if column.path and column.label:
             raise ValueError("cannot specify both path and label")
         elif column.path:
-            m = PARENTED_PATH.match(column.path)
-            column._parents = len(m.group(1))
-            try:
-                column._finder = jmespath.compile(m.group(2))
-            except jmespath.exceptions.ParseError as e:
-                raise ValueError(f"invalid JMESPath expression {m.group(2)} in column {column.name}") from e
-            column._extract = column._extract_jmespath
+            column._extractor = PathExtractor(column.name, column.type, column.path)
         elif column.label:
             if not isinstance(column.label, list):
                 column.label = [column.label]
-            column._extract = column._extract_label
+            column._extractor = LabelExtractor(column.name, column.type, column.label)
         else:
             raise ValueError("must specify either path or label")
-        column._convert = KUGL_TYPE_CONVERTERS[column.type]
         return column
 
     def extract(self, obj: object, context) -> object:
-        """Extract the column value from an object and convert to the correct type."""
-        if obj is None:
-            if context.debug:
-                context.debug(f"no object provided to extractor {self}")
-            return None
-        if context.debug:
-            context.debug(f"get {self} from {abbreviate(obj)}")
-        value = self._extract(obj, context)
-        result = None if value is None else self._convert(value)
-        if context.debug:
-            context.debug(f"got {result}")
-        return result
-
-    def _extract_jmespath(self, obj: object, context) -> object:
-        """Extract a value from an object using a JMESPath finder."""
-        if self._parents > 0:
-            obj = context.get_parent(obj, self._parents)
-        if obj is None:
-            fail(f"Missing parent or too many ^ while evaluating {self.path}")
-        return self._finder.search(obj)
-
-    def _extract_label(self, obj: object, context) -> object:
-        """Extract a value from an object using a label."""
-        obj = context.get_root(obj)
-        if available := obj.get("metadata", {}).get("labels", {}):
-            for label in self.label:
-                if (value := available.get(label)) is not None:
-                    return value
-
-    def __str__(self):
-        if self.path:
-            return f"{self.name} path={self.path}"
-        return f"{self.name} label={','.join(self.label)}"
+        return self._extractor(obj, context)
 
 
 class ExtendTable(BaseModel):
