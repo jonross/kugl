@@ -129,6 +129,7 @@ def make_job(name: str,
              suspend: bool = False,
              pod: Optional[dict] = None,
              labels: Optional[dict] = None,
+             pod_labels: Optional[dict] = None,
              ):
     """
     Construct a Job dict from a generic chunk of pod YAML that we can alter to simulate different
@@ -159,6 +160,8 @@ def make_job(name: str,
         obj["metadata"]["labels"] = labels
     if pod is not None:
         obj["spec"]["template"]["spec"] = pod["spec"]
+    if pod_labels is not None:
+        obj["spec"]["template"]["metadata"]["labels"] = pod_labels
     return obj
 
 

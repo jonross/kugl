@@ -1,7 +1,7 @@
 """
 Tests for the jobs table.
 """
-
+from kugl.util import kugl_home
 from .k8s_mocks import make_job, kubectl_response
 from ..testing import assert_query
 
@@ -53,4 +53,31 @@ def test_job_labels(test_home):
         uid-job-1  foo    bar
         uid-job-4  one    two
         uid-job-4  three  four
+    """)
+
+
+def test_label_parents(test_home):
+    """Jobs have two metadata blocks -- one for the job and one for the pod template -- so use this to
+    verify that label parent references work."""
+    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
+        create:
+          - table: job_users
+            resource: jobs
+            row_source:
+              - items
+              - spec.template
+            columns:
+              - name: job_username
+                label: ^user
+              - name: pod_username
+                label: user
+    """)
+    kubectl_response("jobs", {
+        "items": [
+            make_job("job-1", labels=dict(user="foo"), pod_labels=dict(user="bar")),
+        ]
+    })
+    assert_query("""SELECT job_username, pod_username FROM job_users""", """
+        job_username    pod_username
+        foo             bar
     """)
