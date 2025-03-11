@@ -148,8 +148,21 @@ Each `"^"` at the start of a `path` refers to the part of the response one level
 The default `row_source` is just `items`, which is why the example `workflows` table shown earlier doesn't
 need to specify it.
 
-The `label` column type always looks for `metadata` at the top level of a response item, so doesn't
-need these back-references.
+This syntax also applies to the `label` extractor.  For example, if the `row_source` of a table needs to
+address Job metadata but also metadata from the Job pod template, you can write this:
+
+```yaml
+  ...
+  resource: jobs
+  row_source:
+    - items
+    - spec.template
+  columns:
+    - name: label_from_job
+      label: ^a-job-label
+    - name: label_from_pod
+      label: a-pod-label
+```
 
 ### More about row_source
 
