@@ -58,7 +58,7 @@ kugl() {
     docker run \
         -v ~/.kube:/root/.kube \
         -v ~/.kugl:/root/.kugl \
-        jonross/kugl:0.4.2 python3 -m kugl.main "$@"
+        jonross/kugl:0.5.0 python3 -m kugl.main "$@"
 }
 ```
 
@@ -78,7 +78,7 @@ PATH=${PATH}:$(pwd)/bin
 Find the pods using the most memory:
 
 ```shell
-kugl -a "select name, to_size(mem_req) from pods order by mem_req desc limit 15"
+kugl -a "select namespace, name, to_size(mem_req) from pods order by mem_req desc limit 15"
 ```
 
 If this query is helpful, [save it](./docs-tmp/shortcuts.md), then you can run `kugl hi-mem`.

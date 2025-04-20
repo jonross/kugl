@@ -148,8 +148,21 @@ Each `"^"` at the start of a `path` refers to the part of the response one level
 The default `row_source` is just `items`, which is why the example `workflows` table shown earlier doesn't
 need to specify it.
 
-The `label` column type always looks for `metadata` at the top level of a response item, so doesn't
-need these back-references.
+This syntax also applies to the `label` extractor.  For example, if the `row_source` of a table needs to
+address Job metadata but also metadata from the Job pod template, you can write this:
+
+```yaml
+  ...
+  resource: jobs
+  row_source:
+    - items
+    - spec.template
+  columns:
+    - name: label_from_job
+      label: ^a-job-label
+    - name: label_from_pod
+      label: a-pod-label
+```
 
 ### More about row_source
 
@@ -184,6 +197,56 @@ projecting and flattening, so is the recommended approach.
 
 As noted in [Troubleshooting](./trouble.md), running with `--debug itemize` will show the intermediate results of
 `row_source` processing.
+
+### Extracting from dicts
+
+JMESPath lacks adequate support for addressing dictionaries.  For example, if you want to build a table of
+keys and values from environmet settings in YAML, there is no construct that will give you key-value pairs
+from the fragment below.  You can get the keys, or the values, but not both.
+
+```yaml
+...
+env:
+  AWS_BUCKET_NAME: my_budket
+  AWS_REGION: us-east-1
+  ...
+```
+
+Kugl has a simple workaround for this.  A `row_source` entry can have additional processing options, and for any row 
+source entry that addresses a dictionary, you can add the option `"kv"` to get key-value pairs.  For example, if you
+have adressed the above YAML data with
+
+```yaml
+row_source:
+ - env
+```
+
+Change this to
+
+```yaml
+row_source:
+  - env; kv
+```
+
+and Kugl will present the dictionary as if the data source originally looked like this:
+
+```yaml
+env:
+  - key: AWS_BUCKET_NAME
+    value: my_bucket
+  - key: AWS_REGION
+    value: us-east-1
+```
+
+It's then straightforward to take columns from these items with
+
+```yaml
+columns:
+  - name: variable
+    path: key
+  - name: value
+    path: value
+```
 
 ## Tips
 

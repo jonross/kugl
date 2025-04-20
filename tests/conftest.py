@@ -2,15 +2,15 @@
 from copy import deepcopy
 import os
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
 
 import pytest
 import yaml
 
 from kugl.util import UNIT_TEST_TIMEBASE, kube_home, clock, KPath, kube_context, kugl_home
 
-# Add tests/ folder to $PATH so running 'kubectl ...' invokes our mock, not the real kubectl.
-os.environ["PATH"] = f"{Path(__file__).parent}:{os.environ['PATH']}"
+# Add tests/k8s folder to $PATH so running 'kubectl ...' invokes our mock, not the real kubectl.
+os.environ["PATH"] = f"{Path(__file__).parent / 'k8s'}:{os.environ['PATH']}"
 
 # Some behaviors have to change in tests, sorry
 os.environ["KUGL_UNIT_TESTING"] = "true"
@@ -78,13 +78,29 @@ class HRData:
         """Return a deepcopy of the default HR configuration, for customization in a test."""
         return deepcopy(self.CONFIG)
 
-    def save(self, config: Union[str, dict] = CONFIG):
+    def save(self, config: Union[str, dict] = CONFIG, folder: Optional[KPath] = None):
         """Write a (possibly modified) HR schema configuration to KUGL_HOME."""
         if not isinstance(config, str):
             config = yaml.dump(config)
-        kugl_home().prep().joinpath("hr.yaml").write_text(config)
+        (folder or kugl_home()).prep().joinpath("hr.yaml").write_text(config)
 
 
 @pytest.fixture(scope="function")
 def hr(test_home):
     return HRData()
+
+
+@pytest.fixture(scope="function")
+def extra_home(test_home, tmp_path):
+    """Additional home for Kugl init and schema files.
+
+    When used, this fixture creates a second folder similar to test_home, and writes init.yaml
+    in test_home pointing to both folders."""
+    path = tmp_path / ".extra"
+    kugl_home().prep().joinpath("init.yaml").write_text(f"""
+        settings:
+          init_path:
+            - "{path}"
+    """)
+    yield KPath(path).prep()
+

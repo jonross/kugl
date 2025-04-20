@@ -5,8 +5,8 @@ Unit tests for the --schema CLI option.
 import pytest
 
 from kugl.main import main1
-from kugl.util import KuglError, fail
-from tests.testing import assert_by_line
+from kugl.util import KuglError
+from ..testing import assert_by_line
 
 
 def test_no_such_schema(test_home):

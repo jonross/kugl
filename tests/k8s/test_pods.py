@@ -7,7 +7,8 @@ import pytest
 from kugl.builtins.helpers import PodHelper
 from kugl.util import UNIT_TEST_TIMEBASE, features_debugged
 
-from .testing import make_pod, kubectl_response, Container, CGM, assert_query, make_job, assert_by_line
+from ..testing import assert_query, assert_by_line
+from .k8s_mocks import kubectl_response, make_pod, Container, CGM, make_job
 
 
 def test_missing_metadata():

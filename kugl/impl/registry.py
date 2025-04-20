@@ -126,10 +126,11 @@ class Schema(BaseModel):
     def read_configs(self, init_path: list[str]):
         """Apply the built-in and user configuration files for the schema, if present."""
 
-        init_path = [ConfigPath(p) for p in init_path]
-        if not init_path:
-            init_path = [ConfigPath(kugl_home())]
-        init_path.insert(0, ConfigPath(__file__).parent.parent / "builtins" / "schemas")
+        init_path = [
+            ConfigPath(__file__).parent.parent / "builtins" / "schemas",
+            *[ConfigPath(p) for p in init_path],
+            ConfigPath(kugl_home())
+        ]
 
         # Reset the non-builtin tables, since these can change during unit tests.
         self._create.clear()
@@ -198,7 +199,7 @@ class Schema(BaseModel):
         fields = r.model_dump()
         if "namespaced" in fields:
             return parse_model(rgy.get_resource_by_family("kubernetes"), fields)
-        for family in ["file", "exec", "data"]:
+        for family in ["file", "folder", "exec", "data"]:
             if family in fields:
                 return parse_model(rgy.get_resource_by_family(family), fields)
         # If no family is specified, the schema may have a default one

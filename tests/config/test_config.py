@@ -7,20 +7,32 @@ from kugl.impl.config import Settings, UserConfig, parse_model, ExtendTable, Cre
 
 import yaml
 
-from kugl.main import main1
-from kugl.util import Age, kugl_home, KuglError
+from kugl.util import Age
 
 
 def test_settings_defaults():
     s = Settings()
     assert s.cache_timeout == Age(120)
     assert s.reckless == False
+    assert s.no_headers == False
+    assert s.init_path == []
 
 
-def test_settings_custom():
-    s = Settings(cache_timeout=Age(5), reckless=True)
+def test_settings_custom(monkeypatch):
+    monkeypatch.setenv("FOO", "/tmp")
+    s = parse_model(Settings, yaml.safe_load("""
+        cache_timeout: 5s
+        reckless: true
+        no_headers: true
+        init_path:
+          - $FOO/abc
+          - $FOO/xyz
+          - $BAR/xyz
+    """))
     assert s.cache_timeout == Age(5)
     assert s.reckless == True
+    assert s.no_headers == True
+    assert s.init_path == ["/tmp/abc", "/tmp/xyz", "$BAR/xyz"]
 
 
 def test_empty_config():
@@ -33,7 +45,7 @@ def test_empty_init():
     c = UserInit()
     assert c.settings.cache_timeout == Age(120)
     assert c.settings.reckless == False
-    assert c.shortcuts == {}
+    assert c.shortcuts == []
 
 
 def test_config_with_table_extension():
@@ -116,7 +128,7 @@ def test_unexpected_keys():
             path: metadata.name
             unexpected: 42
     """), return_errors=True)
-    assert errors == ["columns.0.unexpected: Extra inputs are not permitted"]
+    assert errors == ["At columns.0: 'unexpected' is not allowed here"]
 
 
 def test_invalid_jmespath():

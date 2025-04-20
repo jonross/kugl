@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from kugl.builtins.schemas.kubernetes import KubernetesResource
 from kugl.impl.engine import DataCache, CHECK, NEVER_UPDATE, ALWAYS_UPDATE, ResourceRef
 from kugl.util import Age, features_debugged
-from tests.testing import assert_by_line
+from ..testing import assert_by_line
 
 
 def test_cache(test_home, capsys):

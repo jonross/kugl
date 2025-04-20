@@ -1,3 +1,9 @@
+## 0.5.0
+
+- Shortcut syntax in `init.yaml` has changed, but old syntax is still supported (a warning will be printed)
+- Multiple configuration folders are supported via the `init_path` setting in `init.yaml`
+- Add the `folder` resource type for collating data from multiple files
+
 ## 0.4.2
 
 - Configuration errors now show the offending pathname
