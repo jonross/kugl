@@ -4,6 +4,7 @@ Registry of resources and tables, independent of configuration file format.
 
 from argparse import ArgumentParser
 from collections import defaultdict
+from importlib.resources import files
 from itertools import chain
 from typing import Type, Optional
 
@@ -127,7 +128,7 @@ class Schema(BaseModel):
         """Apply the built-in and user configuration files for the schema, if present."""
 
         init_path = [
-            ConfigPath(__file__).parent.parent / "builtins" / "schemas",
+            ConfigPath(files("kugl.builtins.schemas")),
             *[ConfigPath(p) for p in init_path],
             ConfigPath(kugl_home())
         ]
