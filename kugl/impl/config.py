@@ -78,7 +78,8 @@ class SecondaryUserInit(ConfigContent):
 
 
 class UserInit(SecondaryUserInit):
-    """The root model for init.yaml; holds the entire file content."""
+    """The root model for init.yaml in kugl_home() - contains everything in SecondaryUserInit
+    plus Settings."""
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     settings: Optional[Settings] = Settings()
 
@@ -173,7 +174,8 @@ class UserConfig(ConfigContent):
 
 # FIXME use typevars
 def parse_model(model_class, root: dict, return_errors: bool = False) -> Union[object, Tuple[Optional[object], Optional[list[str]]]]:
-    """Parse a dict into a model instance (typically a UserConfig).
+    """Parse a dict into a model instance -- typically a UserConfig but applies anywhere we
+    are parsing from user content, since it improves on some of Pydantic's error messages.
 
     :param model_class: The Pydantic model class to use for validation.
     :param source: The dict to parse
@@ -190,7 +192,9 @@ def parse_model(model_class, root: dict, return_errors: bool = False) -> Union[o
 
 # FIXME use typevars
 def parse_file(model_class, path: ConfigPath) -> object:
-    """Parse a configuration file into a model instance, handling edge cases."""
+    """Parse a configuration file into a model instance.
+    If the file doesn't exist, use the model's default constructor.
+    Fail if the file is world-writeable (security risk.)"""
     if not path.exists():
         result = model_class()
     else:

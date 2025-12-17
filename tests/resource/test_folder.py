@@ -45,7 +45,7 @@ def test_folder_content(hr, tmp_path, capsys):
     config = hr.config()
     folder = KPath(tmp_path) / "region"
     # Replace the HR schema's "people" resource with a folder resource that matches files.
-    # These two files will match the regex, the third won't.
+    # The first two files below will match the regex, the third won't.
     folder.joinpath("east").prep().joinpath("data.yaml").write_text("""
         - name: Jim
           age: 42
