@@ -47,7 +47,8 @@ class HRData:
         resources: 
           - name: people
             # Start this out as a data resource; a unit test can turn it into another
-            # kind of resource.
+            # kind of resource.  Note: this contains gender data even though the table
+            # definition below doesn't use it; it's used in unit tests for table extensions.
             data:
               items:
                 - name: Jim

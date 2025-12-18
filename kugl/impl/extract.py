@@ -50,15 +50,20 @@ class FieldRef:
 
 
 class Extractor:
-    """Base class for YAML field -> column value extractor"""
+    """Base class for JSON field -> column value extractor.  This is a Callable with common
+    logic in __call__ and expects subclasses to define self.extract, also __str__ for
+    debugging.  __str__ should give the column name and a summary of how the extractor
+    is configured."""
 
     def __init__(self, column_name: str, column_type: ColumnType):
         self.column_name = column_name
         self.column_type = column_type
         self._converter = KUGL_TYPE_CONVERTERS[column_type]
 
+    # FIXME: better contract for context
     def __call__(self, obj: object, context) -> object:
-        """Extract the column value from an object and convert to the correct type."""
+        """Extract the column value from an object and convert to the correct type.  The
+        object can be None, implying data missing from the JSON."""
         if obj is None:
             if context.debug:
                 context.debug(f"no object provided to extractor {self}")
