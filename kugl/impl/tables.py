@@ -26,14 +26,16 @@ class TableDef(BaseModel):
 
 
 class Table:
-    """The engine-level representation of a table, independent of the config file format"""
+    """Base class for a Kugl table, independent of the source definition.
+    This is extended by TableFromCode, for Python-defined built-in tables, and by
+    TableFromConfig, for user-defined tables created from config files."""
 
     def __init__(self, name: str, schema_name, resource: str,
                  builtin_columns: list[Column], non_builtin_columns: list[UserColumn]):
         """
-        :param name: the table name, e.g. "pods"
-        :param name: the schema name, e.g. "kubernetes"
-        :param resource: the Kubernetes resource type, e.g. "pods"
+        :param name: table name, e.g. "pods"
+        :param name: schema name, e.g. "kubernetes"
+        :param resource: Kubernetes resource type, e.g. "pods"
         """
         self.name = name
         self.schema_name = schema_name
@@ -41,17 +43,17 @@ class Table:
         self.builtin_columns = builtin_columns
         self.non_builtin_columns = non_builtin_columns
 
-    def build(self, db, kube_data: dict, multi_schema: bool):
+    def build(self, db, raw_data: dict, multi_schema: bool):
         """Create the table in SQLite and insert the data.
 
         :param db: the SqliteDb instance
-        :param kube_data: the JSON data from 'kubectl get'
+        :param kube_data: the JSON data from 'kubectl get' or another resource
         :param multi_schema: whether to use the schema name in the table name
         """
-        context = RowContext(kube_data)
+        context = RowContext(raw_data)
         table_name = f"{self.schema_name}.{self.name}" if multi_schema else self.name
-        ddl = ", ".join(f"{c.name} {c._sqltype}" for c in self.builtin_columns + self.non_builtin_columns)
-        db.execute(f"CREATE TABLE {table_name} ({ddl})")
+        all_columns = self.builtin_columns + self.non_builtin_columns
+        db.execute(f"""CREATE TABLE {table_name} ({", ".join(f"{c.name} {c._sqltype}" for c in all_columns)})""")
         item_rows = list(self.make_rows(context))
         if item_rows:
             if self.non_builtin_columns:
