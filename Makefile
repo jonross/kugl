@@ -2,39 +2,48 @@
 VERSION = 0.5.0
 IMAGE = jonross/kugl:$(VERSION)
 
-venv:
-	python3 -m venv venv
-
-# Build virtualenv for development and install dependencies
-deps: venv
-	(cd venv && . bin/activate && pip install -r ../requirements.txt)
-
-# Test with current requirements
+# Quick test with current dependencies
 test:
-	@bin/tester
+	uv run pytest
 
-# Test with low end of requirements
-lotest:
-	@bin/tester --lo
+# Comprehensive regression test (Python 3.9 with low/high deps, Python 3.13 with high deps)
+# Note: Python 3.13 with lowest resolution is not tested because old pydantic versions don't support it
+test-all:
+	@echo "=== Testing Python 3.9 with lowest dependencies ==="
+	@uv run --python 3.9 --resolution lowest pytest
+	@echo ""
+	@echo "=== Testing Python 3.9 with highest dependencies ==="
+	@uv run --python 3.9 --resolution highest pytest
+	@echo ""
+	@echo "=== Testing Python 3.13 with highest dependencies ==="
+	@uv run --python 3.13 --resolution highest pytest
+	@echo ""
+	@echo "✓ All regression tests passed!"
 
-# Test with high end of requirements
-hitest:
-	@bin/tester --hi
+# Individual test targets (for debugging)
+test-py39-lo:
+	uv run --python 3.9 --resolution lowest pytest
 
-# Test with dev requirements
-pintest:
-	@bin/tester --pin
+test-py39-hi:
+	uv run --python 3.9 --resolution highest pytest
+
+test-py13-lo:
+	uv run --python 3.13 --resolution lowest pytest
+
+test-py13-hi:
+	uv run --python 3.13 --resolution highest pytest
 
 # Build distribution for PyPI
-dist: setup.py MANIFEST.in
-	python3 setup.py sdist bdist_wheel
+dist:
+	rm -rf dist/
+	uv build
 
 # Upload distribution to PyPI
-pypi:
-	twine upload dist/*
+pypi: dist
+	uv run twine upload dist/*
 
 # Build Docker image
-docker: Makefile setup.py
+docker: Makefile pyproject.toml
 	docker build --no-cache -t $(IMAGE) .
 
 # Upload Docker image
@@ -49,8 +58,10 @@ dshell: docker
 pyshell:
 	docker run -it -v ~/.kube:/root/.kube --entrypoint /bin/sh python:3.9-alpine
 
+# Clean build artifacts
 clean:
-	rm -rf build dist kugl.egg-info
+	rm -rf build dist kugl.egg-info .pytest_cache coverage htmlcov
 
+# Full clean including venv
 pristine: clean
-	rm -rf venv
+	rm -rf .venv

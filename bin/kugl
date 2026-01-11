@@ -1,10 +1,9 @@
 #!/bin/bash
 #
-# Developer wrapper script for kugl.main, for use in the absence of a pip install.
+# Developer wrapper script for kugl
 
 set -euo pipefail
 
 kugl_home=$(dirname "$0")/..
-. $kugl_home/venv//bin/activate
-PYTHONPATH=$kugl_home
-exec python3 -m kugl.main "$@"
+cd "$kugl_home"
+exec uv run python -m kugl.main "$@"

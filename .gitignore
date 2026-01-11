@@ -1,8 +1,12 @@
 .idea
 __pycache__/
 venv/
+.venv/
 *.swp
 .coverage
 build/
 dist/
 kugl.egg-info/
+.pytest_cache/
+coverage/
+htmlcov/
