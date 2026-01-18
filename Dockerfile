@@ -12,7 +12,7 @@ RUN apk update \
 
 # Copy project files
 WORKDIR /app
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock README.md ./
 COPY kugl ./kugl
 
 # Install dependencies
