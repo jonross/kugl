@@ -1,3 +1,7 @@
+## 0.6.0
+
+- No external changes
+
 ## 0.5.0
 
 - Shortcut syntax in `init.yaml` has changed, but old syntax is still supported (a warning will be printed)

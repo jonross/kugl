@@ -1,5 +1,5 @@
 
-VERSION = 0.5.0
+VERSION = 0.6.0
 IMAGE = jonross/kugl:$(VERSION)
 
 # Quick test with current dependencies
