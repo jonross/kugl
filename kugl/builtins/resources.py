@@ -19,6 +19,7 @@ class NonCacheableResource(Resource):
     def set_cacheable(cls, resource: "NonCacheableResource") -> "NonCacheableResource":
         if resource.cacheable is True:
             fail(f"resource '{resource.name}' cannot be cacheable: true")
+        # cacheable: field may have been missing from the config file; make it False
         resource.cacheable = False
         return resource
 

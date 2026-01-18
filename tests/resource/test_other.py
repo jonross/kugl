@@ -36,7 +36,7 @@ def test_namespaced_resources_are_kubernetes_resources(hr, capsys):
     # Replace the HR schema's "people" resource with one that will be inferred as Kubernetes
     config["resources"][0] = dict(name="people", namespaced="true")
     hr.save(config)
-    # This will fail because there's no Kubernetes "people" resource, but that's OK.
+    # This will fail because there's no Kubernetes "people" resource
     with pytest.raises(SystemExit):
         assert_query(hr.PEOPLE_QUERY, None)
     _, err = capsys.readouterr()

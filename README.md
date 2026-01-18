@@ -58,18 +58,25 @@ kugl() {
     docker run \
         -v ~/.kube:/root/.kube \
         -v ~/.kugl:/root/.kugl \
-        jonross/kugl:0.5.0 python3 -m kugl.main "$@"
+        jonross/kugl:0.6.0 python3 -m kugl.main "$@"
 }
 ```
 
-If neither of those suits you, it's easy to set up from source.  (This will build a virtualenv in the
-directory where you clone it.)
+If neither of those suits you, it's easy to set up from source:
 
 ```shell
 git clone https://github.com/jonross/kugl.git
 cd kugl
-make deps
-# put kugl's bin directory in your PATH
+
+# Install UV if you don't have it
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Set up development environment
+uv sync
+
+# Run kugl directly
+uv run kugl --help
+# or put kugl's bin directory in your PATH
 PATH=${PATH}:$(pwd)/bin
 ```
 

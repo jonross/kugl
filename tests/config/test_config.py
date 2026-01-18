@@ -115,6 +115,7 @@ def test_missing_fields_for_create():
           - name: foo
             path: metadata.name
     """), return_errors=True)
+    # FIXME: why did I wrap these in a set()
     assert set(errors) == set([
         "resource: Field required",
     ])
@@ -153,7 +154,7 @@ def test_cannot_have_both_path_and_label():
     assert errors == ["columns.0: Value error, cannot specify both path and label"]
 
 
-def test_must_specify_path_or_label():
+def test_must_have_path_or_label():
     _, errors = parse_model(ExtendTable, yaml.safe_load("""
         table: xyz
         columns:

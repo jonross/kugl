@@ -6,7 +6,7 @@ import re
 import subprocess as sp
 import sys
 from contextlib import contextmanager
-from typing import Optional, Union, Callable, Tuple
+from typing import Optional, Union, Tuple
 
 import arrow
 import yaml

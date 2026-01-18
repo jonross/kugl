@@ -13,9 +13,21 @@ from kugl.main import main1, parse_args
 from kugl.util import KuglError, Age, kugl_home
 
 
-def test_enforce_one_cache_option(test_home):
+def test_enforce_cache_option(test_home):
     with pytest.raises(KuglError, match="Cannot use both -c/--cache and -u/--update"):
         main1(["-c", "-u", "select 1"])
+
+
+def test_enforce_cache_option_via_shortcut(test_home, capsys):
+    kugl_home().prep().joinpath("init.yaml").write_text("""
+        shortcuts:
+          - name: foo
+            args:
+              - -u
+              - "select 1"
+    """)
+    with pytest.raises(KuglError, match="Cannot use both -c/--cache and -u/--update"):
+        main1(["-c", "foo"])
 
 
 def test_enforce_one_namespace_option(test_home):
@@ -38,7 +50,13 @@ def test_missing_query(test_home):
         main1([])
 
 
-def test_shortcut_with_invalid_option(test_home, capsys):
+def test_unknown_option(test_home, capsys):
+    with pytest.raises(SystemExit):
+        main1(["--badoption", "select 1"])
+    assert "unrecognized arguments: --badoption" in capsys.readouterr().err
+
+
+def test_unknown_option_in_shortcut(test_home, capsys):
     kugl_home().prep().joinpath("init.yaml").write_text("""
         shortcuts:
           foo:
@@ -50,28 +68,10 @@ def test_shortcut_with_invalid_option(test_home, capsys):
     assert "unrecognized arguments: --badoption" in capsys.readouterr().err
 
 
-def test_unknown_option(test_home, capsys):
-    with pytest.raises(SystemExit):
-        main1(["--badoption", "select 1"])
-    assert "unrecognized arguments: --badoption" in capsys.readouterr().err
-
-
-def test_enforce_one_cache_option_via_shortcut(test_home, capsys):
-    kugl_home().prep().joinpath("init.yaml").write_text("""
-        shortcuts:
-          - name: foo
-            args:
-              - -u
-              - "select 1"
-    """)
-    with pytest.raises(KuglError, match="Cannot use both -c/--cache and -u/--update"):
-        main1(["-c", "foo"])
-
-
 def test_no_headers(test_home, capsys):
     main1(["-H", "select 1, 2"])
     out, _ = capsys.readouterr()
-    # Not sure why the output format is different with no headers...
+    # FIXME: Not sure why the output format is different with no headers...
     assert out == "1  2\n"
 
 
@@ -82,6 +82,7 @@ def test_no_headers(test_home, capsys):
     (["-c", "-u", "select 1"], None, None, None, "Cannot use both -c/--cache and -u/--update"),
 ])
 def test_parse_args(test_home, argv, expected_flag, age, reckless, error):
+    """Verify correct values received for -u, -t, -c, -r options"""
     ap = ArgumentParser()
     settings = Settings()
     if error:
