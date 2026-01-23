@@ -33,7 +33,7 @@ class SqliteDb:
 
     def _query(self, conn, sql, data=None, named=False, names=None, one_row=False):
         cur = conn.cursor()
-        res = cur.execute(sql, data or [])
+        cur.execute(sql, data or [])
         if names is not None:
             names.extend(col[0] for col in cur.description)
         if named:

@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
 from .extract import ColumnType, KUGL_TYPE_TO_SQL_TYPE, LabelExtractor, PathExtractor
-from kugl.util import Age, ConfigPath, parse_age, fail, abbreviate, warn, kugl_home, KPath, friendlier_errors
+from kugl.util import Age, ConfigPath, parse_age, fail, warn, kugl_home, KPath, friendlier_errors
 
 DEFAULT_SCHEMA = "kubernetes"
 

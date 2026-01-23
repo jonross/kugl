@@ -1,11 +1,9 @@
-import json
 import re
 import sys
 from os.path import expandvars, expanduser
 from pathlib import Path
 from typing import Union, Optional
 
-import yaml
 from pydantic import model_validator
 
 from kugl.api import resource, fail, run, Resource
@@ -66,7 +64,7 @@ class FolderResource(NonCacheableResource):
     def validate_folder(cls, resource: "FolderResource"):
         try:
             resource._pattern = re.compile(resource.match)
-        except Exception as e:  # re.compile can raise anything
+        except Exception:  # re.compile can raise anything
             fail(f"Invalid regex {resource.match} in resource {resource.name}")
         if isinstance(resource.folder, str):
             resource.folder = KPath(expandvars(expanduser(resource.folder)))

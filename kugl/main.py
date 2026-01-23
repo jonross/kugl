@@ -6,13 +6,12 @@ import os
 from argparse import ArgumentParser
 import sys
 from sqlite3 import DatabaseError
-from types import SimpleNamespace
-from typing import List, Union, Optional, Type
+from typing import List, Optional, Type
 
 from kugl.impl.registry import Registry
 from kugl.impl.engine import Engine, CHECK, NEVER_UPDATE, ALWAYS_UPDATE, CacheFlag
 from kugl.impl.config import UserInit, parse_file, Settings, Shortcut, SecondaryUserInit
-from kugl.util import Age, fail, debug_features, kugl_home, kube_home, ConfigPath, debugging, KuglError, kube_context, \
+from kugl.util import Age, fail, debug_features, kugl_home, ConfigPath, debugging, KuglError, kube_context, \
     Query, failure_preamble
 
 # Register built-ins immediately because they're needed for command-line parsing

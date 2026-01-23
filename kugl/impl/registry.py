@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from kugl.impl.config import UserConfig, parse_file, CreateTable, ExtendTable, ResourceDef, DEFAULT_SCHEMA, parse_model
 from kugl.impl.tables import TableFromCode, TableFromConfig, TableDef, Table
-from kugl.util import fail, debugging, ConfigPath, kugl_home, cleave, failure_preamble, KPath
+from kugl.util import fail, ConfigPath, kugl_home, cleave, failure_preamble
 
 _REGISTRY = None
 

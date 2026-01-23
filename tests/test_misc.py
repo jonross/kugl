@@ -11,7 +11,7 @@ from kugl.util.clock import RealClock, Clock
 
 from kugl.builtins.helpers import Limits, Containerized
 from kugl.main import main1
-from kugl.util import Age, KuglError, kube_home, kugl_home, features_debugged, debugging, run, kube_context
+from kugl.util import KuglError, kube_home, kugl_home, features_debugged, debugging, run
 
 
 def test_limits_misc(capsys):
