@@ -11,8 +11,8 @@ from kugl.util import Age
 def test_settings_defaults():
     s = Settings()
     assert s.cache_timeout == Age(120)
-    assert s.reckless == False
-    assert s.no_headers == False
+    assert not s.reckless
+    assert not s.no_headers
     assert s.init_path == []
 
 
@@ -28,8 +28,8 @@ def test_settings_custom(monkeypatch):
           - $BAR/xyz
     """))
     assert s.cache_timeout == Age(5)
-    assert s.reckless == True
-    assert s.no_headers == True
+    assert not s.reckless
+    assert not s.no_headers
     assert s.init_path == ["/tmp/abc", "/tmp/xyz", "$BAR/xyz"]
 
 
@@ -42,7 +42,7 @@ def test_empty_config():
 def test_empty_init():
     c = UserInit()
     assert c.settings.cache_timeout == Age(120)
-    assert c.settings.reckless == False
+    assert not c.settings.reckless
     assert c.shortcuts == []
 
 

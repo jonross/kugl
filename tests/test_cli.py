@@ -36,7 +36,7 @@ def test_enforce_one_namespace_option(test_home):
 
 
 def test_no_such_table(test_home):
-    with pytest.raises(sqlite3.OperationalError, match=re.escape(f"no such table: foo")):
+    with pytest.raises(sqlite3.OperationalError, match=re.escape("no such table: foo")):
         main1(["select * from foo"])
 
 

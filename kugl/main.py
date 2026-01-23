@@ -11,13 +11,11 @@ from typing import List, Optional, Type
 from kugl.impl.registry import Registry
 from kugl.impl.engine import Engine, CHECK, NEVER_UPDATE, ALWAYS_UPDATE, CacheFlag
 from kugl.impl.config import UserInit, parse_file, Settings, Shortcut, SecondaryUserInit
-from kugl.util import Age, fail, debug_features, kugl_home, ConfigPath, debugging, KuglError, kube_context, \
-    Query, failure_preamble
+from kugl.util import Age, fail, debug_features, kugl_home, ConfigPath, debugging, KuglError, Query, failure_preamble
 
 # Register built-ins immediately because they're needed for command-line parsing
-import kugl.builtins.resources
-import kugl.builtins.schemas.kubernetes
-
+import kugl.builtins.resources  # noqa: F401
+import kugl.builtins.schemas.kubernetes  # noqa: F401
 
 def main() -> None:
     sys.argv[0] = "kugl"

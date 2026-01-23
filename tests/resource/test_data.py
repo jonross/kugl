@@ -19,7 +19,7 @@ def test_debugged_data_resource(hr, capsys):
     with features_debugged("sqlite"):
         assert_query(hr.PEOPLE_QUERY, hr.PEOPLE_RESULT)
     out, err = capsys.readouterr()
-    assert_by_line(err, f"""
+    assert_by_line(err, """
         sqlite: execute: ATTACH DATABASE ':memory:' AS 'hr'
         sqlite: execute: CREATE TABLE hr.people (name text, age integer)
         sqlite: execute: INSERT INTO hr.people VALUES(?, ?)
