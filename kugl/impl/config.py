@@ -10,17 +10,29 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
 from .extract import ColumnType, KUGL_TYPE_TO_SQL_TYPE, LabelExtractor, PathExtractor
-from kugl.util import Age, ConfigPath, parse_age, fail, warn, kugl_home, KPath, friendlier_errors
+from kugl.util import (
+    Age,
+    ConfigPath,
+    parse_age,
+    fail,
+    warn,
+    kugl_home,
+    KPath,
+    friendlier_errors,
+)
 
 DEFAULT_SCHEMA = "kubernetes"
 
+
 class ConfigContent(BaseModel):
     """Base class for the top-level classes of configuration files; this just tracks the source file."""
+
     _source: ConfigPath  # set by parse_file()
 
 
 class Settings(BaseModel):
     """Holds the settings: entry from a user config file."""
+
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     cache_timeout: Union[Age, int] = Age(120)
     reckless: bool = False
@@ -37,7 +49,7 @@ class Settings(BaseModel):
 
     @model_validator(mode="after")
     @classmethod
-    def validate_init_path(cls, settings: 'Settings') -> 'Settings':
+    def validate_init_path(cls, settings: "Settings") -> "Settings":
         home_resolved = kugl_home().resolve()
         if any(KPath(x).resolve() == home_resolved for x in settings.init_path):
             fail("~/.kugl should not be listed in init_path")
@@ -46,7 +58,7 @@ class Settings(BaseModel):
 
     @model_validator(mode="after")
     @classmethod
-    def convert_timeout(cls, settings: 'Settings') -> 'Settings':
+    def convert_timeout(cls, settings: "Settings") -> "Settings":
         # If timeout specified in config, convert back to Age
         if isinstance(settings.cache_timeout, int):
             settings.cache_timeout = Age(settings.cache_timeout)
@@ -55,6 +67,7 @@ class Settings(BaseModel):
 
 class Shortcut(BaseModel):
     """Holds one entry from the shortcuts: section of a user config file."""
+
     model_config = ConfigDict(extra="forbid")
     name: str
     args: list[str]
@@ -63,6 +76,7 @@ class Shortcut(BaseModel):
 
 class SecondaryUserInit(ConfigContent):
     """The root model for init.yaml in folders other than kugl_home()"""
+
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     shortcuts: list[Shortcut] = []
 
@@ -72,14 +86,19 @@ class SecondaryUserInit(ConfigContent):
         """Handle the old form of shortcuts, which is just a dict of lists."""
         shortcuts = model.get("shortcuts")
         if isinstance(shortcuts, dict):
-            warn("Shortcuts format has changed, please see https://github.com/jonross/kugl/blob/main/docs-tmp/shortcuts.md")
-            model["shortcuts"] = [Shortcut(name=name, args=args) for name, args in shortcuts.items()]
+            warn(
+                "Shortcuts format has changed, please see https://github.com/jonross/kugl/blob/main/docs-tmp/shortcuts.md"
+            )
+            model["shortcuts"] = [
+                Shortcut(name=name, args=args) for name, args in shortcuts.items()
+            ]
         return model
 
 
 class UserInit(SecondaryUserInit):
     """The root model for init.yaml in kugl_home() - contains everything in SecondaryUserInit
     plus Settings."""
+
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     settings: Optional[Settings] = Settings()
 
@@ -87,6 +106,7 @@ class UserInit(SecondaryUserInit):
 class Column(BaseModel):
     """The minimal field set for a table column defined from code.  Columns defined from user
     config files use UserColumn, a subclass."""
+
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     name: str
     type: ColumnType = "text"
@@ -96,13 +116,14 @@ class Column(BaseModel):
 
     @model_validator(mode="after")
     @classmethod
-    def recognize_type(cls, column: 'Column') -> 'Column':
+    def recognize_type(cls, column: "Column") -> "Column":
         column._sqltype = KUGL_TYPE_TO_SQL_TYPE[column.type]
         return column
 
 
 class UserColumn(Column):
     """Holds one entry from a columns: list in a user config file."""
+
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     path: Optional[str] = None
     label: Optional[Union[str, list[str]]] = None
@@ -117,7 +138,7 @@ class UserColumn(Column):
 
     @model_validator(mode="after")
     @classmethod
-    def gen_extractor(cls, column: 'UserColumn') -> 'UserColumn':
+    def gen_extractor(cls, column: "UserColumn") -> "UserColumn":
         """
         Generate the Extractor instance for a column definition; given an object, it will return
         a column value of the appropriate type.
@@ -140,6 +161,7 @@ class UserColumn(Column):
 
 class ExtendTable(BaseModel):
     """Holds the extend: section from a user config file."""
+
     model_config = ConfigDict(extra="forbid")
     table: str
     columns: list[UserColumn] = []
@@ -151,6 +173,7 @@ class ResourceDef(BaseModel):
     This only ensures the .name and .cacheable attributes are properly typed.  The remaining
     validation happens in registry.py when we create a (possibly) schema-specific Resource.
     """
+
     model_config = ConfigDict(extra="allow")
     name: str
     cacheable: Optional[bool] = None
@@ -158,12 +181,14 @@ class ResourceDef(BaseModel):
 
 class CreateTable(ExtendTable):
     """Holds the create: section from a user config file."""
+
     resource: str
     row_source: Optional[list[str]] = None
 
 
 class UserConfig(ConfigContent):
     """The root model for a user config file; holds the complete file content."""
+
     model_config = ConfigDict(extra="forbid")
     resources: list[ResourceDef] = []
     extend: list[ExtendTable] = []
@@ -173,7 +198,9 @@ class UserConfig(ConfigContent):
 
 
 # FIXME use typevars
-def parse_model(model_class, root: dict, return_errors: bool = False) -> Union[object, Tuple[Optional[object], Optional[list[str]]]]:
+def parse_model(
+    model_class, root: dict, return_errors: bool = False
+) -> Union[object, Tuple[Optional[object], Optional[list[str]]]]:
     """Parse a dict into a model instance -- typically a UserConfig but applies anywhere we
     are parsing from user content, since it improves on some of Pydantic's error messages.
 

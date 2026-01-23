@@ -11,7 +11,6 @@ from kugl.util import best_guess_parse, KPath, debugging
 
 
 class NonCacheableResource(Resource):
-
     @model_validator(mode="after")
     @classmethod
     def set_cacheable(cls, resource: "NonCacheableResource") -> "NonCacheableResource":
@@ -25,6 +24,7 @@ class NonCacheableResource(Resource):
 @resource("data")
 class DataResource(NonCacheableResource):
     """A resource whose data is provided directly in the configuration file."""
+
     data: dict
 
     def get_objects(self):
@@ -38,6 +38,7 @@ class FileResource(NonCacheableResource):
     These are non-cacheable because'm not sure it's appropriate to mirror the folder structure of file
     resources under ~/.kuglcache.  Maybe that's just paranoia. But if we change this, make sure stdin
     is never cachable."""
+
     file: str
 
     def get_objects(self):
@@ -55,6 +56,7 @@ class FolderResource(NonCacheableResource):
     """A resource that reads selectively from a folder tree.
 
     These are non-cacheable for the same reason as FileResource."""
+
     folder: Union[str, Path]
     glob: str
     match: str
@@ -109,7 +111,9 @@ class ExecResource(Resource):
             if resource.cache_key is None:
                 fail(f"exec resource '{resource.name}' must have a cache key")
             if expandvars(resource.cache_key) == resource.cache_key:
-                fail(f"exec resource '{resource.name}' cache_key does not contain non-empty environment references")
+                fail(
+                    f"exec resource '{resource.name}' cache_key does not contain non-empty environment references"
+                )
         return resource
 
     def get_objects(self):

@@ -16,7 +16,10 @@ def test_config_with_missing_resource(test_home):
             resource: stuff
             columns: []
     """)
-    with pytest.raises(KuglError, match="Errors in .*kubernetes.yaml:\nTable 'stuff' needs undefined resource 'stuff'"):
+    with pytest.raises(
+        KuglError,
+        match="Errors in .*kubernetes.yaml:\nTable 'stuff' needs undefined resource 'stuff'",
+    ):
         assert_query("SELECT * FROM stuff", "")
 
 
@@ -26,7 +29,9 @@ def test_untypeable_resource(hr):
     # Replace the HR schema's "people" resource with an untypeable one.
     config["resources"][0] = dict(name="people")
     hr.save(config)
-    with pytest.raises(KuglError, match="Errors in .*hr.yaml:\ncan't infer type of resource 'people'"):
+    with pytest.raises(
+        KuglError, match="Errors in .*hr.yaml:\ncan't infer type of resource 'people'"
+    ):
         assert_query(hr.PEOPLE_QUERY, None)
 
 

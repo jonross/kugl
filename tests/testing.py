@@ -34,7 +34,9 @@ def assert_query(sql: str, expected: Union[str, list], all_ns: bool = False):
         assert actual == expected
 
 
-def assert_by_line(lines: Union[str, list[str]], expected: Union[str, list[Union[str, re.Pattern]]]):
+def assert_by_line(
+    lines: Union[str, list[str]], expected: Union[str, list[Union[str, re.Pattern]]]
+):
     """
     Compare a list of lines with a list of expected lines or regex patterns.
     :param lines: Actual output, as a list of lines

@@ -10,7 +10,15 @@ from typing import Type, Optional
 
 from pydantic import BaseModel
 
-from kugl.impl.config import UserConfig, parse_file, CreateTable, ExtendTable, ResourceDef, DEFAULT_SCHEMA, parse_model
+from kugl.impl.config import (
+    UserConfig,
+    parse_file,
+    CreateTable,
+    ExtendTable,
+    ResourceDef,
+    DEFAULT_SCHEMA,
+    parse_model,
+)
 from kugl.impl.tables import TableFromCode, TableFromConfig, TableDef, Table
 from kugl.util import fail, ConfigPath, kugl_home, cleave, failure_preamble
 
@@ -66,7 +74,9 @@ class Registry:
         for schema_name in schema_defaults:
             existing = self.resources_by_schema.get(schema_name)
             if existing:
-                fail(f"Resource type {family} already registered as the default for schema {schema_name}")
+                fail(
+                    f"Resource type {family} already registered as the default for schema {schema_name}"
+                )
         self.resources_by_family[family] = cls
         for schema_name in schema_defaults:
             self.resources_by_schema[schema_name] = cls
@@ -91,12 +101,15 @@ class Registry:
         schema = self.get_schema(schema_name).read_configs(init_path)
         if table_name:
             return schema.table_builder(table_name, missing_ok=False).printable_schema()
-        return "\n\n".join(schema.table_builder(name).printable_schema()
-                         for name in sorted(schema.all_table_names()))
+        return "\n\n".join(
+            schema.table_builder(name).printable_schema()
+            for name in sorted(schema.all_table_names())
+        )
 
 
 class Resource(BaseModel):
     """Common attributes of all resource types."""
+
     name: str
     # This is optional because the default cache behavior for every resource type is different.
     # We set it to None to detect when the user hasn't configured it.
@@ -118,6 +131,7 @@ class Resource(BaseModel):
 
 class Schema(BaseModel):
     """Collection of tables and resource definitions."""
+
     name: str
     builtin: dict[str, TableDef] = {}
     _create: dict[str, CreateTable] = {}
@@ -130,7 +144,7 @@ class Schema(BaseModel):
         init_path = [
             ConfigPath(files("kugl.builtins.schemas")),
             *[ConfigPath(p) for p in init_path],
-            ConfigPath(kugl_home())
+            ConfigPath(kugl_home()),
         ]
 
         # Reset the non-builtin tables, since these can change during unit tests.
@@ -204,9 +218,11 @@ class Schema(BaseModel):
             if family in fields:
                 return parse_model(rgy.get_resource_by_family(family), fields)
         # If no family is specified, the schema may have a default one
-        if (impl := rgy.get_resource_by_schema(self.name)):
+        if impl := rgy.get_resource_by_schema(self.name):
             return parse_model(impl, fields)
-        fail(f"can't infer type of resource '{r.name}' -- need one of 'file', 'data', 'namespaced' etc")
+        fail(
+            f"can't infer type of resource '{r.name}' -- need one of 'file', 'data', 'namespaced' etc"
+        )
 
     def table_builder(self, name, missing_ok=True):
         """Return the Table builder subclass (see tables.py) for a table name.

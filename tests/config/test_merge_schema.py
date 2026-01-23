@@ -69,9 +69,11 @@ def test_extend_valid_table(hr, extra_home, capsys):
     """)
     main1(["SELECT * FROM hr.people ORDER BY age"])
     out, _ = capsys.readouterr()
-    assert_by_line(out, """
+    assert_by_line(
+        out,
+        """
         name      age  sex
         Jim        42  m
         Jill       43  f
-    """)
-
+    """,
+    )

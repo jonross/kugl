@@ -2,6 +2,7 @@
 This is separate from engine.py for maintainability.
 SQLite tables are defined and populated here.
 """
+
 from dataclasses import dataclass
 from typing import Optional, Type
 
@@ -19,6 +20,7 @@ class TableDef(BaseModel):
     Capture a table definition from the @table decorator, example:
         @table(schema="kubernetes", name="pods", resource="pods")
     """
+
     cls: Type
     name: str
     schema_name: str = Field(..., alias="schema")
@@ -30,8 +32,14 @@ class Table:
     This is extended by TableFromCode, for Python-defined built-in tables, and by
     TableFromConfig, for user-defined tables created from config files."""
 
-    def __init__(self, name: str, schema_name, resource: str,
-                 builtin_columns: list[Column], non_builtin_columns: list[UserColumn]):
+    def __init__(
+        self,
+        name: str,
+        schema_name,
+        resource: str,
+        builtin_columns: list[Column],
+        non_builtin_columns: list[UserColumn],
+    ):
         """
         :param name: table name, e.g. "pods"
         :param name: schema name, e.g. "kubernetes"
@@ -53,12 +61,15 @@ class Table:
         context = RowContext(raw_data)
         table_name = f"{self.schema_name}.{self.name}" if multi_schema else self.name
         all_columns = self.builtin_columns + self.non_builtin_columns
-        db.execute(f"""CREATE TABLE {table_name} ({", ".join(f"{c.name} {c._sqltype}" for c in all_columns)})""")
+        db.execute(
+            f"""CREATE TABLE {table_name} ({", ".join(f"{c.name} {c._sqltype}" for c in all_columns)})"""
+        )
         item_rows = list(self.make_rows(context))
         if item_rows:
             if self.non_builtin_columns:
-                extend_row = lambda item, row: row + tuple(column.extract(item, context)
-                                                           for column in self.non_builtin_columns)
+                extend_row = lambda item, row: row + tuple(
+                    column.extract(item, context) for column in self.non_builtin_columns
+                )
             else:
                 extend_row = lambda item, row: row
             rows = [extend_row(item, row) for item, row in item_rows]
@@ -66,7 +77,10 @@ class Table:
             db.execute(f"INSERT INTO {table_name} VALUES({placeholders})", rows)
 
     def printable_schema(self):
-        rows = [(c.name, c._sqltype, c.comment or "") for c in self.builtin_columns + self.non_builtin_columns]
+        rows = [
+            (c.name, c._sqltype, c.comment or "")
+            for c in self.builtin_columns + self.non_builtin_columns
+        ]
         return f"## {self.name}\n" + tabulate(rows, tablefmt="plain")
 
 
@@ -79,8 +93,13 @@ class TableFromCode(Table):
         :param extender: an ExtendTable object from the extend: section of a user config file
         """
         self.impl = table_def.cls()
-        super().__init__(table_def.name, table_def.schema_name, table_def.resource, self.impl.columns(),
-                         extender.columns if extender else [])
+        super().__init__(
+            table_def.name,
+            table_def.schema_name,
+            table_def.resource,
+            self.impl.columns(),
+            extender.columns if extender else [],
+        )
 
     def make_rows(self, context: "RowContext") -> list[tuple[dict, tuple]]:
         """Delegate to the user-defined table implementation."""
@@ -90,14 +109,25 @@ class TableFromCode(Table):
 class TableFromConfig(Table):
     """A table created from a create: section in a user config file, rather than in Python"""
 
-    def __init__(self, name: str, schema_name: str, creator: CreateTable, extender: Optional[ExtendTable]):
+    def __init__(
+        self,
+        name: str,
+        schema_name: str,
+        creator: CreateTable,
+        extender: Optional[ExtendTable],
+    ):
         """
         :param name: the table name, e.g. "pods"
         :param creator: a CreateTable object from the create: section of a user config file
         :param extender: an ExtendTable object from the extend: section of a user config file
         """
-        super().__init__(name, schema_name, creator.resource, [],
-                         creator.columns + (extender.columns if extender else []))
+        super().__init__(
+            name,
+            schema_name,
+            creator.resource,
+            [],
+            creator.columns + (extender.columns if extender else []),
+        )
         self.row_source = [Itemizer.parse(x, name) for x in (creator.row_source or ["items"])]
 
     def make_rows(self, context: "RowContext") -> list[tuple[dict, tuple]]:
@@ -179,6 +209,7 @@ class RowContext:
 @dataclass
 class Itemizer:
     """Helper class to hold information parsed from one line of a row_source"""
+
     # Original row_source expression
     expr: str
     # JMESPath expression to find the items
@@ -200,4 +231,3 @@ class Itemizer:
             return Itemizer(s, jmespath.compile(parts[0]), unpack)
         except jmespath.exceptions.ParseError as e:
             fail(f"invalid row_source {parts[0]} for table {table_name}", e)
-

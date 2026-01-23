@@ -11,7 +11,6 @@ UNIT_TEST_TIMEBASE = 1733798942
 
 
 class Clock:
-
     @abstractmethod
     def set(self, epoch: int):
         raise NotImplementedError()
@@ -31,7 +30,6 @@ class Clock:
 
 
 class RealClock(Clock):
-
     def set(self, epoch: int):
         pass
 
@@ -55,7 +53,6 @@ def simulate_time():
 
 
 class FakeClock(Clock):
-
     def __init__(self, epoch: Optional[int] = None):
         self._epoch = epoch or int(time.time())
 

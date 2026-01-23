@@ -95,6 +95,7 @@ def test_run_nonzero_returncode(capsys):
 def test_real_clock():
     """For 100% coverage"""
     import time
+
     clock = RealClock()
     clock.set(0)
     assert abs(int(time.time()) - clock.now()) < 5

@@ -17,7 +17,7 @@ PARENTED_PATH = re.compile(r"^(\^*)(.*)")
 KUGL_TYPE_CONVERTERS = {
     # Valid choices for column type in config -> function to extract that from a string
     "integer": int,
-    "real" : float,
+    "real": float,
     "text": str,
     "date": parse_utc,
     "age": parse_age,
@@ -40,6 +40,7 @@ KUGL_TYPE_TO_SQL_TYPE = {
 @dataclass
 class FieldRef:
     """Parsed form of a parented JMESPath expression or label, e.g. '^^metadata.name'"""
+
     n_parents: int
     target: str
 
@@ -112,7 +113,9 @@ class PathExtractor(Extractor):
         try:
             self._finder = jmespath.compile(self._ref.target)
         except jmespath.exceptions.ParseError as e:
-            raise ValueError(f"invalid JMESPath expression {self._ref.target} in column {column_name}") from e
+            raise ValueError(
+                f"invalid JMESPath expression {self._ref.target} in column {column_name}"
+            ) from e
 
     def extract(self, obj: object, context) -> object:
         """Extract a value from an object using a JMESPath finder."""

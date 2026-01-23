@@ -9,7 +9,6 @@ from kugl.util import debugging
 
 
 class SqliteDb:
-
     def __init__(self, target=None):
         self.target = target
         self.conn = sqlite3.connect(":memory:", check_same_thread=False) if target is None else None

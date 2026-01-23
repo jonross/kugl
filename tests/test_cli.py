@@ -1,6 +1,7 @@
 """
 Tests for command-line options.
 """
+
 import re
 import sqlite3
 from argparse import ArgumentParser
@@ -75,12 +76,21 @@ def test_no_headers(test_home, capsys):
     assert out == "1  2\n"
 
 
-@pytest.mark.parametrize("argv,expected_flag,age,reckless,error", [
-    (["-u", "select 1"], ALWAYS_UPDATE, Age(120), False, None),
-    (["-t", "5", "select 1"], CHECK, Age(5), False, None),
-    (["-c", "-r", "select 1"], NEVER_UPDATE, Age(120), True, None),
-    (["-c", "-u", "select 1"], None, None, None, "Cannot use both -c/--cache and -u/--update"),
-])
+@pytest.mark.parametrize(
+    "argv,expected_flag,age,reckless,error",
+    [
+        (["-u", "select 1"], ALWAYS_UPDATE, Age(120), False, None),
+        (["-t", "5", "select 1"], CHECK, Age(5), False, None),
+        (["-c", "-r", "select 1"], NEVER_UPDATE, Age(120), True, None),
+        (
+            ["-c", "-u", "select 1"],
+            None,
+            None,
+            None,
+            "Cannot use both -c/--cache and -u/--update",
+        ),
+    ],
+)
 def test_parse_args(test_home, argv, expected_flag, age, reckless, error):
     """Verify correct values received for -u, -t, -c, -r options"""
     ap = ArgumentParser()

@@ -18,6 +18,7 @@ class Limits:
     A class to hold CPU, GPU and memory resources. This is called "Limits" although it's used for both requests
     and limits, so as not to confuse "resources" with Kubernetes resources in general.
     """
+
     cpu: Optional[float]
     gpu: Optional[float]
     mem: Optional[int]
@@ -95,7 +96,6 @@ class ItemHelper:
 
 
 class Containerized:
-
     @abstractmethod
     def containers(self):
         raise NotImplementedError()
@@ -105,14 +105,15 @@ class Containerized:
 
 
 class PodHelper(ItemHelper, Containerized):
-
     @property
     def command(self):
         return " ".join((self.main or {}).get("command", []))
 
     @property
     def is_daemon(self):
-        return any(ref.get("kind") == "DaemonSet" for ref in self.metadata.get("ownerReferences", []))
+        return any(
+            ref.get("kind") == "DaemonSet" for ref in self.metadata.get("ownerReferences", [])
+        )
 
     @property
     def containers(self):
@@ -131,7 +132,6 @@ class PodHelper(ItemHelper, Containerized):
 
 
 class JobHelper(ItemHelper, Containerized):
-
     @property
     def status(self):
         status = self.obj.get("status", {})
@@ -161,4 +161,3 @@ class JobHelper(ItemHelper, Containerized):
     def containers(self):
         """Return the containers in the job, if any, else an empty list."""
         return self["spec"]["template"]["spec"].get("containers", [])
-

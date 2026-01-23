@@ -32,6 +32,7 @@ def kubectl_response(kind: str, output: Union[str, dict]):
 
 class Taint(BaseModel):
     """Helper class for creating taints in test nodes"""
+
     key: str
     effect: str
     value: Optional[str] = None
@@ -39,6 +40,7 @@ class Taint(BaseModel):
 
 class CGM(BaseModel):
     """Helper class for creating CPU/GPU/Memory resources in test containers"""
+
     model_config = ConfigDict(populate_by_name=True)
     cpu: Union[int, str, None] = None
     mem: Union[int, str, None] = Field(None, alias="memory")
@@ -47,8 +49,9 @@ class CGM(BaseModel):
 
 class Container(BaseModel):
     """Helper class for creating containers in test pods"""
+
     name: str = "main"
-    command: List[str] = Field(default_factory = lambda: ["echo", "hello"])
+    command: List[str] = Field(default_factory=lambda: ["echo", "hello"])
     requests: Optional[CGM] = CGM(cpu=1, mem="10M")
     limits: Optional[CGM] = CGM(cpu=1, mem="10M")
     # Don't specify this in the constructor, it's a derived field
@@ -76,19 +79,20 @@ def make_node(name: str, taints: Optional[List[Taint]] = None, labels: Optional[
     return node
 
 
-def make_pod(name: str,
-             no_metadata: bool = False,
-             name_at_root: bool = False,
-             no_name: bool = False,
-             is_daemon: bool = False,
-             creation_ts: int = UNIT_TEST_TIMEBASE,
-             deletion_ts: int = None,
-             namespace: Optional[str] = None,
-             node_name: Optional[str] = None,
-             containers: List[Container] = [Container()],
-             labels: Optional[dict] = None,
-             phase: Optional[str] = "Running",
-             ):
+def make_pod(
+    name: str,
+    no_metadata: bool = False,
+    name_at_root: bool = False,
+    no_name: bool = False,
+    is_daemon: bool = False,
+    creation_ts: int = UNIT_TEST_TIMEBASE,
+    deletion_ts: int = None,
+    namespace: Optional[str] = None,
+    node_name: Optional[str] = None,
+    containers: List[Container] = [Container()],
+    labels: Optional[dict] = None,
+    phase: Optional[str] = "Running",
+):
     """
     Construct a Pod dict from a generic chunk of pod YAML that we can alter to simulate different
     responses from the K8S API.
@@ -122,15 +126,16 @@ def make_pod(name: str,
     return obj
 
 
-def make_job(name: str,
-             namespace: str = None,
-             active_count: Optional[int] = None,
-             condition: Optional[Tuple[str, str, Optional[str]]] = None,
-             suspend: bool = False,
-             pod: Optional[dict] = None,
-             labels: Optional[dict] = None,
-             pod_labels: Optional[dict] = None,
-             ):
+def make_job(
+    name: str,
+    namespace: str = None,
+    active_count: Optional[int] = None,
+    condition: Optional[Tuple[str, str, Optional[str]]] = None,
+    suspend: bool = False,
+    pod: Optional[dict] = None,
+    labels: Optional[dict] = None,
+    pod_labels: Optional[dict] = None,
+):
     """
     Construct a Job dict from a generic chunk of pod YAML that we can alter to simulate different
     responses from the K8S API.
@@ -152,7 +157,9 @@ def make_job(name: str,
     if active_count is not None:
         obj["status"]["active"] = active_count
     elif condition is not None:
-        obj["status"]["conditions"] = [{"type": condition[0], "status": condition[1], "reason": condition[2]}]
+        obj["status"]["conditions"] = [
+            {"type": condition[0], "status": condition[1], "reason": condition[2]}
+        ]
     elif suspend:
         obj["spec"]["suspend"] = True
         del obj["status"]
@@ -168,4 +175,3 @@ def make_job(name: str,
 @cache
 def _static_content(filename: str):
     return Path(__file__).parent.parent.joinpath("static", filename).read_text()
-

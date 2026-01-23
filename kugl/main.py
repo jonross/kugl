@@ -1,6 +1,7 @@
 """
 Command-line entry point.
 """
+
 import argparse
 import os
 from argparse import ArgumentParser
@@ -11,11 +12,22 @@ from typing import List, Optional, Type
 from kugl.impl.registry import Registry
 from kugl.impl.engine import Engine, CHECK, NEVER_UPDATE, ALWAYS_UPDATE, CacheFlag
 from kugl.impl.config import UserInit, parse_file, Settings, Shortcut, SecondaryUserInit
-from kugl.util import Age, fail, debug_features, kugl_home, ConfigPath, debugging, KuglError, Query, failure_preamble
+from kugl.util import (
+    Age,
+    fail,
+    debug_features,
+    kugl_home,
+    ConfigPath,
+    debugging,
+    KuglError,
+    Query,
+    failure_preamble,
+)
 
 # Register built-ins immediately because they're needed for command-line parsing
 import kugl.builtins.resources  # noqa: F401
 import kugl.builtins.schemas.kubernetes  # noqa: F401
+
 
 def main() -> None:
     sys.argv[0] = "kugl"
@@ -23,7 +35,6 @@ def main() -> None:
 
 
 def main1(argv: List[str]):
-
     if "KUGL_UNIT_TESTING" in os.environ and "KUGL_MOCKDIR" not in os.environ:
         # Never enter main in tests unless test_home fixture is in use, else we could read
         # the user's init file.
@@ -46,7 +57,6 @@ def main1(argv: List[str]):
 
 
 def main2(argv: List[str], init: Optional[UserInit] = None):
-
     kugl_home().mkdir(exist_ok=True)
     if not argv:
         fail("Missing sql query")
@@ -77,7 +87,9 @@ def main2(argv: List[str], init: Optional[UserInit] = None):
     print(engine.query_and_format(Query(args.sql)))
 
 
-def parse_args(argv: list[str], ap: ArgumentParser, settings: Settings) -> tuple[argparse.Namespace, CacheFlag]:
+def parse_args(
+    argv: list[str], ap: ArgumentParser, settings: Settings
+) -> tuple[argparse.Namespace, CacheFlag]:
     """Add stock arguments to parser, parse the command line, and override settings."""
     ap.add_argument("-D", "--debug", type=str)
     ap.add_argument("-c", "--cache", default=False, action="store_true")

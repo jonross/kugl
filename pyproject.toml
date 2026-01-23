@@ -65,5 +65,8 @@ addopts = ["-vv", "-s", "--tb=native", "--cov", "--cov-report=html:coverage"]
 [tool.coverage.run]
 omit = ["tests/kubectl/*", "tests/testing.py"]
 
+[tool.ruff]
+line-length = 100
+
 [tool.ruff.lint]
 ignore = ["E731"]
