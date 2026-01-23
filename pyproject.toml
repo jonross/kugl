@@ -42,6 +42,7 @@ kugl = "kugl.main:main"
 dev = [
     "pytest>=7.1.3",
     "pytest-cov>=4.1.0",
+    "ruff>=0.8.0",
 ]
 docs = [
     "sphinx-rtd-theme==3.0.2",
@@ -63,3 +64,6 @@ addopts = ["-vv", "-s", "--tb=native", "--cov", "--cov-report=html:coverage"]
 
 [tool.coverage.run]
 omit = ["tests/kubectl/*", "tests/testing.py"]
+
+[tool.ruff.lint]
+ignore = ["E731"]

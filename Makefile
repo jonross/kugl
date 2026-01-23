@@ -2,6 +2,11 @@
 VERSION = 0.6.0
 IMAGE = jonross/kugl:$(VERSION)
 
+# Lint and format check
+lint:
+	uv run ruff check .
+	uv run ruff format --check .
+
 # Quick test with current dependencies
 test:
 	uv run pytest
