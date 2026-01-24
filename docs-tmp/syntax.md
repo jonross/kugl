@@ -10,7 +10,7 @@ kugl [options] [sql | shortcut]
 Most invocations of Kugl will need `-a` or `-n namespace`, just like `kubectl`.
 If your cluster is small, you could also (for instance) `alias kg="kugl -a"` and use `where namespace = ...` instead.
 
-* `-a, --all-namespaces` - Look in all namespaces for Kubernetes resources.  May not be combine with `-n`.
+* `-a, --all` - Look in all namespaces for Kubernetes resources.  May not be combine with `-n`.
 * `-n, --namespace NS` - Look in namespace `NS` for Kubernetes resources.  May not be combined with `-a`.
 
 ### Cache control

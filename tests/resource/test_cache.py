@@ -24,7 +24,7 @@ def test_cache(test_home, capsys):
     all_res = {pods, jobs, nodes, events}
 
     for r in all_res:
-        r.resource.handle_cli_options(SimpleNamespace(namespace="foo", all_namespaces=False))
+        r.resource.handle_cli_options(SimpleNamespace(namespace="foo", all=False))
 
     # Pretend we have cached data for pods, nodes, and events, but not jobs.
 

@@ -1,7 +1,7 @@
 
 ### My query isn't working
 
-Don't forget to use `-n/--namespace <namespace>` or `-a/--all-namespaces`.  The `default` namespace in
+Don't forget to use `-n/--namespace <namespace>` or `-a/--all`.  The `default` namespace in
 Kubernetes often has few or no resources.
 
 Read the [JMESPath tutorial](https://jmespath.org/tutorial.html) 

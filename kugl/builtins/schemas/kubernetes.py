@@ -34,13 +34,13 @@ class KubernetesResource(Resource):
 
     @classmethod
     def add_cli_options(cls, ap: ArgumentParser):
-        ap.add_argument("-a", "--all-namespaces", default=False, action="store_true")
+        ap.add_argument("-a", "--all", "--all-namespaces", dest="all", default=False, action="store_true")
         ap.add_argument("-n", "--namespace", type=str)
 
     def handle_cli_options(self, args):
-        if args.all_namespaces and args.namespace:
-            fail("Cannot use both -a/--all-namespaces and -n/--namespace")
-        if args.all_namespaces:
+        if args.all and args.namespace:
+            fail("Cannot use both -a/--all and -n/--namespace")
+        if args.all:
             self._ns = "__all"
             self._all_ns = True
         else:
@@ -56,7 +56,7 @@ class KubernetesResource(Resource):
         :return: JSON as output by "kubectl get {self.name} -o json"
         """
         unit_testing = "KUGL_UNIT_TESTING" in os.environ
-        namespace_flag = ["--all-namespaces"] if self._all_ns else ["-n", self._ns]
+        namespace_flag = ["--all"] if self._all_ns else ["-n", self._ns]
         if self.name == "pods":
             pod_statuses = {}
 

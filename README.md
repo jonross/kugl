@@ -18,7 +18,7 @@ kugl -a "select owner, sum(gpu_req), sum(cpu_req)
 With `kubectl` and `jq`, that's a little more work:
 
 ```shell
-kubectl get pods -o json --all-namespaces | 
+kubectl get pods -o json --all | 
 jq -r --argjson nodes "$(kubectl get nodes -o json | jq '[.items[] 
         | select((.metadata.labels["node.kubernetes.io/instance-type"] // "") | test("g5.*large")) 
         | .metadata.name]')" \
@@ -100,8 +100,8 @@ in SQLite.  If you `JOIN` to other resource tables like `nodes` it calls `kubect
 for those too.  If you need more columns or tables than are built in as of this release,
 there's a config file for that.
 
-Because Kugl always fetches all resources from a namespace (or everything, if 
-`-a/--all-namespaces` is used), it tries
+Because Kugl always fetches all resources from a namespace (or everything, if
+`-a/--all` is used), it tries
 to ease Kubernetes API Server load by **caching responses for 
 two minutes**.  This is why it often prints "Data delayed up to ..." messages.
 

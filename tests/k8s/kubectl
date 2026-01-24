@@ -9,9 +9,9 @@ import re
 import sys
 
 args = " ".join(sys.argv[1:])
-if m := re.match("get (pods|jobs|things) (-n default|--all-namespaces) -o json", args):
+if m := re.match("get (pods|jobs|things) (-n default|--all) -o json", args):
     kind = m.group(1)
-elif re.match("get pods (-n default|--all-namespaces)", args):
+elif re.match("get pods (-n default|--all)", args):
     kind = "pod_statuses"
 elif m := re.match("get (nodes|things) -o json", args):
     kind = m.group(1)

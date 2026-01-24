@@ -140,8 +140,8 @@ def test_other_pod_fields(test_home, capsys):
     assert_by_line(
         err,
         """
-        fetch: running kubectl get pods --all-namespaces
-        fetch: running kubectl get pods --all-namespaces -o json
+        fetch: running kubectl get pods --all
+        fetch: running kubectl get pods --all -o json
     """,
     )
 

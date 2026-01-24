@@ -24,7 +24,7 @@ def assert_query(sql: str, expected: Union[str, list], all_ns: bool = False):
         caller can indent for neatness.  Or, if a list, each item will be checked in order.
     :param all_ns: FIXME temporary hack until we get namespaces out of engine.py
     """
-    args = SimpleNamespace(all_namespaces=all_ns, namespace=None)
+    args = SimpleNamespace(all=all_ns, namespace=None)
     engine = Engine(args, ALWAYS_UPDATE, Settings())
     if isinstance(expected, str):
         actual = engine.query_and_format(Query(sql))
