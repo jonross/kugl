@@ -2,6 +2,8 @@
 VERSION = 0.6.0
 IMAGE = jonross/kugl:$(VERSION)
 
+.PHONY: lint test test-all test-py39-lo test-py39-hi test-py13-lo test-py13-hi dist pypi docker push dshell pyshell docs clean pristine
+
 # Lint and format check
 lint:
 	uv run ruff check .
@@ -62,6 +64,10 @@ dshell: docker
 # Manually test PyPI install
 pyshell:
 	docker run -it -v ~/.kube:/root/.kube --entrypoint /bin/sh python:3.9-alpine
+
+# Build documentation locally
+docs:
+	uv run --group docs sphinx-build -b html docs build/docs
 
 # Clean build artifacts
 clean:

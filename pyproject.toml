@@ -45,6 +45,7 @@ dev = [
     "ruff>=0.8.0",
 ]
 docs = [
+    "sphinx>=7.0.0",
     "sphinx-rtd-theme==3.0.2",
 ]
 
