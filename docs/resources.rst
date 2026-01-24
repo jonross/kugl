@@ -1,13 +1,14 @@
-Note
-----
+Resources
+=========
 
-Since configuration files can contain scripts, they should be protected
-to the same degree as your shell scripts and anything on your
-``PYTHONPATH.`` Kugl will refuse to read a configuration file that is
-world-writable.
+.. warning::
+   Since configuration files can contain scripts, they should be protected
+   to the same degree as your shell scripts and anything on your
+   ``PYTHONPATH.`` Kugl will refuse to read a configuration file that is
+   world-writable.
 
 Exec resources
---------------
+~~~~~~~~~~~~~~
 
 By replacing ``file: pathname`` with ``exec: some command`` you can have
 Kugl run any shell script that generates JSON or YAML output. For
@@ -30,7 +31,7 @@ For an example, see the table built on ``aws ec2``
 `here <./multi.rst>`__.
 
 File resources
---------------
+~~~~~~~~~~~~~~
 
 Kugl can be used to query YAML data in a file. For instance, this will
 implement a bit of ``kubectl config get-contexts``.
@@ -66,7 +67,7 @@ filenames. Using ``file: stdin`` also works, and lets you pipe JSON or
 YAML to a Kugl query.
 
 Folder resources
-----------------
+~~~~~~~~~~~~~~~~
 
 These are like ``file`` resources except they can match files in a tree.
 Let's say you have a set of configuration files per AWS region, with

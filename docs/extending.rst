@@ -1,12 +1,13 @@
-Note
-----
+Extending Kugl
+--------------
 
-Configuration files should be protected to the same degree as your shell
-scripts and anything on your ``PYTHONPATH.`` Kugl will refuse to read a
-configuration file that is world-writable.
+.. warning::
+   Configuration files should be protected to the same degree as your shell
+   scripts and anything on your ``PYTHONPATH.`` Kugl will refuse to read a
+   configuration file that is world-writable.
 
 Adding columns to an existing table
------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To extend a table, use the ``extend:`` section in ``~/.kugl/init.yaml``.
 This is a list of table names, each with a list of new columns. An
@@ -44,7 +45,7 @@ Example
        path: spec.providerID
 
 Adding a new table
-------------------
+~~~~~~~~~~~~~~~~~~
 
 This works just like extending a table, with these differences
 
@@ -79,7 +80,7 @@ Example: this defines a new resource type and table for Argo workflows.
            path: metadata.labels."workflows.argoproj.io/phase"
 
 Column extractors and defaults
-------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You've seen how the ``path`` extractor works, using JMESPath to identify
 an element in the response JSON. You can also use the ``label``
@@ -113,7 +114,7 @@ Here's a more concise way of defining the ``workflows`` table, above
            label: workflows.argoproj.io/phase
 
 Parsing data into numeric columns
----------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``kubectl`` response values like ``50Mi`` (of memory) are unhelpful in
 queries, since you can't treat them numerically. Kugl fixes this,
@@ -137,7 +138,7 @@ a column definition and automatically convert response values.
 +-----------+-------------+--------------------------------------------+
 
 Generating multiple rows per response item
-------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 It's rare for a ``kubectl get`` response item to map directly to a
 single row in a table. For example, a node can have multiple taints, and
@@ -296,7 +297,7 @@ It's then straightforward to take columns from these items with
        path: value
 
 Tips
-----
+~~~~
 
 If creating multiple tables from a resource, you should use the ``uid``
 column (sourced from ``metadata.uid``) as a join key, since this is a

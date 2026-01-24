@@ -1,3 +1,6 @@
+Troubleshooting
+---------------
+
 My query isn't working
 ~~~~~~~~~~~~~~~~~~~~~~
 

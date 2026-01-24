@@ -29,6 +29,6 @@ Cache control
   age
 
 Other
------
+~~~~~~~~~~~~~
 
 - ``-H, --no-header`` -- Suppress column headers

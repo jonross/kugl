@@ -1,5 +1,8 @@
+Shortcuts
+---------
+
 Saving queries
---------------
+~~~~~~~~~~~~~~
 
 The ``shortcuts`` section in ``~/.kugl/init.yaml`` is a map from query
 names to lists of command-line arguments.

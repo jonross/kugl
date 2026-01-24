@@ -4,7 +4,7 @@ Kugl Documentation
 Kugl lets you use SQL to query Kubernetes resources.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
 
    Usage <syntax>
