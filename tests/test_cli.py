@@ -103,3 +103,32 @@ def test_parse_args(test_home, argv, expected_flag, age, reckless, error):
         assert actual_flag == expected_flag
         assert settings.cache_timeout == age
         assert settings.reckless == reckless
+
+
+def test_init_command(test_home, capsys):
+    """Verify 'kugl init' creates ~/.kugl/kubernetes.yaml with recommended config"""
+    kubernetes_yaml = kugl_home() / "kubernetes.yaml"
+    assert not kubernetes_yaml.exists()
+
+    main1(["init"])
+    out, _ = capsys.readouterr()
+
+    assert kubernetes_yaml.exists()
+    assert f"Created {kubernetes_yaml}" in out
+
+    content = kubernetes_yaml.read_text()
+    assert "extend:" in content
+    assert "table: nodes" in content
+    assert "name: instance_type" in content
+    assert "node.kubernetes.io/instance-type" in content
+    assert "beta.kubernetes.io/instance-type" in content
+
+
+def test_init_command_already_exists(test_home):
+    """Verify 'kugl init' fails if kubernetes.yaml already exists"""
+    kubernetes_yaml = kugl_home() / "kubernetes.yaml"
+    kubernetes_yaml.parent.mkdir(exist_ok=True)
+    kubernetes_yaml.write_text("existing content")
+
+    with pytest.raises(KuglError, match="already exists"):
+        main1(["init"])

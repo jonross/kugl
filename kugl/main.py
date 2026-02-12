@@ -61,6 +61,10 @@ def main2(argv: List[str], init: Optional[UserInit] = None):
     if not argv:
         fail("Missing sql query")
 
+    if argv[0] == "init":
+        _handle_init_command()
+        return
+
     if init is None:
         init, shortcuts = _merge_init_files()
 
@@ -134,6 +138,28 @@ def _merge_init_files() -> tuple[UserInit, dict[str, Shortcut]]:
         _merge_init(secondary)
     _merge_init(init)
     return init, shortcuts
+
+
+def _handle_init_command():
+    """Initialize kugl configuration by creating ~/.kugl and recommended kubernetes.yaml."""
+    config_dir = kugl_home()
+    config_dir.mkdir(exist_ok=True)
+
+    kubernetes_yaml = config_dir / "kubernetes.yaml"
+    if kubernetes_yaml.exists():
+        fail(f"{kubernetes_yaml} already exists. Remove it first if you want to reinitialize.")
+
+    recommended_config = """extend:
+  - table: nodes
+    columns:
+      - name: instance_type
+        label:
+          - node.kubernetes.io/instance-type
+          - beta.kubernetes.io/instance-type
+"""
+
+    kubernetes_yaml.write_text(recommended_config)
+    print(f"Created {kubernetes_yaml}")
 
 
 if __name__ == "__main__":

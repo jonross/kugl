@@ -8,7 +8,24 @@ Recommended configuration
 
 Instance type is a useful column to have in the ``nodes`` table.
 Unfortunately, there is no standard label for it. You can fix this with
-configuration. In ``~/.kugl/kubernetes.yaml``, add
+configuration.
+
+Quick setup
+~~~~~~~~~~~
+
+To automatically create ``~/.kugl`` with the recommended configuration,
+run:
+
+.. code:: shell
+
+   kugl init
+
+This creates ``~/.kugl/kubernetes.yaml`` with the configuration below.
+
+Manual setup
+~~~~~~~~~~~~
+
+Alternatively, in ``~/.kugl/kubernetes.yaml``, add
 
 .. code:: yaml
 
