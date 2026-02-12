@@ -1,6 +1,13 @@
+## 0.7.0
+
+- Add `init` subcommand to generate `kubernetes.yaml` per recommended post-install configuration
+- Rename `--schema` option to `schema` subcommand, support `--schema` for backward compatibility
+- Convert documentation to reStructured Text, for publishing to readthedocs.org
+
 ## 0.6.0
 
 - No external changes
+- Convert build to `uv`
 
 ## 0.5.0
 
