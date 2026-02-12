@@ -2,7 +2,7 @@
 name = "kugl"
 version = "0.6.0"
 description = "Explore Kubernetes resources using SQLite"
-readme = "README.md"
+readme = "README.rst"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
