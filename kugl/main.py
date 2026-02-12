@@ -65,16 +65,20 @@ def main2(argv: List[str], init: Optional[UserInit] = None):
         _handle_init_command()
         return
 
+    if argv[0] == "schema" or argv[0] == "--schema":
+        if len(argv) < 2:
+            fail("Missing schema or table name")
+        if init is None:
+            init, shortcuts = _merge_init_files()
+        print(Registry.get().printable_schema(argv[1], init.settings.init_path))
+        return
+
     if init is None:
         init, shortcuts = _merge_init_files()
 
     ap = ArgumentParser()
     Registry.get().augment_cli(ap)
     args, cache_flag = parse_args(argv, ap, init.settings)
-
-    if args.schema:
-        print(Registry.get().printable_schema(args.sql, init.settings.init_path))
-        return
 
     # Check for shortcut and reparse, because they can contain command-line options.
     if " " not in args.sql:
@@ -99,7 +103,6 @@ def parse_args(
     ap.add_argument("-c", "--cache", default=False, action="store_true")
     ap.add_argument("-H", "--no-headers", default=False, action="store_true")
     ap.add_argument("-r", "--reckless", default=False, action="store_true")
-    ap.add_argument("--schema", default=False, action="store_true")
     ap.add_argument("-t", "--timeout", type=str)
     ap.add_argument("-u", "--update", default=False, action="store_true")
     ap.add_argument("sql")

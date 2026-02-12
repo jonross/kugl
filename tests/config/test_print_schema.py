@@ -1,5 +1,5 @@
 """
-Unit tests for the --schema CLI option.
+Unit tests for the schema CLI subcommand.
 """
 
 import pytest
@@ -9,18 +9,25 @@ from kugl.util import KuglError
 from ..testing import assert_by_line
 
 
+def test_missing_schema_arg(test_home):
+    with pytest.raises(KuglError, match="Missing schema or table name"):
+        main1(["schema"])
+
+
 def test_no_such_schema(test_home):
     with pytest.raises(KuglError, match="no configurations found for schema 'notfound'"):
-        main1(["--schema", "notfound"])
+        main1(["schema", "notfound"])
 
 
 def test_no_such_table(test_home):
     with pytest.raises(KuglError, match="Table 'blah' is not defined in schema kubernetes"):
-        main1(["--schema", "kubernetes.blah"])
+        main1(["schema", "kubernetes.blah"])
 
 
-def test_print_one_table(test_home, capsys):
-    main1(["--schema", "kubernetes.nodes"])
+@pytest.mark.parametrize("cmd", ["schema", "--schema"])
+def test_print_one_table(test_home, capsys, cmd):
+    """Test schema output with both new subcommand and legacy --schema option"""
+    main1([cmd, "kubernetes.nodes"])
     out, err = capsys.readouterr()
     assert_by_line(
         out,
@@ -39,7 +46,7 @@ def test_print_one_table(test_home, capsys):
 
 
 def test_print_entire_schema(test_home, capsys):
-    main1(["--schema", "kubernetes"])
+    main1(["schema", "kubernetes"])
     out, err = capsys.readouterr()
     # Ensure all the table headers are present
     for table_name in [
