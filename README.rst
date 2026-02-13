@@ -57,8 +57,7 @@ If you don't mind Kugl cluttering your Python with its
    pip install kugl
 
 If you do mind, there's a Docker image; ``mkdir ~/.kugl`` and use this
-Bash alias. (Sorry, this is an x86 image, I don't have multiarch working
-yet.)
+Bash alias.
 
 .. code:: shell
 
@@ -66,7 +65,7 @@ yet.)
        docker run \
            -v ~/.kube:/root/.kube \
            -v ~/.kugl:/root/.kugl \
-           jonross/kugl:0.6.0 python3 -m kugl.main "$@"
+           jonross/kugl:0.7.0 python3 -m kugl.main "$@"
    }
 
 If neither of those suits you, it's easy to set up from source:
