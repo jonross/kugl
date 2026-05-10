@@ -34,6 +34,12 @@ def test_no_main_container():
 
 
 def test_by_cpu(test_home, capsys):
+    """
+    Verify filtering by CPU.
+    Verify debug output for fetching resources.
+    Verify debug output for extracting limits.
+    Verify fetching status.
+    """
     kubectl_response(
         "pods",
         {
@@ -96,6 +102,13 @@ def test_by_cpu(test_home, capsys):
 
 
 def test_other_pod_fields(test_home, capsys):
+    """
+    Verify determination of is_daemon column.
+    Verify extraction of node name and main container command.
+    Verify extraction of creation and deletion timestamps.
+    Verify debug output for fetching resources.
+    Verify fetching status.
+    """
     kubectl_response(
         "pods",
         {
@@ -189,6 +202,7 @@ def test_other_pod_fields(test_home, capsys):
     ],
 )
 def test_resource_summing(test_home, containers, expected):
+    """Verify extraction of requests / limits per comments above in test parameters."""
     pod = make_pod("pod-1", containers=containers)
     kubectl_response("pods", {"items": [pod]})
     kubectl_response("pod_statuses", "NAME    STATUS\npod-1  Running")

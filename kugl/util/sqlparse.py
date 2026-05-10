@@ -64,7 +64,7 @@ class Query:
         return {nt.schema_name for nt in self.named_tables if nt.schema_name}
 
     def _scan(self):
-        """Find table references."""
+        """Find table references by looking for FROM and JOIN."""
 
         statements = sqlparse.parse(self.sql)
         if len(statements) != 1:

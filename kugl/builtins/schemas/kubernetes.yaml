@@ -1,5 +1,6 @@
 
 resources:
+  # Tables for these resources are defined in Python
   - name: pods
     namespaced: true
   - name: pod_statuses
@@ -9,8 +10,8 @@ resources:
   - name: nodes
     namespaced: false
 
-# node_taints builtin is defined here because it doesn't have any special column extraction
-# logic, and because it serves as a good unit test.
+# node_taints builtin table is done here because it doesn't have any special column extraction
+# logic, and it serves as a good unit test.
 
 create:
   - table: node_taints
