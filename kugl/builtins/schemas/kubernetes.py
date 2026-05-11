@@ -56,7 +56,7 @@ class KubernetesResource(Resource):
         :return: JSON as output by "kubectl get {self.name} -o json"
         """
         unit_testing = "KUGL_UNIT_TESTING" in os.environ
-        namespace_flag = ["--all"] if self._all_ns else ["-n", self._ns]
+        namespace_flag = ["--all-namespaces"] if self._all_ns else ["-n", self._ns]
         if self.name == "pods":
             pod_statuses = {}
 
