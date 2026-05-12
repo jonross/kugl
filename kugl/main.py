@@ -30,6 +30,8 @@ import kugl.builtins.schemas.kubernetes  # noqa: F401
 
 
 def main() -> None:
+    # This one line is separate from the rest of main() logic so we don't meddle with
+    # sys.argv in unit tests.
     sys.argv[0] = "kugl"
     main1(sys.argv[1:])
 
