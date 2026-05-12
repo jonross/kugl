@@ -46,8 +46,9 @@ dist:
 	uv build
 
 # Upload distribution to PyPI
+# This is preferable to 'uv publish' since I don't have to keep my API token in the environment.
 pypi: dist
-	uv run twine upload dist/*
+	uvx twine upload dist/*
 
 # Build Docker image (local platform only, for testing)
 docker: Makefile pyproject.toml
