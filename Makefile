@@ -61,8 +61,8 @@ push: Makefile pyproject.toml
 	docker buildx build --platform linux/amd64,linux/arm64 --no-cache -t $(IMAGE) --push .
 
 # Manually test Docker image
-dshell: docker
-	docker run -it -v ~/.kube:/root/.kube $(IMAGE) /bin/sh
+smoke:
+	docker run -it -v ~/.kube:/root/.kube $(IMAGE) "select * from nodes"
 
 # Manually test PyPI install
 pyshell:
