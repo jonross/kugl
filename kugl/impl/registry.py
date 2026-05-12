@@ -243,6 +243,6 @@ class Schema(BaseModel):
     def all_table_names(self):
         return set(chain(self.builtin.keys(), self._create.keys(), self._extend.keys()))
 
-    def resource_for(self, table: Table) -> set[ResourceDef]:
+    def resource_def(self, table: Table) -> set[ResourceDef]:
         """Return the ResourceDef used by a Table."""
         return self._resources[table.resource]

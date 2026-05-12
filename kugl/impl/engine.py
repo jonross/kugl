@@ -114,7 +114,7 @@ class Engine:
         for named_table in query.named_tables:
             schema = schemas[named_table.schema_name or DEFAULT_SCHEMA]
             if table := schema.table_builder(named_table.name):
-                resource_ref = ResourceRef(schema, schema.resource_for(table))
+                resource_ref = ResourceRef(schema, schema.resource_def(table))
                 tables.append((table, resource_ref))
                 resource_refs.add(resource_ref)
 
