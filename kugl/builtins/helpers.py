@@ -131,6 +131,12 @@ class PodHelper(ItemHelper, Containerized):
         return main or self.containers[0]
 
 
+class CronJobHelper(ItemHelper, Containerized):
+    @property
+    def containers(self):
+        return self["spec"]["jobTemplate"]["spec"]["template"]["spec"].get("containers", [])
+
+
 class JobHelper(ItemHelper, Containerized):
     @property
     def status(self):

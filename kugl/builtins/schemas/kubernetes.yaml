@@ -7,6 +7,8 @@ resources:
     namespaced: true
   - name: jobs
     namespaced: true
+  - name: cronjobs
+    namespaced: true
   - name: nodes
     namespaced: false
 

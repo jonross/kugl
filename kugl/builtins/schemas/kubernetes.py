@@ -13,7 +13,7 @@ from threading import Thread
 
 from pydantic import model_validator
 
-from ..helpers import Limits, ItemHelper, PodHelper, JobHelper
+from ..helpers import Limits, ItemHelper, PodHelper, JobHelper, CronJobHelper
 from kugl.api import table, fail, resource, run, parse_utc, Resource, column
 from kugl.util import WHITESPACE_RE, kube_context
 
@@ -263,3 +263,51 @@ class PodLabelsTable(LabelsTable):
 @table(schema="kubernetes", name="job_labels", resource="jobs")
 class JobLabelsTable(LabelsTable):
     UID_FIELD = "job_uid"
+
+
+@table(schema="kubernetes", name="cronjobs", resource="cronjobs")
+class CronJobsTable:
+    _COLUMNS = [
+        column("name", "TEXT", "cronjob name, from metadata.name"),
+        column("uid", "TEXT", "cronjob UID, from metadata.uid"),
+        column("namespace", "TEXT", "cronjob namespace, from metadata.namespace"),
+        column("schedule", "TEXT", "cron schedule expression, from spec.schedule"),
+        column("suspend", "INTEGER", "1 if suspended, 0 otherwise"),
+        column("active", "INTEGER", "number of currently active jobs"),
+        column("last_schedule_ts", "INTEGER", "last schedule time in epoch seconds, from status.lastScheduleTime"),
+        column("last_success_ts", "INTEGER", "last successful time in epoch seconds, from status.lastSuccessfulTime"),
+        column("cpu_req", "REAL", "sum of CPUs requested across containers in job template"),
+        column("gpu_req", "REAL", "sum of GPUs requested, or null"),
+        column("mem_req", "INTEGER", "sum of memory requested, in bytes"),
+        column("cpu_lim", "REAL", "CPU limit, or null"),
+        column("gpu_lim", "REAL", "GPU limit, or null"),
+        column("mem_lim", "INTEGER", "memory limit, or null"),
+    ]
+
+    def columns(self):
+        return self._COLUMNS
+
+    def make_rows(self, context) -> list[tuple[dict, tuple]]:
+        for item in context.data["items"]:
+            cj = CronJobHelper(item)
+            status = item.get("status", {})
+            yield (
+                item,
+                (
+                    cj.name,
+                    cj.metadata.get("uid"),
+                    cj.namespace,
+                    item["spec"]["schedule"],
+                    1 if item["spec"].get("suspend") else 0,
+                    len(status.get("active", [])),
+                    parse_utc(status.get("lastScheduleTime")),
+                    parse_utc(status.get("lastSuccessfulTime")),
+                    *cj.resources("requests", debug=context.debug).as_tuple(),
+                    *cj.resources("limits", debug=context.debug).as_tuple(),
+                ),
+            )
+
+
+@table(schema="kubernetes", name="cronjob_labels", resource="cronjobs")
+class CronJobLabelsTable(LabelsTable):
+    UID_FIELD = "cronjob_uid"

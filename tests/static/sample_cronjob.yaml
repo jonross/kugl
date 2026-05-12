@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  creationTimestamp: "2024-11-20T01:05:00Z"
+  name: example-cronjob-1
+  namespace: example
+  uid: 70948f11-2ecb-4a20-b9aa-bc039cb98b99
+spec:
+  schedule: "0 * * * *"
+  suspend: false
+  jobTemplate:
+    metadata: {}
+    spec:
+      template:
+        metadata:
+          labels:
+            cronjob-name: example-cronjob-1
+        spec:
+          containers:
+          - name: example-job
+            image: alpine:latest
+            command:
+            - echo
+            - "Hello, world"
+            resources:
+              requests:
+                cpu: "1"
+                memory: 10M
+              limits:
+                cpu: "1"
+                memory: 10M
+status: {}
