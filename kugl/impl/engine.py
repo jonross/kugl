@@ -10,7 +10,19 @@ from tabulate import tabulate
 
 from .config import Settings, DEFAULT_SCHEMA
 from .registry import Schema, Resource, Registry
-from ..util import fail, SqliteDb, to_size, to_utc, kugl_cache, clock, debugging, to_age, Age, KPath, Query
+from ..util import (
+    fail,
+    SqliteDb,
+    to_size,
+    to_utc,
+    kugl_cache,
+    clock,
+    debugging,
+    to_age,
+    Age,
+    KPath,
+    Query,
+)
 from .tables import Table
 
 # Cache behaviors
@@ -22,6 +34,7 @@ CacheFlag = Literal[ALWAYS_UPDATE, CHECK, NEVER_UPDATE]
 class ResourceRef:
     """Associate a Resource with a Schema in a hashable type (for set memberhip).
     This avoids having Resource itself be hashable, which is an unnecessary constraint."""
+
     schema: Schema
     resource: Resource
 
@@ -36,7 +49,10 @@ class ResourceRef:
         return hash((self.schema.name, self.resource.name))
 
     def __lt__(self, other):
-        return (self.schema.name, self.resource.name) < (other.schema.name, other.resource.name)
+        return (self.schema.name, self.resource.name) < (
+            other.schema.name,
+            other.resource.name,
+        )
 
 
 class Engine:
@@ -60,8 +76,12 @@ class Engine:
     def query_and_format(self, query: Query) -> str:
         """Execute a Kugl query and format the results for stdout."""
         rows, headers = self.query(query)
-        return tabulate(rows, tablefmt="plain", floatfmt=".1f",
-                        headers=(() if self.settings.no_headers else headers))
+        return tabulate(
+            rows,
+            tablefmt="plain",
+            floatfmt=".1f",
+            headers=(() if self.settings.no_headers else headers),
+        )
 
     def query(self, query: Query) -> Tuple[list[Tuple], list[str]]:
         """Execute a Kugl query but don't format the results.
@@ -80,7 +100,10 @@ class Engine:
             schemas_named = {"kubernetes"}
             multi_schema = False
         registry = Registry.get()
-        schemas = {name: registry.get_schema(name).read_configs(self.settings.init_path) for name in schemas_named}
+        schemas = {
+            name: registry.get_schema(name).read_configs(self.settings.init_path)
+            for name in schemas_named
+        }
 
         # Reconcile tables created / extended in the config file with tables defined in code,
         # generate the table builders, and identify the required resources. Note: some of the
@@ -115,6 +138,7 @@ class Engine:
                     self.data[ref.name] = self.cache.load(ref)
             except Exception as e:
                 fail(f"failed to fetch resource {ref.name}: {e}")
+
         with ThreadPoolExecutor(max_workers=8) as pool:
             for _ in pool.map(fetch, resource_refs):
                 pass
@@ -164,7 +188,9 @@ class DataCache:
         non_cacheable = {r for r in resources if not r.resource.cacheable}
         # Sort here for deterministic behavior in unit tests
         cache_ages = {r: self.age(self.cache_path(r)) for r in sorted(cacheable)}
-        expired = {r for r, age in cache_ages.items() if age is not None and age >= self.timeout.value}
+        expired = {
+            r for r, age in cache_ages.items() if age is not None and age >= self.timeout.value
+        }
         missing = {r for r, age in cache_ages.items() if age is None}
         # Always refresh what's missing or non-cacheable, and possibly also what's expired
         # Stale data warning for everything else
@@ -177,7 +203,10 @@ class DataCache:
             debug("requested", names(resources))
             debug("cacheable", names(cacheable))
             debug("non-cacheable", names(non_cacheable))
-            debug("ages", " ".join(f"{r.name}={age}" for r, age in sorted(cache_ages.items())))
+            debug(
+                "ages",
+                " ".join(f"{r.name}={age}" for r, age in sorted(cache_ages.items())),
+            )
             debug("expired", names(expired))
             debug("missing", names(missing))
             debug("refreshable", names(refreshable))
@@ -208,7 +237,6 @@ class DataCache:
 
 
 def add_custom_functions(db):
-
     def wrap(name, func):
         def wrapped(*args):
             if args and not args[0]:
@@ -217,8 +245,12 @@ def add_custom_functions(db):
                 return func(*args)
             except Exception as e:
                 # Can't use fail() here because SQLite won't offer detail
-                print(f"kugl: exception in extension function {name}: {e}", file=sys.stderr)
+                print(
+                    f"kugl: exception in extension function {name}: {e}",
+                    file=sys.stderr,
+                )
                 os._exit(1)
+
         return wrapped
 
     db.create_function("to_size", 1, wrap("to_size", lambda x: to_size(x, iec=True)))

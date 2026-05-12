@@ -23,6 +23,10 @@ def test_reject_kugl_home_in_init_path(test_home):
 
 @pytest.mark.parametrize("use_old_syntax", [True, False])
 def test_simple_shortcut(test_home, capsys, use_old_syntax):
+    """
+    Verify basic shortcut functionality.
+    Verify it works with the old syntax and outputs a warning.
+    """
     if use_old_syntax:
         # Shortcut syntax before version 0.5
         content = """

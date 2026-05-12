@@ -5,6 +5,7 @@ NOTE: This is not a good example of how to write user-defined tables.
 FIXME: Remove references to non-API imports.
 FIXME: Don't use ArgumentParser in the API.
 """
+
 import json
 import os
 from argparse import ArgumentParser
@@ -12,14 +13,13 @@ from threading import Thread
 
 from pydantic import model_validator
 
-from ..helpers import Limits, ItemHelper, PodHelper, JobHelper
+from ..helpers import Limits, ItemHelper, PodHelper, JobHelper, CronJobHelper
 from kugl.api import table, fail, resource, run, parse_utc, Resource, column
 from kugl.util import WHITESPACE_RE, kube_context
 
 
 @resource("kubernetes", schema_defaults=["kubernetes"])
 class KubernetesResource(Resource):
-
     namespaced: bool
     _all_ns: bool
     _ns: str
@@ -34,13 +34,13 @@ class KubernetesResource(Resource):
 
     @classmethod
     def add_cli_options(cls, ap: ArgumentParser):
-        ap.add_argument("-a", "--all-namespaces", default=False, action="store_true")
+        ap.add_argument("-a", "--all", "--all-namespaces", dest="all", default=False, action="store_true")
         ap.add_argument("-n", "--namespace", type=str)
 
     def handle_cli_options(self, args):
-        if args.all_namespaces and args.namespace:
-            fail("Cannot use both -a/--all-namespaces and -n/--namespace")
-        if args.all_namespaces:
+        if args.all and args.namespace:
+            fail("Cannot use both -a/--all and -n/--namespace")
+        if args.all:
             self._ns = "__all"
             self._all_ns = True
         else:
@@ -59,10 +59,12 @@ class KubernetesResource(Resource):
         namespace_flag = ["--all-namespaces"] if self._all_ns else ["-n", self._ns]
         if self.name == "pods":
             pod_statuses = {}
+
             # Kick off a thread to get pod statuses
             def _fetch():
                 _, output, _ = run(["kubectl", "get", "pods", *namespace_flag])
                 pod_statuses.update(self._pod_status_from_pod_list(output))
+
             status_thread = Thread(target=_fetch, daemon=True)
             status_thread.start()
             # In unit tests, wait for pod status here so the log order is deterministic.
@@ -77,6 +79,7 @@ class KubernetesResource(Resource):
             # Add pod status to pods
             if not unit_testing:
                 status_thread.join()
+
             def pod_with_updated_status(pod):
                 metadata = pod["metadata"]
                 status = pod_statuses.get(f"{metadata['namespace']}/{metadata['name']}")
@@ -84,6 +87,7 @@ class KubernetesResource(Resource):
                     pod["kubectl_status"] = status
                     return pod
                 return None
+
             data["items"] = list(filter(None, map(pod_with_updated_status, data["items"])))
         return data
 
@@ -109,7 +113,6 @@ class KubernetesResource(Resource):
 
 @table(schema="kubernetes", name="nodes", resource="nodes")
 class NodesTable:
-
     _COLUMNS = [
         column("name", "TEXT", "node name, from metadata.name"),
         column("uid", "TEXT", "node UID, from metadata.uid"),
@@ -127,24 +130,34 @@ class NodesTable:
     def make_rows(self, context) -> list[tuple[dict, tuple]]:
         for item in context.data["items"]:
             node = ItemHelper(item)
-            yield item, (
-                node.name,
-                node.metadata.get("uid"),
-                *Limits.extract(node["status"]["allocatable"], debug=context.debug).as_tuple(),
-                *Limits.extract(node["status"]["capacity"], debug=context.debug).as_tuple(),
+            yield (
+                item,
+                (
+                    node.name,
+                    node.metadata.get("uid"),
+                    *Limits.extract(node["status"]["allocatable"], debug=context.debug).as_tuple(),
+                    *Limits.extract(node["status"]["capacity"], debug=context.debug).as_tuple(),
+                ),
             )
 
 
 @table(schema="kubernetes", name="pods", resource="pods")
 class PodsTable:
-
     _COLUMNS = [
         column("name", "TEXT", "pod name, from metadata.name"),
         column("uid", "TEXT", "pod UID, from metadata.uid"),
         column("namespace", "TEXT", "pod namespace, from metadata.namespace"),
         column("node_name", "TEXT", "node name, from spec.nodeName, or null"),
-        column("creation_ts", "INTEGER", "creation timestamp in epoch seconds, from metadata.creationTimestamp"),
-        column("deletion_ts", "INTEGER", "deletion timestamp in epoch seconds, from metadata.deletionTimestamp"),
+        column(
+            "creation_ts",
+            "INTEGER",
+            "creation timestamp in epoch seconds, from metadata.creationTimestamp",
+        ),
+        column(
+            "deletion_ts",
+            "INTEGER",
+            "deletion timestamp in epoch seconds, from metadata.deletionTimestamp",
+        ),
         column("is_daemon", "INTEGER", "1 if a daemonset pod, 0 otherwise"),
         column("command", "TEXT", "command from main container"),
         column("phase", "TEXT", "pod phase, from status.phase"),
@@ -163,30 +176,36 @@ class PodsTable:
     def make_rows(self, context) -> list[tuple[dict, tuple]]:
         for item in context.data["items"]:
             pod = PodHelper(item)
-            yield item, (
-                pod.name,
-                pod.metadata.get("uid"),
-                pod.namespace,
-                pod["spec"].get("nodeName"),
-                parse_utc(pod.metadata["creationTimestamp"]),
-                parse_utc(pod.metadata.get("deletionTimestamp")),
-                1 if pod.is_daemon else 0,
-                pod.command,
-                pod["status"]["phase"],
-                pod["kubectl_status"],
-                *pod.resources("requests", debug=context.debug).as_tuple(),
-                *pod.resources("limits", debug=context.debug).as_tuple(),
+            yield (
+                item,
+                (
+                    pod.name,
+                    pod.metadata.get("uid"),
+                    pod.namespace,
+                    pod["spec"].get("nodeName"),
+                    parse_utc(pod.metadata["creationTimestamp"]),
+                    parse_utc(pod.metadata.get("deletionTimestamp")),
+                    1 if pod.is_daemon else 0,
+                    pod.command,
+                    pod["status"]["phase"],
+                    pod["kubectl_status"],
+                    *pod.resources("requests", debug=context.debug).as_tuple(),
+                    *pod.resources("limits", debug=context.debug).as_tuple(),
+                ),
             )
 
 
 @table(schema="kubernetes", name="jobs", resource="jobs")
 class JobsTable:
-
     _COLUMNS = [
         column("name", "TEXT", "job name, from metadata.name"),
         column("uid", "TEXT", "job UID, from metadata.name"),
         column("namespace", "TEXT", "job namespace,from metadata.namespace"),
-        column("status", "TEXT", "job status, one of 'Running', 'Complete', 'Suspended', 'Failed', 'Unknown'"),
+        column(
+            "status",
+            "TEXT",
+            "job status, one of 'Running', 'Complete', 'Suspended', 'Failed', 'Unknown'",
+        ),
         column("cpu_req", "REAL", "sum of CPUs requested across containers"),
         column("gpu_req", "REAL", "sum of GPUs requested, or null"),
         column("mem_req", "INTEGER", "sum of memory requested, in bytes"),
@@ -201,13 +220,16 @@ class JobsTable:
     def make_rows(self, context) -> list[tuple[dict, tuple]]:
         for item in context.data["items"]:
             job = JobHelper(item)
-            yield item, (
-                job.name,
-                job.metadata.get("uid"),
-                job.namespace,
-                job.status,
-                *job.resources("requests", debug=context.debug).as_tuple(),
-                *job.resources("limits", debug=context.debug).as_tuple(),
+            yield (
+                item,
+                (
+                    job.name,
+                    job.metadata.get("uid"),
+                    job.namespace,
+                    job.status,
+                    *job.resources("requests", debug=context.debug).as_tuple(),
+                    *job.resources("limits", debug=context.debug).as_tuple(),
+                ),
             )
 
 
@@ -241,3 +263,51 @@ class PodLabelsTable(LabelsTable):
 @table(schema="kubernetes", name="job_labels", resource="jobs")
 class JobLabelsTable(LabelsTable):
     UID_FIELD = "job_uid"
+
+
+@table(schema="kubernetes", name="cronjobs", resource="cronjobs")
+class CronJobsTable:
+    _COLUMNS = [
+        column("name", "TEXT", "cronjob name, from metadata.name"),
+        column("uid", "TEXT", "cronjob UID, from metadata.uid"),
+        column("namespace", "TEXT", "cronjob namespace, from metadata.namespace"),
+        column("schedule", "TEXT", "cron schedule expression, from spec.schedule"),
+        column("suspend", "INTEGER", "1 if suspended, 0 otherwise"),
+        column("active", "INTEGER", "number of currently active jobs"),
+        column("last_schedule_ts", "INTEGER", "last schedule time in epoch seconds, from status.lastScheduleTime"),
+        column("last_success_ts", "INTEGER", "last successful time in epoch seconds, from status.lastSuccessfulTime"),
+        column("cpu_req", "REAL", "sum of CPUs requested across containers in job template"),
+        column("gpu_req", "REAL", "sum of GPUs requested, or null"),
+        column("mem_req", "INTEGER", "sum of memory requested, in bytes"),
+        column("cpu_lim", "REAL", "CPU limit, or null"),
+        column("gpu_lim", "REAL", "GPU limit, or null"),
+        column("mem_lim", "INTEGER", "memory limit, or null"),
+    ]
+
+    def columns(self):
+        return self._COLUMNS
+
+    def make_rows(self, context) -> list[tuple[dict, tuple]]:
+        for item in context.data["items"]:
+            cj = CronJobHelper(item)
+            status = item.get("status", {})
+            yield (
+                item,
+                (
+                    cj.name,
+                    cj.metadata.get("uid"),
+                    cj.namespace,
+                    item["spec"]["schedule"],
+                    1 if item["spec"].get("suspend") else 0,
+                    len(status.get("active", [])),
+                    parse_utc(status.get("lastScheduleTime")),
+                    parse_utc(status.get("lastSuccessfulTime")),
+                    *cj.resources("requests", debug=context.debug).as_tuple(),
+                    *cj.resources("limits", debug=context.debug).as_tuple(),
+                ),
+            )
+
+
+@table(schema="kubernetes", name="cronjob_labels", resource="cronjobs")
+class CronJobLabelsTable(LabelsTable):
+    UID_FIELD = "cronjob_uid"

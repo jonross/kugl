@@ -11,7 +11,7 @@ from kugl.util.clock import RealClock, Clock
 
 from kugl.builtins.helpers import Limits, Containerized
 from kugl.main import main1
-from kugl.util import Age, KuglError, kube_home, kugl_home, features_debugged, debugging, run, kube_context
+from kugl.util import KuglError, kube_home, kugl_home, features_debugged, debugging, run
 
 
 def test_limits_misc(capsys):
@@ -95,6 +95,7 @@ def test_run_nonzero_returncode(capsys):
 def test_real_clock():
     """For 100% coverage"""
     import time
+
     clock = RealClock()
     clock.set(0)
     assert abs(int(time.time()) - clock.now()) < 5

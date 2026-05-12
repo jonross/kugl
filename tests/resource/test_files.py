@@ -18,7 +18,10 @@ def test_file_resources_not_cacheable(hr):
     # Replace the HR config's "people" resource with a file resource.
     config["resources"][0] = dict(name="people", file="blah", cacheable="true")
     hr.save(config)
-    with pytest.raises(KuglError, match="Errors in .*hr.yaml:\nresource 'people' cannot be cacheable: true"):
+    with pytest.raises(
+        KuglError,
+        match="Errors in .*hr.yaml:\nresource 'people' cannot be cacheable: true",
+    ):
         assert_query(hr.PEOPLE_QUERY, None)
 
 
@@ -28,7 +31,10 @@ def test_file_resource_not_found(hr):
     # Replace the HR schema's "people" resource with a missing file resource.
     config["resources"][0] = dict(name="people", file="missing.json")
     hr.save(config)
-    with pytest.raises(KuglError, match="failed to fetch resource hr.people: failed to read missing.json"):
+    with pytest.raises(
+        KuglError,
+        match="failed to fetch resource hr.people: failed to read missing.json",
+    ):
         assert_query(hr.PEOPLE_QUERY, None)
 
 
@@ -52,4 +58,3 @@ def test_stdin_resource(hr, monkeypatch):
     config["resources"][0] = dict(name="people", file="stdin")
     hr.save(config)
     assert_query(hr.PEOPLE_QUERY, hr.PEOPLE_RESULT)
-

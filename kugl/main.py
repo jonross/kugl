@@ -1,32 +1,42 @@
 """
 Command-line entry point.
 """
+
 import argparse
 import os
 from argparse import ArgumentParser
 import sys
 from sqlite3 import DatabaseError
-from types import SimpleNamespace
-from typing import List, Union, Optional, Type
+from typing import List, Optional, Type
 
 from kugl.impl.registry import Registry
 from kugl.impl.engine import Engine, CHECK, NEVER_UPDATE, ALWAYS_UPDATE, CacheFlag
 from kugl.impl.config import UserInit, parse_file, Settings, Shortcut, SecondaryUserInit
-from kugl.util import Age, fail, debug_features, kugl_home, kube_home, ConfigPath, debugging, KuglError, kube_context, \
-    Query, failure_preamble
+from kugl.util import (
+    Age,
+    fail,
+    debug_features,
+    kugl_home,
+    ConfigPath,
+    debugging,
+    KuglError,
+    Query,
+    failure_preamble,
+)
 
 # Register built-ins immediately because they're needed for command-line parsing
-import kugl.builtins.resources
-import kugl.builtins.schemas.kubernetes
+import kugl.builtins.resources  # noqa: F401
+import kugl.builtins.schemas.kubernetes  # noqa: F401
 
 
 def main() -> None:
+    # This one line is separate from the rest of main() logic so we don't meddle with
+    # sys.argv in unit tests.
     sys.argv[0] = "kugl"
     main1(sys.argv[1:])
 
 
 def main1(argv: List[str]):
-
     if "KUGL_UNIT_TESTING" in os.environ and "KUGL_MOCKDIR" not in os.environ:
         # Never enter main in tests unless test_home fixture is in use, else we could read
         # the user's init file.
@@ -49,10 +59,21 @@ def main1(argv: List[str]):
 
 
 def main2(argv: List[str], init: Optional[UserInit] = None):
-
     kugl_home().mkdir(exist_ok=True)
     if not argv:
         fail("Missing sql query")
+
+    if argv[0] == "init":
+        _handle_init_command()
+        return
+
+    if argv[0] == "schema" or argv[0] == "--schema":
+        if len(argv) < 2:
+            fail("Missing schema or table name")
+        if init is None:
+            init, shortcuts = _merge_init_files()
+        print(Registry.get().printable_schema(argv[1], init.settings.init_path))
+        return
 
     if init is None:
         init, shortcuts = _merge_init_files()
@@ -60,10 +81,6 @@ def main2(argv: List[str], init: Optional[UserInit] = None):
     ap = ArgumentParser()
     Registry.get().augment_cli(ap)
     args, cache_flag = parse_args(argv, ap, init.settings)
-
-    if args.schema:
-        print(Registry.get().printable_schema(args.sql, init.settings.init_path))
-        return
 
     # Check for shortcut and reparse, because they can contain command-line options.
     if " " not in args.sql:
@@ -80,13 +97,14 @@ def main2(argv: List[str], init: Optional[UserInit] = None):
     print(engine.query_and_format(Query(args.sql)))
 
 
-def parse_args(argv: list[str], ap: ArgumentParser, settings: Settings) -> tuple[argparse.Namespace, CacheFlag]:
+def parse_args(
+    argv: list[str], ap: ArgumentParser, settings: Settings
+) -> tuple[argparse.Namespace, CacheFlag]:
     """Add stock arguments to parser, parse the command line, and override settings."""
     ap.add_argument("-D", "--debug", type=str)
     ap.add_argument("-c", "--cache", default=False, action="store_true")
     ap.add_argument("-H", "--no-headers", default=False, action="store_true")
     ap.add_argument("-r", "--reckless", default=False, action="store_true")
-    ap.add_argument("--schema", default=False, action="store_true")
     ap.add_argument("-t", "--timeout", type=str)
     ap.add_argument("-u", "--update", default=False, action="store_true")
     ap.add_argument("sql")
@@ -125,6 +143,28 @@ def _merge_init_files() -> tuple[UserInit, dict[str, Shortcut]]:
         _merge_init(secondary)
     _merge_init(init)
     return init, shortcuts
+
+
+def _handle_init_command():
+    """Initialize kugl configuration by creating ~/.kugl and recommended kubernetes.yaml."""
+    config_dir = kugl_home()
+    config_dir.mkdir(exist_ok=True)
+
+    kubernetes_yaml = config_dir / "kubernetes.yaml"
+    if kubernetes_yaml.exists():
+        fail(f"{kubernetes_yaml} already exists. Remove it first if you want to reinitialize.")
+
+    recommended_config = """extend:
+  - table: nodes
+    columns:
+      - name: instance_type
+        label:
+          - node.kubernetes.io/instance-type
+          - beta.kubernetes.io/instance-type
+"""
+
+    kubernetes_yaml.write_text(recommended_config)
+    print(f"Created {kubernetes_yaml}")
 
 
 if __name__ == "__main__":

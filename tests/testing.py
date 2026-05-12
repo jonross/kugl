@@ -24,7 +24,7 @@ def assert_query(sql: str, expected: Union[str, list], all_ns: bool = False):
         caller can indent for neatness.  Or, if a list, each item will be checked in order.
     :param all_ns: FIXME temporary hack until we get namespaces out of engine.py
     """
-    args = SimpleNamespace(all_namespaces=all_ns, namespace=None)
+    args = SimpleNamespace(all=all_ns, namespace=None)
     engine = Engine(args, ALWAYS_UPDATE, Settings())
     if isinstance(expected, str):
         actual = engine.query_and_format(Query(sql))
@@ -34,7 +34,9 @@ def assert_query(sql: str, expected: Union[str, list], all_ns: bool = False):
         assert actual == expected
 
 
-def assert_by_line(lines: Union[str, list[str]], expected: Union[str, list[Union[str, re.Pattern]]]):
+def assert_by_line(
+    lines: Union[str, list[str]], expected: Union[str, list[Union[str, re.Pattern]]]
+):
     """
     Compare a list of lines with a list of expected lines or regex patterns.
     :param lines: Actual output, as a list of lines

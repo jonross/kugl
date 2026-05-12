@@ -1,6 +1,7 @@
 """
 Tests for command-line options.
 """
+
 import re
 import sqlite3
 from argparse import ArgumentParser
@@ -31,12 +32,12 @@ def test_enforce_cache_option_via_shortcut(test_home, capsys):
 
 
 def test_enforce_one_namespace_option(test_home):
-    with pytest.raises(KuglError, match="Cannot use both -a/--all-namespaces and -n/--namespace"):
+    with pytest.raises(KuglError, match="Cannot use both -a/--all and -n/--namespace"):
         main1(["-a", "-n", "x", "select * from pods"])
 
 
 def test_no_such_table(test_home):
-    with pytest.raises(sqlite3.OperationalError, match=re.escape(f"no such table: foo")):
+    with pytest.raises(sqlite3.OperationalError, match=re.escape("no such table: foo")):
         main1(["select * from foo"])
 
 
@@ -75,12 +76,21 @@ def test_no_headers(test_home, capsys):
     assert out == "1  2\n"
 
 
-@pytest.mark.parametrize("argv,expected_flag,age,reckless,error", [
-    (["-u", "select 1"], ALWAYS_UPDATE, Age(120), False, None),
-    (["-t", "5", "select 1"], CHECK, Age(5), False, None),
-    (["-c", "-r", "select 1"], NEVER_UPDATE, Age(120), True, None),
-    (["-c", "-u", "select 1"], None, None, None, "Cannot use both -c/--cache and -u/--update"),
-])
+@pytest.mark.parametrize(
+    "argv,expected_flag,age,reckless,error",
+    [
+        (["-u", "select 1"], ALWAYS_UPDATE, Age(120), False, None),
+        (["-t", "5", "select 1"], CHECK, Age(5), False, None),
+        (["-c", "-r", "select 1"], NEVER_UPDATE, Age(120), True, None),
+        (
+            ["-c", "-u", "select 1"],
+            None,
+            None,
+            None,
+            "Cannot use both -c/--cache and -u/--update",
+        ),
+    ],
+)
 def test_parse_args(test_home, argv, expected_flag, age, reckless, error):
     """Verify correct values received for -u, -t, -c, -r options"""
     ap = ArgumentParser()
@@ -93,3 +103,32 @@ def test_parse_args(test_home, argv, expected_flag, age, reckless, error):
         assert actual_flag == expected_flag
         assert settings.cache_timeout == age
         assert settings.reckless == reckless
+
+
+def test_init_command(test_home, capsys):
+    """Verify 'kugl init' creates ~/.kugl/kubernetes.yaml with recommended config"""
+    kubernetes_yaml = kugl_home() / "kubernetes.yaml"
+    assert not kubernetes_yaml.exists()
+
+    main1(["init"])
+    out, _ = capsys.readouterr()
+
+    assert kubernetes_yaml.exists()
+    assert f"Created {kubernetes_yaml}" in out
+
+    content = kubernetes_yaml.read_text()
+    assert "extend:" in content
+    assert "table: nodes" in content
+    assert "name: instance_type" in content
+    assert "node.kubernetes.io/instance-type" in content
+    assert "beta.kubernetes.io/instance-type" in content
+
+
+def test_init_command_already_exists(test_home):
+    """Verify 'kugl init' fails if kubernetes.yaml already exists"""
+    kubernetes_yaml = kugl_home() / "kubernetes.yaml"
+    kubernetes_yaml.parent.mkdir(exist_ok=True)
+    kubernetes_yaml.write_text("existing content")
+
+    with pytest.raises(KuglError, match="already exists"):
+        main1(["init"])

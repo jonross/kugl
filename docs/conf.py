@@ -17,9 +17,10 @@
 
 # -- Project information -----------------------------------------------------
 
-project = "Basic Sphinx Example Project"
-copyright = "2022, Read the Docs core team"
-author = "Read the Docs core team"
+project = "Kugl"
+copyright = "2024-2026, Jon Ross"
+author = "Jon Ross"
+release = "0.7.0"
 
 
 # -- General configuration ---------------------------------------------------
@@ -60,4 +61,5 @@ html_theme = "sphinx_rtd_theme"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
+# html_static_path = ["_static"]
+html_static_path = []

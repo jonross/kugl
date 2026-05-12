@@ -1,6 +1,7 @@
 """
 Assorted utility functions / classes with no obvious home.
 """
+
 import json
 import re
 import subprocess as sp
@@ -40,7 +41,7 @@ def parse_utc(utc_str: Optional[str]) -> int:
 
 
 def to_utc(epoch: int) -> str:
-    return arrow.get(epoch).to('utc').format('YYYY-MM-DDTHH:mm:ss') + 'Z'
+    return arrow.get(epoch).to("utc").format("YYYY-MM-DDTHH:mm:ss") + "Z"
 
 
 def warn(message: str):
@@ -89,11 +90,13 @@ def cleave(s: str, sep: str, flip: bool = False):
 def friendlier_errors(errors: list) -> list[str]:
     """Improve upon Pydantic's error messages."""
     location_str = lambda loc: ".".join(map(str, loc))
+
     def _improve(error):
-        message, location = error['msg'], error['loc']
+        message, location = error["msg"], error["loc"]
         if "Extra inputs are not permitted" in message:
             return f"At {location_str(location[:-1])}: '{location[-1]}' is not allowed here"
         return location_str(location) + ": " + message
+
     return [_improve(e) for e in errors]
 
 
@@ -103,4 +106,3 @@ def best_guess_parse(text):
     if text[0] in "{[":
         return json.loads(text)
     return yaml.safe_load(text)
-

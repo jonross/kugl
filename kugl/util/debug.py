@@ -4,6 +4,7 @@ from typing import Union, Optional, Callable
 
 DEBUG_FLAGS = {}
 
+
 def debug_features(features: Union[str, list[str]], on: bool = True):
     """Turn debugging on or off for a set of features.
 
@@ -48,5 +49,3 @@ def debugging(feature: str = None) -> Optional[Callable]:
 def _dprint(feature, args):
     """Print a debug to stderr tagged with the feature name."""
     print(feature + ":", *args, file=sys.stderr)
-
-

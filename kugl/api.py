@@ -1,6 +1,7 @@
 """
 Imports usable by user-defined tables in Python (once we have those.)
 """
+
 from typing import Optional as _Optional
 
 from kugl.impl.config import Column as _BuiltinColumn
@@ -15,11 +16,25 @@ from kugl.util import (
     to_utc,
 )
 
+__all__ = [
+    "resource",
+    "table",
+    "column",
+    "Resource",
+    "fail",
+    "parse_age",
+    "parse_utc",
+    "run",
+    "to_age",
+    "to_utc",
+]
+
 
 def resource(type: str, schema_defaults: list[str] = []):
     def wrap(cls):
         _Registry.get().add_resource(cls, type, schema_defaults)
         return cls
+
     return wrap
 
 
@@ -27,6 +42,7 @@ def table(**kwargs):
     def wrap(cls):
         _Registry.get().add_table(cls, **kwargs)
         return cls
+
     return wrap
 
 

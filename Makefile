@@ -1,6 +1,13 @@
 
-VERSION = 0.6.0
+VERSION = 0.7.0
 IMAGE = jonross/kugl:$(VERSION)
+
+.PHONY: lint test test-all test-py39-lo test-py39-hi test-py13-lo test-py13-hi dist pypi docker push dshell pyshell docs clean pristine
+
+# Lint and format check
+lint:
+	uv run ruff check .
+	uv run ruff format --check .
 
 # Quick test with current dependencies
 test:
@@ -42,13 +49,16 @@ dist:
 pypi: dist
 	uv run twine upload dist/*
 
-# Build Docker image
+# Build Docker image (local platform only, for testing)
 docker: Makefile pyproject.toml
 	docker build --no-cache -t $(IMAGE) .
 
-# Upload Docker image
-push: docker
-	docker push $(IMAGE)
+# Build and push multi-platform Docker image (linux/amd64 and linux/arm64)
+push: Makefile pyproject.toml
+	@echo "Setting up buildx builder for multi-platform..."
+	@docker buildx create --name multiplatform --use 2>/dev/null || docker buildx use multiplatform
+	@echo "Building and pushing multi-platform image: $(IMAGE)"
+	docker buildx build --platform linux/amd64,linux/arm64 --no-cache -t $(IMAGE) --push .
 
 # Manually test Docker image
 dshell: docker
@@ -57,6 +67,10 @@ dshell: docker
 # Manually test PyPI install
 pyshell:
 	docker run -it -v ~/.kube:/root/.kube --entrypoint /bin/sh python:3.9-alpine
+
+# Build documentation locally
+docs:
+	uv run --group docs sphinx-build -b html docs build/docs
 
 # Clean build artifacts
 clean:

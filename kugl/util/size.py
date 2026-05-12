@@ -2,8 +2,7 @@ import re
 from typing import Union
 
 SIZE_RE = re.compile(r"([0-9\.]+)(([KMGTP]i?)?)")
-SIZE_MULTIPLIERS = dict(K=10**3, M=10**6, G=10**9, T=10**12,
-                        Ki=2**10, Mi=2**20, Gi=2**30, Ti=2**40)
+SIZE_MULTIPLIERS = dict(K=10**3, M=10**6, G=10**9, T=10**12, Ki=2**10, Mi=2**20, Gi=2**30, Ti=2**40)
 
 
 def parse_size(x: Union[str, int, None]):
@@ -38,14 +37,14 @@ def to_size(nbytes: int, iec=False):
     bytes = "i" if iec else ""
     if nbytes < one_k:
         return f"{nbytes}"
-    elif nbytes < one_k ** 2:
+    elif nbytes < one_k**2:
         size, suffix = nbytes / one_k, "K" + bytes
-    elif nbytes < one_k ** 3:
-        size, suffix = nbytes / one_k ** 2, "M" + bytes
-    elif nbytes < one_k ** 4:
-        size, suffix = nbytes / one_k ** 3, "G" + bytes
+    elif nbytes < one_k**3:
+        size, suffix = nbytes / one_k**2, "M" + bytes
+    elif nbytes < one_k**4:
+        size, suffix = nbytes / one_k**3, "G" + bytes
     else:
-        size, suffix = nbytes / one_k ** 4, "T" + bytes
+        size, suffix = nbytes / one_k**4, "T" + bytes
     if size < 10:
         return f"{size:.1f}{suffix}"
     else:

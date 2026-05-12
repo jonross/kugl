@@ -67,21 +67,28 @@ def test_folder_content(hr, tmp_path, capsys):
           age: 50
           sex: m
     """)
-    config["resources"][0] = dict(name="people", folder=str(folder),
-                                  glob="**/data.yaml", match="(?P<region>[^/]+)/data.yaml")
+    config["resources"][0] = dict(
+        name="people",
+        folder=str(folder),
+        glob="**/data.yaml",
+        match="(?P<region>[^/]+)/data.yaml",
+    )
     # Update the row_source of the people table to match the folder data layout.
     config["create"][0]["row_source"] = ["[]", "content"]
     # Add a column to capture the region.
     config["create"][0]["columns"].append(dict(name="region", path="^match.region"))
     hr.save(config)
     with features_debugged("folder"):
-        assert_query("SELECT region, name, age FROM hr.people ORDER BY age", """
+        assert_query(
+            "SELECT region, name, age FROM hr.people ORDER BY age",
+            """
             region    name      age
             west      Jen        40
             west      Joe        41
             east      Jim        42
             east      Jill       43
-        """)
+        """,
+        )
     _, err = capsys.readouterr()
     assert "Reviewing files for **/data.yaml" in err
     assert "Adding east/data.yaml with match {'region': 'east'}" in err

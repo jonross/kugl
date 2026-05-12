@@ -22,12 +22,15 @@ def test_too_many_parents(test_home):
             - name: something
               path: ^^^invalid
     """)
-    kubectl_response("things", {
-        "items": [
-            {"something": "foo"},
-            {"something": "foo"},
-        ]
-    })
+    kubectl_response(
+        "things",
+        {
+            "items": [
+                {"something": "foo"},
+                {"something": "foo"},
+            ]
+        },
+    )
     with pytest.raises(KuglError, match="Missing parent or too many . while evaluating ...invalid"):
         assert_query("SELECT * FROM things", "")
 
@@ -52,8 +55,11 @@ def test_data_dict_expansion(test_home):
             - name: value
               path: value
     """)
-    assert_query("SELECT * FROM things ORDER BY key", """
+    assert_query(
+        "SELECT * FROM things ORDER BY key",
+        """
         key    value
         baz    glig
         foo    bar
-    """)
+    """,
+    )

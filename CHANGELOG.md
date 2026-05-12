@@ -1,6 +1,16 @@
+## 0.7.0
+
+- Add `init` subcommand to generate `kubernetes.yaml` per recommended post-install configuration
+- Rename `--schema` option to `schema` subcommand, support `--schema` for backward compatibility
+- Convert documentation to reStructured Text, for publishing to readthedocs.org
+- Support ARM chips via a multi-arch Docker build
+- Add `cronjobs` and `cronjob_labels` tables to `kubernetes` schema
+- Lint and format with `ruff`
+
 ## 0.6.0
 
 - No external changes
+- Convert build to `uv`
 
 ## 0.5.0
 

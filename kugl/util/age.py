@@ -97,4 +97,3 @@ def parse_age(age: str) -> int:
 
 def to_age(seconds: int) -> str:
     return Age(seconds).render()
-
