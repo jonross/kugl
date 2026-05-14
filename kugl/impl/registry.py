@@ -52,9 +52,9 @@ class Registry:
         t = TableDef(cls=cls, **kwargs)
         self.get_schema(t.schema_name).builtin[t.name] = t
 
-    def add_resource(self, cls: type, family: str, schema_defaults: list[str]):
+    def add_resource_family(self, cls: type, family: str, schema_defaults: list[str]):
         """
-        Register a resource type.  This is called by the @resource decorator.
+        This is called by the @resource_family decorator.
 
         :param cls: The class to register
         :param family: e.g. "file", "kubernetes", "aws"

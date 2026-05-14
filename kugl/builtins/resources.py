@@ -6,7 +6,7 @@ from typing import Union, Optional
 
 from pydantic import model_validator
 
-from kugl.api import resource, fail, run, Resource
+from kugl.api import resource_family, fail, run, Resource
 from kugl.util import best_guess_parse, KPath, debugging
 
 
@@ -21,7 +21,7 @@ class NonCacheableResource(Resource):
         return resource
 
 
-@resource("data")
+@resource_family("data")
 class DataResource(NonCacheableResource):
     """A resource whose data is provided directly in the configuration file."""
 
@@ -31,7 +31,7 @@ class DataResource(NonCacheableResource):
         return self.data
 
 
-@resource("file")
+@resource_family("file")
 class FileResource(NonCacheableResource):
     """A resource that reads a file from disk.
 
@@ -51,7 +51,7 @@ class FileResource(NonCacheableResource):
             fail(f"failed to read {self.file} in resource {self.name}", e)
 
 
-@resource("folder")
+@resource_family("folder")
 class FolderResource(NonCacheableResource):
     """A resource that reads selectively from a folder tree.
 
@@ -95,7 +95,7 @@ class FolderResource(NonCacheableResource):
         return result
 
 
-@resource("exec")
+@resource_family("exec")
 class ExecResource(Resource):
     exec: Union[str, list[str]]
     cache_key: Optional[str] = None
