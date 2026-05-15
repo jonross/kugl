@@ -14,11 +14,11 @@ from threading import Thread
 from pydantic import model_validator
 
 from ..helpers import Limits, ItemHelper, PodHelper, JobHelper, CronJobHelper
-from kugl.api import table, fail, resource, run, parse_utc, Resource, column
+from kugl.api import table, fail, resource_type, run, parse_utc, Resource, column
 from kugl.util import WHITESPACE_RE, kube_context
 
 
-@resource("kubernetes", schema_defaults=["kubernetes"])
+@resource_type("kubernetes", schema_defaults=["kubernetes"])
 class KubernetesResource(Resource):
     namespaced: bool
     _all_ns: bool

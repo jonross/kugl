@@ -17,7 +17,7 @@ from kugl.util import (
 )
 
 __all__ = [
-    "resource",
+    "resource_type",
     "table",
     "column",
     "Resource",
@@ -30,7 +30,7 @@ __all__ = [
 ]
 
 
-def resource(type: str, schema_defaults: list[str] = []):
+def resource_type(type: str, schema_defaults: list[str] = []):
     def wrap(cls):
         _Registry.get().add_resource(cls, type, schema_defaults)
         return cls

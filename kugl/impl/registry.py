@@ -54,7 +54,7 @@ class Registry:
 
     def add_resource(self, cls: type, family: str, schema_defaults: list[str]):
         """
-        Register a resource type.  This is called by the @resource decorator.
+        Register a resource type.  This is called by the @resource_type decorator.
 
         :param cls: The class to register
         :param family: e.g. "file", "kubernetes", "aws"
