@@ -87,7 +87,7 @@ class Registry:
             fail(f"Resource family {family} is not registered")
         return impl
 
-    def get_resource_by_schema(self, schema_name: str) -> Type:
+    def get_schema_default_resource(self, schema_name: str) -> Type:
         return self.resources_by_schema.get(schema_name)
 
     def augment_cli(self, ap: ArgumentParser):
@@ -225,7 +225,7 @@ class Schema(BaseModel):
             if family in fields:
                 return parse_model(rgy.get_resource_by_family(family), fields)
         # If no family is specified, the schema may have a default one
-        if impl := rgy.get_resource_by_schema(self.name):
+        if impl := rgy.get_schema_default_resource(self.name):
             return parse_model(impl, fields)
         fail(
             f"can't infer type of resource '{r.name}' -- need one of 'file', 'data', 'namespaced' etc"

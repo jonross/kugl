@@ -38,7 +38,7 @@ class Table:
         schema_name,
         resource: str,
         builtin_columns: list[Column],
-        non_builtin_columns: list[UserColumn],
+        added_columns: list[UserColumn],
     ):
         """
         :param name: table name, e.g. "pods"
@@ -49,7 +49,7 @@ class Table:
         self.schema_name = schema_name
         self.resource = resource
         self.builtin_columns = builtin_columns
-        self.non_builtin_columns = non_builtin_columns
+        self.added_columns = added_columns
 
     def build(self, db, raw_data: dict, multi_schema: bool):
         """Create the table in SQLite and insert the data.
@@ -60,15 +60,15 @@ class Table:
         """
         context = RowContext(raw_data)
         table_name = f"{self.schema_name}.{self.name}" if multi_schema else self.name
-        all_columns = self.builtin_columns + self.non_builtin_columns
+        all_columns = self.builtin_columns + self.added_columns
         db.execute(
             f"""CREATE TABLE {table_name} ({", ".join(f"{c.name} {c._sqltype}" for c in all_columns)})"""
         )
         item_rows = list(self.make_rows(context))
         if item_rows:
-            if self.non_builtin_columns:
+            if self.added_columns:
                 extend_row = lambda item, row: row + tuple(
-                    column.extract(item, context) for column in self.non_builtin_columns
+                    column.extract(item, context) for column in self.added_columns
                 )
             else:
                 extend_row = lambda item, row: row
@@ -79,7 +79,7 @@ class Table:
     def printable_schema(self):
         rows = [
             (c.name, c._sqltype, c.comment or "")
-            for c in self.builtin_columns + self.non_builtin_columns
+            for c in self.builtin_columns + self.added_columns
         ]
         return f"## {self.name}\n" + tabulate(rows, tablefmt="plain")
 
@@ -163,7 +163,7 @@ class TableFromConfig(Table):
                     for child in found:
                         if index > 0:
                             # Fix #132 -- don't do this at pass 0, or it sets the parent to the entire
-                            # response object, breaking self.get_root()
+                            # response object.
                             context.set_parent(child, item)
                         new_items.append(child)
                         if debug:
@@ -198,11 +198,6 @@ class RowContext:
         while depth > 0 and child is not None:
             child = self._parents.get(id(child))
             depth -= 1
-        return child
-
-    def get_root(self, child):
-        while (parent := self._parents.get(id(child))) is not None:
-            child = parent
         return child
 
 
