@@ -229,6 +229,94 @@ Built from ``kubectl get nodes``, one row per taint
 |                    |      | entry in ``spec.taints``                 |
 +--------------------+------+------------------------------------------+
 
+services
+~~~~~~~~
+
+Built from ``kubectl get services``, one row per service.
+
++-------------+---------+--------------------------------------------------+
+| Column      | Type    | Description                                      |
++=============+=========+==================================================+
+| name        | TEXT    | Service name, from ``metadata.name``             |
++-------------+---------+--------------------------------------------------+
+| uid         | TEXT    | Service UID, from ``metadata.uid``               |
++-------------+---------+--------------------------------------------------+
+| namespace   | TEXT    | Service namespace, from ``metadata.namespace``   |
++-------------+---------+--------------------------------------------------+
+| type        | TEXT    | Service type: ``ClusterIP``, ``NodePort``,       |
+|             |         | ``LoadBalancer``, or ``ExternalName``            |
++-------------+---------+--------------------------------------------------+
+| cluster_ip  | TEXT    | Cluster IP, from ``spec.clusterIP``; null for    |
+|             |         | headless services and ``ExternalName`` type      |
++-------------+---------+--------------------------------------------------+
+| external_ip | TEXT    | External IP or hostname for ``LoadBalancer``     |
+|             |         | services, from ``status.loadBalancer.ingress``;  |
+|             |         | null otherwise                                   |
++-------------+---------+--------------------------------------------------+
+| creation_ts | INTEGER | Creation timestamp in epoch seconds, from        |
+|             |         | ``metadata.creationTimestamp``                   |
++-------------+---------+--------------------------------------------------+
+
+service_labels
+~~~~~~~~~~~~~~
+
+Built from ``kubectl get services``, one row per label.
+
++--------------+------+--------------------------------------------------+
+| Column       | Type | Description                                      |
++==============+======+==================================================+
+| service_uid  | TEXT | Service UID, from ``metadata.uid``               |
++--------------+------+--------------------------------------------------+
+| key, value   | TEXT | Label key and value from each entry in           |
+|              |      | ``metadata.labels``                              |
++--------------+------+--------------------------------------------------+
+
+deployments
+~~~~~~~~~~~
+
+Built from ``kubectl get deployments``, one row per deployment.
+
++-------------+---------+--------------------------------------------------+
+| Column      | Type    | Description                                      |
++=============+=========+==================================================+
+| name        | TEXT    | Deployment name, from ``metadata.name``          |
++-------------+---------+--------------------------------------------------+
+| uid         | TEXT    | Deployment UID, from ``metadata.uid``            |
++-------------+---------+--------------------------------------------------+
+| namespace   | TEXT    | Deployment namespace, from                       |
+|             |         | ``metadata.namespace``                           |
++-------------+---------+--------------------------------------------------+
+| replicas    | INTEGER | Desired replica count, from ``spec.replicas``    |
++-------------+---------+--------------------------------------------------+
+| ready       | INTEGER | Ready replicas, from ``status.readyReplicas``    |
++-------------+---------+--------------------------------------------------+
+| available   | INTEGER | Available replicas, from                         |
+|             |         | ``status.availableReplicas``                     |
++-------------+---------+--------------------------------------------------+
+| updated     | INTEGER | Updated replicas, from                           |
+|             |         | ``status.updatedReplicas``                       |
++-------------+---------+--------------------------------------------------+
+| strategy    | TEXT    | Rollout strategy, from ``spec.strategy.type``;   |
+|             |         | ``RollingUpdate`` or ``Recreate``                |
++-------------+---------+--------------------------------------------------+
+| creation_ts | INTEGER | Creation timestamp in epoch seconds, from        |
+|             |         | ``metadata.creationTimestamp``                   |
++-------------+---------+--------------------------------------------------+
+
+deployment_labels
+~~~~~~~~~~~~~~~~~
+
+Built from ``kubectl get deployments``, one row per label.
+
++----------------+------+--------------------------------------------------+
+| Column         | Type | Description                                      |
++================+======+==================================================+
+| deployment_uid | TEXT | Deployment UID, from ``metadata.uid``            |
++----------------+------+--------------------------------------------------+
+| key, value     | TEXT | Label key and value from each entry in           |
+|                |      | ``metadata.labels``                              |
++----------------+------+--------------------------------------------------+
+
 Built-in functions
 ------------------
 

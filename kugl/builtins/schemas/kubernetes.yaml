@@ -11,6 +11,10 @@ resources:
     namespaced: true
   - name: nodes
     namespaced: false
+  - name: services
+    namespaced: true
+  - name: deployments
+    namespaced: true
 
 # node_taints builtin table is done here because it doesn't have any special column extraction
 # logic, and it serves as a good unit test.

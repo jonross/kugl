@@ -311,3 +311,85 @@ class CronJobsTable:
 @table(schema="kubernetes", name="cronjob_labels", resource="cronjobs")
 class CronJobLabelsTable(LabelsTable):
     UID_FIELD = "cronjob_uid"
+
+
+@table(schema="kubernetes", name="services", resource="services")
+class ServicesTable:
+    _COLUMNS = [
+        column("name", "TEXT", "service name, from metadata.name"),
+        column("uid", "TEXT", "service UID, from metadata.uid"),
+        column("namespace", "TEXT", "service namespace, from metadata.namespace"),
+        column("type", "TEXT", "service type: ClusterIP, NodePort, LoadBalancer, or ExternalName"),
+        column("cluster_ip", "TEXT", "cluster IP, or null for headless services"),
+        column("external_ip", "TEXT", "external IP or hostname for LoadBalancer services, or null"),
+        column("creation_ts", "INTEGER", "creation timestamp in epoch seconds, from metadata.creationTimestamp"),
+    ]
+
+    def columns(self):
+        return self._COLUMNS
+
+    def make_rows(self, context) -> list[tuple[dict, tuple]]:
+        for item in context.data["items"]:
+            svc = ItemHelper(item)
+            cluster_ip = item["spec"].get("clusterIP")
+            ingress = item.get("status", {}).get("loadBalancer", {}).get("ingress", [])
+            external_ip = (ingress[0].get("ip") or ingress[0].get("hostname")) if ingress else None
+            yield (
+                item,
+                (
+                    svc.name,
+                    svc.metadata.get("uid"),
+                    svc.namespace,
+                    item["spec"].get("type"),
+                    None if cluster_ip == "None" else cluster_ip,
+                    external_ip,
+                    parse_utc(svc.metadata.get("creationTimestamp")),
+                ),
+            )
+
+
+@table(schema="kubernetes", name="service_labels", resource="services")
+class ServiceLabelsTable(LabelsTable):
+    UID_FIELD = "service_uid"
+
+
+@table(schema="kubernetes", name="deployments", resource="deployments")
+class DeploymentsTable:
+    _COLUMNS = [
+        column("name", "TEXT", "deployment name, from metadata.name"),
+        column("uid", "TEXT", "deployment UID, from metadata.uid"),
+        column("namespace", "TEXT", "deployment namespace, from metadata.namespace"),
+        column("replicas", "INTEGER", "desired replica count, from spec.replicas"),
+        column("ready", "INTEGER", "ready replicas, from status.readyReplicas"),
+        column("available", "INTEGER", "available replicas, from status.availableReplicas"),
+        column("updated", "INTEGER", "updated replicas, from status.updatedReplicas"),
+        column("strategy", "TEXT", "rollout strategy: RollingUpdate or Recreate, from spec.strategy.type"),
+        column("creation_ts", "INTEGER", "creation timestamp in epoch seconds, from metadata.creationTimestamp"),
+    ]
+
+    def columns(self):
+        return self._COLUMNS
+
+    def make_rows(self, context) -> list[tuple[dict, tuple]]:
+        for item in context.data["items"]:
+            deploy = ItemHelper(item)
+            status = item.get("status", {})
+            yield (
+                item,
+                (
+                    deploy.name,
+                    deploy.metadata.get("uid"),
+                    deploy.namespace,
+                    item["spec"].get("replicas"),
+                    status.get("readyReplicas"),
+                    status.get("availableReplicas"),
+                    status.get("updatedReplicas"),
+                    item["spec"].get("strategy", {}).get("type"),
+                    parse_utc(deploy.metadata.get("creationTimestamp")),
+                ),
+            )
+
+
+@table(schema="kubernetes", name="deployment_labels", resource="deployments")
+class DeploymentLabelsTable(LabelsTable):
+    UID_FIELD = "deployment_uid"
