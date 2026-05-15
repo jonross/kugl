@@ -302,6 +302,7 @@ Tips
 If creating multiple tables from a resource, you should use the ``uid``
 column (sourced from ``metadata.uid``) as a join key, since this is a
 guaranteed unique key.
+(Example: `nodes` and `node_labels`, `pods` and `pod_labels`.)
 
 The ``utils:`` section of ``~/.kugl/init.yaml`` is ignored during
 configuration parsing, so you can use it to store reusable bits of YAML.
