@@ -225,3 +225,14 @@ Set `KUGL_DEBUG` env var to a comma-separated list of topics:
 - `clock.CLOCK` is patched in tests to control time (for cache age calculations)
 - Tests use actual in-memory SQLite; no mocking of the DB layer
 - Kubernetes tests mock `kubectl` via fixtures in `tests/k8s/k8s_mocks.py`
+
+## Running Tests
+
+```bash
+uv run pytest tests/          # full suite
+uv run pytest tests/ -k foo   # filter by name
+```
+
+**Important:** always run from the project root with `tests/` as the target, not an individual file.
+The Registry is populated by decorator side-effects at import time; running a single test module in
+isolation skips those imports and causes "Resource family X is not registered" errors.
