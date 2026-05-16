@@ -6,40 +6,59 @@ Explore Kubernetes resources using SQLite.
 Example
 -------
 
-Find the top users of a GPU pool, based on instance type and a
-team-specific pod label.
+Find memory pressure by node — how much memory running and initializing
+pods are requesting, versus what each node can allocate. No configuration
+required.
 
-With Kugl (and a bit of configuration for owner and instance type)
+With Kugl:
 
 .. code:: shell
 
-   kugl -a "select owner, sum(gpu_req), sum(cpu_req)
-            from pods join nodes on pods.node_name = nodes.name
-            where instance_type like 'g5.%large' and pods.phase in ('Running', 'Pending')
-            group by 1 order by 2 desc limit 10"
+   kugl -a "select n.name, to_size(sum(p.mem_req)) as requested, to_size(n.mem_alloc) as allocatable
+            from nodes n join pods p on p.node_name = n.name
+            where p.phase = 'Running' or p.status like 'Init:%'
+            group by n.name order by sum(p.mem_req) desc"
 
 With ``kubectl`` and ``jq``, that's a little more work:
 
 .. code:: shell
 
-   kubectl get pods -o json --all | 
-   jq -r --argjson nodes "$(kubectl get nodes -o json | jq '[.items[] 
-           | select((.metadata.labels["node.kubernetes.io/instance-type"] // "") | test("g5.*large")) 
-           | .metadata.name]')" \
-     '[ .items[]
-       | select(.spec.nodeName as $node | $nodes | index($node))
-       | select(.status.phase == "Running" or .status.phase == "Pending")
-       | . as $pod | $pod.spec.containers[]
-       | select(.resources.requests["nvidia.com/gpu"] != null)
-       | {owner: $pod.metadata.labels["com.mycompany/job-owner"], 
-          gpu: .resources.requests["nvidia.com/gpu"], 
-          cpu: .resources.requests["cpu"]}
-     ] | group_by(.owner) 
-     | map({owner: .[0].owner, 
-            gpu: map(.gpu | tonumber) | add, 
-            cpu: map(.cpu | if test("m$") then (sub("m$"; "") | tonumber / 1000) else tonumber end) | add})
-     | sort_by(-.gpu) | .[:10] | .[]
-     | "\(.owner) \(.gpu) \(.cpu)"'
+   { kubectl get nodes -o json; kubectl get pods -A -o json; } | jq -rn '
+     def membytes:
+       if test("Ki$") then (gsub("Ki$"; "") | tonumber * 1024)
+       elif test("Mi$") then (gsub("Mi$"; "") | tonumber * 1048576)
+       elif test("Gi$") then (gsub("Gi$"; "") | tonumber * 1073741824)
+       elif test("K$")  then (gsub("K$";  "") | tonumber * 1000)
+       elif test("M$")  then (gsub("M$";  "") | tonumber * 1000000)
+       elif test("G$")  then (gsub("G$";  "") | tonumber * 1000000000)
+       else tonumber end;
+     (input | .items | map({
+       name: .metadata.name,
+       alloc: (.status.allocatable.memory | membytes)
+     }) | INDEX(.name)) as $nodeMap |
+     [input | .items[] |
+       select(
+         .status.phase == "Running" or
+         (((.spec.initContainers // []) | length) > 0 and
+          ((.status.initContainerStatuses // []) | map(select(.ready)) | length) <
+          ((.spec.initContainers // []) | length))
+       ) |
+       select(.spec.nodeName) |
+       {
+         node: .spec.nodeName,
+         mem: ([.spec.containers[].resources.requests.memory // "0"] | map(membytes) | add)
+       }
+     ] |
+     group_by(.node) |
+     map({node: .[0].node, requested: (map(.mem) | add), allocatable: $nodeMap[.[0].node].alloc}) |
+     sort_by(-.requested)[] |
+     [.node, .requested, .allocatable] | @tsv'
+
+The ``jq`` version pipes both ``kubectl`` calls through a brace group to avoid
+passing large JSON as a command-line argument — the ``--argjson`` alternative
+fails with ``argument list too long`` on clusters with many nodes. It also
+leaves byte values as raw integers; formatting them as ``to_size()`` does
+requires another pass.
 
 Installing
 ----------
