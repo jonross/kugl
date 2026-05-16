@@ -317,6 +317,50 @@ Built from ``kubectl get deployments``, one row per label.
 |                |      | ``metadata.labels``                              |
 +----------------+------+--------------------------------------------------+
 
+events
+~~~~~~
+
+Built from ``kubectl get events``, one row per event. Kubernetes deduplicates
+repeated events, so ``count`` reflects how many times an event occurred rather
+than the number of rows. Note that ``type`` and ``count`` conflict with SQL
+keywords / aggregate function names and must be backtick-quoted in queries,
+e.g. ``SELECT \`type\`, \`count\` FROM events``.
+
++---------------+---------+------------------------------------------------------------+
+| Column        | Type    | Description                                                |
++===============+=========+============================================================+
+| namespace     | TEXT    | Event namespace, from ``metadata.namespace``               |
++---------------+---------+------------------------------------------------------------+
+| type          | TEXT    | Event type: ``Normal`` or ``Warning``; backtick-quote      |
+|               |         | in SQL                                                     |
++---------------+---------+------------------------------------------------------------+
+| reason        | TEXT    | Short machine-readable reason, e.g. ``Scheduled``,         |
+|               |         | ``OOMKilling``                                             |
++---------------+---------+------------------------------------------------------------+
+| message       | TEXT    | Human-readable event description                           |
++---------------+---------+------------------------------------------------------------+
+| count         | INTEGER | Number of times this event has occurred; backtick-quote    |
+|               |         | in SQL                                                     |
++---------------+---------+------------------------------------------------------------+
+| first_ts      | INTEGER | First occurrence timestamp in epoch seconds, from          |
+|               |         | ``firstTimestamp``                                         |
++---------------+---------+------------------------------------------------------------+
+| last_ts       | INTEGER | Last occurrence timestamp in epoch seconds, from           |
+|               |         | ``lastTimestamp``                                          |
++---------------+---------+------------------------------------------------------------+
+| obj_kind      | TEXT    | Involved object kind, from ``involvedObject.kind``,        |
+|               |         | e.g. ``Pod``, ``Node``                                     |
++---------------+---------+------------------------------------------------------------+
+| obj_name      | TEXT    | Involved object name, from ``involvedObject.name``;        |
+|               |         | primary join key to other tables                           |
++---------------+---------+------------------------------------------------------------+
+| obj_namespace | TEXT    | Involved object namespace, from                            |
+|               |         | ``involvedObject.namespace``                               |
++---------------+---------+------------------------------------------------------------+
+| source        | TEXT    | Generating component, from ``source.component``,           |
+|               |         | e.g. ``kubelet``, ``default-scheduler``                    |
++---------------+---------+------------------------------------------------------------+
+
 Built-in functions
 ------------------
 

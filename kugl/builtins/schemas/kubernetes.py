@@ -393,3 +393,44 @@ class DeploymentsTable:
 @table(schema="kubernetes", name="deployment_labels", resource="deployments")
 class DeploymentLabelsTable(LabelsTable):
     UID_FIELD = "deployment_uid"
+
+
+@table(schema="kubernetes", name="events", resource="events")
+class EventsTable:
+    _COLUMNS = [
+        column("namespace", "TEXT", "event namespace, from metadata.namespace"),
+        column("type", "TEXT", "event type: Normal or Warning — quote with backticks in SQL"),
+        column("reason", "TEXT", "short machine-readable event reason"),
+        column("message", "TEXT", "human-readable event description"),
+        column("count", "INTEGER", "number of times this event has occurred — quote with backticks in SQL"),
+        column("first_ts", "INTEGER", "first occurrence timestamp in epoch seconds, from firstTimestamp"),
+        column("last_ts", "INTEGER", "last occurrence timestamp in epoch seconds, from lastTimestamp"),
+        column("obj_kind", "TEXT", "involved object kind, from involvedObject.kind"),
+        column("obj_name", "TEXT", "involved object name, from involvedObject.name"),
+        column("obj_namespace", "TEXT", "involved object namespace, from involvedObject.namespace"),
+        column("source", "TEXT", "component that generated the event, from source.component"),
+    ]
+
+    def columns(self):
+        return self._COLUMNS
+
+    def make_rows(self, context) -> list[tuple[dict, tuple]]:
+        for item in context.data["items"]:
+            event = ItemHelper(item)
+            obj = item.get("involvedObject", {})
+            yield (
+                item,
+                (
+                    event.namespace,
+                    item.get("type"),
+                    item.get("reason"),
+                    item.get("message"),
+                    item.get("count"),
+                    parse_utc(item.get("firstTimestamp")),
+                    parse_utc(item.get("lastTimestamp")),
+                    obj.get("kind"),
+                    obj.get("name"),
+                    obj.get("namespace"),
+                    item.get("source", {}).get("component"),
+                ),
+            )

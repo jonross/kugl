@@ -9,7 +9,7 @@ import re
 import sys
 
 args = " ".join(sys.argv[1:])
-if m := re.match("get (pods|jobs|cronjobs|services|deployments|things) (-n default|--all-namespaces) -o json", args):
+if m := re.match("get (pods|jobs|cronjobs|services|deployments|events|things) (-n default|--all-namespaces) -o json", args):
     kind = m.group(1)
 elif re.match("get pods (-n default|--all-namespaces)", args):
     kind = "pod_statuses"

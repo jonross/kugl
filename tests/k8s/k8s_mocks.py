@@ -283,6 +283,36 @@ def make_deployment(
     return obj
 
 
+def make_event(
+    name: str,
+    namespace: str = "default",
+    event_type: str = "Normal",
+    reason: str = "Scheduled",
+    message: str = "Event message",
+    count: int = 1,
+    first_ts: int = UNIT_TEST_TIMEBASE,
+    last_ts: int = UNIT_TEST_TIMEBASE,
+    obj_kind: str = "Pod",
+    obj_name: str = "example-pod",
+    obj_namespace: str = "default",
+    source: str = "default-scheduler",
+):
+    obj = yaml.safe_load(_static_content("sample_event.yaml"))
+    obj["metadata"]["name"] = f"{obj_name}.{name}"
+    obj["metadata"]["namespace"] = namespace
+    obj["type"] = event_type
+    obj["reason"] = reason
+    obj["message"] = message
+    obj["count"] = count
+    obj["firstTimestamp"] = to_utc(first_ts)
+    obj["lastTimestamp"] = to_utc(last_ts)
+    obj["involvedObject"]["kind"] = obj_kind
+    obj["involvedObject"]["name"] = obj_name
+    obj["involvedObject"]["namespace"] = obj_namespace
+    obj["source"]["component"] = source
+    return obj
+
+
 @cache
 def _static_content(filename: str):
     return Path(__file__).parent.parent.joinpath("static", filename).read_text()
