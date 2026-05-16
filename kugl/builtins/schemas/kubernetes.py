@@ -10,6 +10,7 @@ import json
 import os
 from argparse import ArgumentParser
 from threading import Thread
+from typing import Optional
 
 from pydantic import model_validator
 
@@ -20,9 +21,14 @@ from kugl.util import WHITESPACE_RE, kube_context
 
 @resource_type("kubernetes", schema_defaults=["kubernetes"])
 class KubernetesResource(Resource):
+    # Does 'kubectl get' for this resource need a --namespace flag?
     namespaced: bool
+    # User specified -A on the command line
     _all_ns: bool
-    _ns: str
+    # User specified -n on the command line and this is the namespace
+    _ns: Optional[str]
+    # User specified -c on the command line and this is the context
+    _context: Optional[str]
 
     @model_validator(mode="after")
     @classmethod
@@ -46,9 +52,10 @@ class KubernetesResource(Resource):
         else:
             self._ns = args.namespace or "default"
             self._all_ns = False
+        self._context = args.context
 
     def cache_path(self) -> str:
-        return f"{kube_context()}/{self._ns}.{self.name}.json"
+        return f"{self._context or kube_context()}/{self._ns}.{self.name}.json"
 
     def get_objects(self) -> dict:
         """Fetch resources from Kubernetes using kubectl.
@@ -56,13 +63,14 @@ class KubernetesResource(Resource):
         :return: JSON as output by "kubectl get {self.name} -o json"
         """
         unit_testing = "KUGL_UNIT_TESTING" in os.environ
+        context_flag = ["--context", self._context] if self._context else []
         namespace_flag = ["--all-namespaces"] if self._all_ns else ["-n", self._ns]
         if self.name == "pods":
             pod_statuses = {}
 
             # Kick off a thread to get pod statuses
             def _fetch():
-                _, output, _ = run(["kubectl", "get", "pods", *namespace_flag])
+                _, output, _ = run(["kubectl", *context_flag, "get", "pods", *namespace_flag])
                 pod_statuses.update(self._pod_status_from_pod_list(output))
 
             status_thread = Thread(target=_fetch, daemon=True)
@@ -71,9 +79,9 @@ class KubernetesResource(Resource):
             if unit_testing:
                 status_thread.join()
         if self.namespaced:
-            _, output, _ = run(["kubectl", "get", self.name, *namespace_flag, "-o", "json"])
+            _, output, _ = run(["kubectl", *context_flag, "get", self.name, *namespace_flag, "-o", "json"])
         else:
-            _, output, _ = run(["kubectl", "get", self.name, "-o", "json"])
+            _, output, _ = run(["kubectl", *context_flag, "get", self.name, "-o", "json"])
         data = json.loads(output)
         if self.name == "pods":
             # Add pod status to pods

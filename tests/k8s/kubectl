@@ -8,7 +8,12 @@ from pathlib import Path
 import re
 import sys
 
-args = " ".join(sys.argv[1:])
+argv = sys.argv[1:]
+if "--context" in argv:
+    idx = argv.index("--context")
+    argv = argv[:idx] + argv[idx+2:]
+
+args = " ".join(argv)
 if m := re.match("get (pods|jobs|cronjobs|services|deployments|events|things) (-n default|--all-namespaces) -o json", args):
     kind = m.group(1)
 elif re.match("get pods (-n default|--all-namespaces)", args):
