@@ -1,3 +1,24 @@
+## 0.8.0
+
+New tables in ``kubernetes`` schema:
+
+- ``events``
+- ``cronjobs`` and ``cronjob_labels`` 
+- ``services`` and ``service_labels``
+- ``deployments`` and ``deployment_labels``
+
+CLI changes:
+
+- Added ``-c``/``--context`` option to specify a Kubernetes context
+- Renamed ``-a`` option to ``-A`` for consistency with ``kubectl``
+- Renamed ``-c``/``--cache`` to ``-s``/``--stale``
+- Renamed ``-u``/``--update`` to ``-r``/``--refresh``
+- Renamed ``-r``/``--reckless`` to ``-q``/``--quiet`` (and ``reckless:`` in settings to ``quiet:``)
+
+Other:
+
+- New masthead example of ``kugl`` vs ``kubectl | jq``
+
 ## 0.7.0
 
 - Add `init` subcommand to generate `kubernetes.yaml` per recommended post-install configuration

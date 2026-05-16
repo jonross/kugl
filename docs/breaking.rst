@@ -9,6 +9,9 @@ Please expect bugs and backward-incompatible changes.
 0.8.0
 ~~~~~
 
+CLI changes:
+
+- Added ``-c``/``--context`` option to specify a Kubernetes context
 - Renamed ``-a`` option to ``-A`` for consistency with ``kubectl``
 - Renamed ``-c``/``--cache`` to ``-s``/``--stale``
 - Renamed ``-u``/``--update`` to ``-r``/``--refresh``
