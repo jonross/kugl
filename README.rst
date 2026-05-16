@@ -6,11 +6,9 @@ Explore Kubernetes resources using SQLite.
 Example
 -------
 
-Find memory pressure by node — how much memory running and initializing
-pods are requesting, versus what each node can allocate. No configuration
-required.
-
-With Kugl:
+Report memory pressure by node — how much memory is requested by running and initializing
+pods, versus what each node can allocate.  Kugl understands Kubernetes memory and CPU
+units natively, and offers ``kubectl``'s human-friendly status string as a column:
 
 .. code:: shell
 
@@ -19,7 +17,18 @@ With Kugl:
             where p.phase = 'Running' or p.status like 'Init:%'
             group by n.name order by sum(p.mem_req) desc"
 
-With ``kubectl`` and ``jq``, that's a little more work:
+Result:
+
+.. code:: text
+
+   name                                         requested    allocatable
+   ip-10-12-18-252.us-east-2.compute.internal   42Gi         59Gi
+   ip-10-12-188-56.us-east-2.compute.internal   36Gi         120Gi
+   ...
+
+With ``kubectl -o json`` and ``jq``, that's rather more work.  Parsing units is your problem,
+status is derived from multiple fields, joins are awkward, and this doesn't yet cover
+output formatting:
 
 .. code:: shell
 
@@ -53,12 +62,6 @@ With ``kubectl`` and ``jq``, that's a little more work:
      map({node: .[0].node, requested: (map(.mem) | add), allocatable: $nodeMap[.[0].node].alloc}) |
      sort_by(-.requested)[] |
      [.node, .requested, .allocatable] | @tsv'
-
-The ``jq`` version pipes both ``kubectl`` calls through a brace group to avoid
-passing large JSON as a command-line argument — the ``--argjson`` alternative
-fails with ``argument list too long`` on clusters with many nodes. It also
-leaves byte values as raw integers; formatting them as ``to_size()`` does
-requires another pass.
 
 Installing
 ----------
