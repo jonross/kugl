@@ -16,6 +16,8 @@ Most invocations of Kugl will need ``-a`` or ``-n namespace``, just like
   Kubernetes resources. May not be combined with ``-n``.
 - ``-n, --namespace NS`` - Look in namespace ``NS`` for Kubernetes
   resources. May not be combined with ``-a``.
+- ``-c, --context CONTEXT`` - Use context ``CONTEXT`` for Kubernetes
+  resources.  If not specified, the current context is used.
 
 Cache control
 ~~~~~~~~~~~~~
