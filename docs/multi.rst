@@ -7,11 +7,12 @@ Other resource types
    ``PYTHONPATH.`` Kugl will refuse to read a configuration file that is
    world-writable.
 
+.. warning::
+   This is experimental, the functionality is pretty limited.
+   It's also subject to change.
+
 Extending Kugl to AWS
 ~~~~~~~~~~~~~~~~~~~~~
-
-(So far this is just an experiment, the functionality is pretty
-limited.)
 
 Using the ``exec`` resource type described in `Other resource
 types <./resources.rst>`__, you can make AWS data available for

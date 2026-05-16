@@ -111,9 +111,9 @@ element offering the metadate extracted from the pattern match, example
 .. code:: json
 
    [
-       { "match":  {"region": "us-east-1" }, "content": { ... file contents ... } },
-       { "match":  {"region": "us-east-2" }, "content": { ... file contents ... } },
-       { "match":  {"region": "us-west-1" }, "content": { ... file contents ... } },
+       { "match":  {"region": "us-east-1" }, "content": "file contents as string" },
+       { "match":  {"region": "us-east-2" }, "content": "file contents as string" },
+       { "match":  {"region": "us-west-1" }, "content": "file contents as string" },
    ]
 
 To build a table showing environment settings by region:
