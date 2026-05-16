@@ -47,7 +47,7 @@ Installing
 Kugl requires Python 3.9 or later, and kubectl.
 
 **This is an alpha release.** Please expect bugs and
-`backward-incompatible changes <./docs-tmp/breaking.md>`__
+`backward-incompatible changes <docs/breaking.rst>`__
 
 If you don't mind Kugl cluttering your Python with its
 `dependencies <./reqs_public.txt>`__:
@@ -95,11 +95,11 @@ Find the pods using the most memory:
 
    kugl -a "select namespace, name, to_size(mem_req) from pods order by mem_req desc limit 15"
 
-If this query is helpful, `save it <./docs-tmp/shortcuts.md>`__, then
+If this query is helpful, `save it <docs/shortcuts.rst>`__, then
 you can run ``kugl hi-mem``.
 
 Please also see the `recommended
-configuration <./docs-tmp/recommended.md>`__.
+configuration <docs/recommended.rst>`__.
 
 How it works (important)
 ------------------------
@@ -124,23 +124,28 @@ be set in the config file as well.
 
 In any case, please be mindful of stale data and server load.
 
+.. BEGIN_LEARN_MORE
+
 Learn more
 ----------
 
-- `Command-line syntax <./docs-tmp/syntax.md>`__
-- `Recommended configuration <./docs-tmp/recommended.md>`__
-- `Settings <./docs-tmp/settings.md>`__
-- `Built-in tables and functions <./docs-tmp/builtins.md>`__
-- `Configuring new columns and tables <./docs-tmp/extending.md>`__
-- `Troubleshooting and feedback <./docs-tmp/trouble.md>`__
+- `Command-line syntax <docs/syntax.rst>`__
+- `Recommended configuration <docs/recommended.rst>`__
+- `Settings <docs/settings.rst>`__
+- `Shortcuts <docs/shortcuts.rst>`__
+- `Built-in tables and functions <docs/builtins.rst>`__
+- `Configuring new columns and tables <docs/extending.rst>`__
+- `Troubleshooting and feedback <docs/trouble.rst>`__
 - Beyond Kubernetes and kubectl
 
-  - `Other resource types <./docs-tmp/resources.md>`__
-  - `Additional schemas <./docs-tmp/multi.md>`__
+  - `Other resource types <docs/resources.rst>`__
+  - `Additional schemas <docs/multi.rst>`__
 
 - `Release notes <./CHANGELOG.md>`__
-- `Breaking changes <./docs-tmp/breaking.md>`__
+- `Breaking changes <docs/breaking.rst>`__
 - `License <./LICENSE>`__
+
+.. END_LEARN_MORE
 
 Pronunciation
 ~~~~~~~~~~~~~
