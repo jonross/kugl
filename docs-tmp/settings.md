@@ -12,7 +12,7 @@ rather than on every usage from the command line.  Example:
 ```yaml
 settings:
   cache_timeout: 5m
-  reckless: true
+  quiet: true
 ```
 
 The `init_path` section of `settings` can be used to specify multiple configuration folders.

@@ -34,12 +34,12 @@ class KubernetesResource(Resource):
 
     @classmethod
     def add_cli_options(cls, ap: ArgumentParser):
-        ap.add_argument("-a", "--all", "--all-namespaces", dest="all", default=False, action="store_true")
+        ap.add_argument("-A", "--all", "--all-namespaces", dest="all", default=False, action="store_true")
         ap.add_argument("-n", "--namespace", type=str)
 
     def handle_cli_options(self, args):
         if args.all and args.namespace:
-            fail("Cannot use both -a/--all and -n/--namespace")
+            fail("Cannot use both -A/--all and -n/--namespace")
         if args.all:
             self._ns = "__all"
             self._all_ns = True

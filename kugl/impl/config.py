@@ -35,7 +35,7 @@ class Settings(BaseModel):
 
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     cache_timeout: Union[Age, int] = Age(120)
-    reckless: bool = False
+    quiet: bool = False
     no_headers: bool = False
     init_path: list[str] = []
 

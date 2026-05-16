@@ -14,7 +14,7 @@ Example:
 
    settings:
      cache_timeout: 5m
-     reckless: true
+     quiet: true
 
 The ``init_path`` section of ``settings`` can be used to specify
 multiple configuration folders. This is useful for team configuration

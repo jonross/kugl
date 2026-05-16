@@ -101,7 +101,7 @@ Top-level settings and shortcuts. Only this file may contain `settings:`.
 ```yaml
 settings:
   cache_timeout: 5m    # default 2m
-  reckless: true       # suppress stale-data warnings
+  quiet: true          # suppress stale-data warnings
   init_path:           # extra config folders, applied before ~/.kugl/
     - ~/team-kugl
 

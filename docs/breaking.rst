@@ -1,6 +1,19 @@
 Breaking changes
 ----------------
 
+Kugl is still in alpha.
+Please expect bugs and backward-incompatible changes.
+
+.. _080:
+
+0.8.0
+~~~~~
+
+- Renamed ``-a`` option to ``-A`` for consistency with ``kubectl``
+- Renamed ``-c``/``--cache`` to ``-s``/``--stale``
+- Renamed ``-u``/``--update`` to ``-r``/``--refresh``
+- Renamed ``-r``/``--reckless`` to ``-q``/``--quiet`` (and ``reckless:`` in settings to ``quiet:``)
+
 .. _050:
 
 0.5.0

@@ -139,9 +139,9 @@ Server load by **caching responses for two minutes**. This is why it
 often prints "Data delayed up to ..." messages.
 
 Depending on your cluster activity, the cache can be a help or a
-hindrance. You can suppress the "delayed" messages with the ``-r`` /
-``--reckless`` option, or always update data using the ``-u`` /
-``--update`` option. These behaviors, and the cache expiration time, can
+hindrance. You can suppress the "delayed" messages with the ``-q`` /
+``--quiet`` option, or always fetch fresh data using the ``-r`` /
+``--refresh`` option. These behaviors, and the cache expiration time, can
 be set in the config file as well.
 
 In any case, please be mindful of stale data and server load.

@@ -122,7 +122,7 @@ class Engine:
         for r in resource_refs:
             r.resource.handle_cli_options(self.args)
         refreshable, max_staleness = self.cache.advise_refresh(resource_refs, self.cache_flag)
-        if not self.settings.reckless and max_staleness is not None:
+        if not self.settings.quiet and max_staleness is not None:
             print(f"(Data may be up to {max_staleness} seconds old.)", file=sys.stderr)
             clock.CLOCK.sleep(0.5)
 

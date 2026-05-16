@@ -15,10 +15,10 @@ If your cluster is small, you could also (for instance) `alias kg="kugl -a"` and
 
 ### Cache control
 
-* `-c, --cache` - Always use cached data, if available, regardless of its age
-* `-r, --reckless` - Don't print stale data warnings
+* `-s, --stale` - Always use cached data, if available, regardless of its age
+* `-r, --refresh` - Always fetch fresh data from `kubectl`, regardless of data age
+* `-q, --quiet` - Don't print stale data warnings
 * `-t, --timeout AGE` - Change the expiration time for cached data, e.g. `5m`, `1h`; the default is `2m` (two minutes)
-* `-u, --update` - Always updated from `kubectl`, regardless of data age
 
 ## Other
 
