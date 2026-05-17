@@ -1,12 +1,3 @@
-## 0.9.0
-
-- Named scope syntax for multi-step ``row_source``: each entry takes ``as <name>`` and
-  columns reference ancestor objects with ``in <name>`` suffix (e.g. ``metadata.uid in node``);
-  the old ``^`` parent-hop syntax is removed
-- New ``from:`` column key that auto-detects label vs JMESPath: values matching
-  ``domain/key`` format (e.g. ``karpenter.sh/nodepool``) use label extraction, everything
-  else uses JMESPath
-
 ## 0.8.0
 
 New tables in ``kubernetes`` schema:
@@ -16,7 +7,7 @@ New tables in ``kubernetes`` schema:
 - ``services`` and ``service_labels``
 - ``deployments`` and ``deployment_labels``
 
-CLI changes:
+CLI changes (breaking):
 
 - Added ``-c``/``--context`` option to specify a Kubernetes context
 - Renamed ``-a`` option to ``-A`` for consistency with ``kubectl``
@@ -24,9 +15,19 @@ CLI changes:
 - Renamed ``-u``/``--update`` to ``-r``/``--refresh``
 - Renamed ``-r``/``--reckless`` to ``-q``/``--quiet`` (and ``reckless:`` in settings to ``quiet:``)
 
-Other:
+Extending tables:
+
+- Named scope syntax for multi-step ``row_source``: each entry takes ``as <name>`` and
+  columns reference ancestor objects with ``in <name>`` suffix (e.g. ``metadata.uid in node``);
+  the old ``^`` parent-hop syntax is removed
+- New ``from:`` column key that auto-detects label vs JMESPath: values matching
+  ``domain/key`` format (e.g. ``karpenter.sh/nodepool``) use label extraction, everything
+  else uses JMESPath
+
+Documentation:
 
 - New masthead example of ``kugl`` vs ``kubectl | jq``
+
 
 ## 0.7.0
 

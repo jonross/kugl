@@ -9,6 +9,9 @@ Please expect bugs and backward-incompatible changes.
 0.8.0
 ~~~~~
 
+The new `from:` syntax alternative to `path:` and `label:` is backwards compatible, but
+the old syntax is deprecated and will be removed in a future release.
+
 CLI changes:
 
 - Added ``-c``/``--context`` option to specify a Kubernetes context
