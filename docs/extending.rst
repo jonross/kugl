@@ -87,9 +87,10 @@ an element in the response JSON. You can also use the ``label``
 extractor, which is a shortcut to ``metadata.labels``, and can either be
 a single string or a list of labels to check in order.
 
-A third option, ``from:``, combines both: Kugl auto-detects whether a
+A new option, ``from:``, combines both: Kugl auto-detects whether a
 value is a label (matches ``domain/key`` format like
 ``karpenter.sh/nodepool``) or a JMESPath expression (everything else).
+This will become the default in a future release.
 So these two column definitions are equivalent:
 
 .. code:: yaml

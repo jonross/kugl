@@ -10,7 +10,7 @@ Kugl lets you query Kubernetes (and other) resources using SQL. It fetches JSON 
 ```
 kugl/
   api.py              # Public decorators: @table, @resource_type, @column
-  main.py             # CLI entry point
+  main.py             # CLI entry point; shortcut expansion occurs here when args.sql contains no spaces
   impl/
     engine.py         # Engine (query execution), DataCache, ResourceRef
     registry.py       # Registry (singleton), Schema, Resource base class
@@ -232,6 +232,7 @@ Set `KUGL_DEBUG` env var to a comma-separated list of topics:
 - `clock.CLOCK` is patched in tests to control time (for cache age calculations)
 - Tests use actual in-memory SQLite; no mocking of the DB layer
 - Kubernetes tests mock `kubectl` via fixtures in `tests/k8s/k8s_mocks.py`
+- Shortcut and config merge tests live in `tests/config/test_merge_init.py`
 
 ## Running Tests
 
