@@ -10,19 +10,25 @@ import json
 import os
 from argparse import ArgumentParser
 from threading import Thread
+from typing import Optional
 
 from pydantic import model_validator
 
 from ..helpers import Limits, ItemHelper, PodHelper, JobHelper, CronJobHelper
-from kugl.api import table, fail, resource, run, parse_utc, Resource, column
+from kugl.api import table, fail, resource_type, run, parse_utc, Resource, column
 from kugl.util import WHITESPACE_RE, kube_context
 
 
-@resource("kubernetes", schema_defaults=["kubernetes"])
+@resource_type("kubernetes", schema_defaults=["kubernetes"])
 class KubernetesResource(Resource):
+    # Does 'kubectl get' for this resource need a --namespace flag?
     namespaced: bool
+    # User specified -A on the command line
     _all_ns: bool
-    _ns: str
+    # User specified -n on the command line and this is the namespace
+    _ns: Optional[str]
+    # User specified -c on the command line and this is the context
+    _context: Optional[str]
 
     @model_validator(mode="after")
     @classmethod
@@ -34,21 +40,22 @@ class KubernetesResource(Resource):
 
     @classmethod
     def add_cli_options(cls, ap: ArgumentParser):
-        ap.add_argument("-a", "--all", "--all-namespaces", dest="all", default=False, action="store_true")
+        ap.add_argument("-A", "--all", "--all-namespaces", dest="all", default=False, action="store_true")
         ap.add_argument("-n", "--namespace", type=str)
 
     def handle_cli_options(self, args):
         if args.all and args.namespace:
-            fail("Cannot use both -a/--all and -n/--namespace")
+            fail("Cannot use both -A/--all and -n/--namespace")
         if args.all:
             self._ns = "__all"
             self._all_ns = True
         else:
             self._ns = args.namespace or "default"
             self._all_ns = False
+        self._context = args.context
 
     def cache_path(self) -> str:
-        return f"{kube_context()}/{self._ns}.{self.name}.json"
+        return f"{self._context or kube_context()}/{self._ns}.{self.name}.json"
 
     def get_objects(self) -> dict:
         """Fetch resources from Kubernetes using kubectl.
@@ -56,13 +63,14 @@ class KubernetesResource(Resource):
         :return: JSON as output by "kubectl get {self.name} -o json"
         """
         unit_testing = "KUGL_UNIT_TESTING" in os.environ
+        context_flag = ["--context", self._context] if self._context else []
         namespace_flag = ["--all-namespaces"] if self._all_ns else ["-n", self._ns]
         if self.name == "pods":
             pod_statuses = {}
 
             # Kick off a thread to get pod statuses
             def _fetch():
-                _, output, _ = run(["kubectl", "get", "pods", *namespace_flag])
+                _, output, _ = run(["kubectl", *context_flag, "get", "pods", *namespace_flag])
                 pod_statuses.update(self._pod_status_from_pod_list(output))
 
             status_thread = Thread(target=_fetch, daemon=True)
@@ -71,9 +79,9 @@ class KubernetesResource(Resource):
             if unit_testing:
                 status_thread.join()
         if self.namespaced:
-            _, output, _ = run(["kubectl", "get", self.name, *namespace_flag, "-o", "json"])
+            _, output, _ = run(["kubectl", *context_flag, "get", self.name, *namespace_flag, "-o", "json"])
         else:
-            _, output, _ = run(["kubectl", "get", self.name, "-o", "json"])
+            _, output, _ = run(["kubectl", *context_flag, "get", self.name, "-o", "json"])
         data = json.loads(output)
         if self.name == "pods":
             # Add pod status to pods
@@ -311,3 +319,126 @@ class CronJobsTable:
 @table(schema="kubernetes", name="cronjob_labels", resource="cronjobs")
 class CronJobLabelsTable(LabelsTable):
     UID_FIELD = "cronjob_uid"
+
+
+@table(schema="kubernetes", name="services", resource="services")
+class ServicesTable:
+    _COLUMNS = [
+        column("name", "TEXT", "service name, from metadata.name"),
+        column("uid", "TEXT", "service UID, from metadata.uid"),
+        column("namespace", "TEXT", "service namespace, from metadata.namespace"),
+        column("type", "TEXT", "service type: ClusterIP, NodePort, LoadBalancer, or ExternalName"),
+        column("cluster_ip", "TEXT", "cluster IP, or null for headless services"),
+        column("external_ip", "TEXT", "external IP or hostname for LoadBalancer services, or null"),
+        column("creation_ts", "INTEGER", "creation timestamp in epoch seconds, from metadata.creationTimestamp"),
+    ]
+
+    def columns(self):
+        return self._COLUMNS
+
+    def make_rows(self, context) -> list[tuple[dict, tuple]]:
+        for item in context.data["items"]:
+            svc = ItemHelper(item)
+            cluster_ip = item["spec"].get("clusterIP")
+            ingress = item.get("status", {}).get("loadBalancer", {}).get("ingress", [])
+            external_ip = (ingress[0].get("ip") or ingress[0].get("hostname")) if ingress else None
+            yield (
+                item,
+                (
+                    svc.name,
+                    svc.metadata.get("uid"),
+                    svc.namespace,
+                    item["spec"].get("type"),
+                    None if cluster_ip == "None" else cluster_ip,
+                    external_ip,
+                    parse_utc(svc.metadata.get("creationTimestamp")),
+                ),
+            )
+
+
+@table(schema="kubernetes", name="service_labels", resource="services")
+class ServiceLabelsTable(LabelsTable):
+    UID_FIELD = "service_uid"
+
+
+@table(schema="kubernetes", name="deployments", resource="deployments")
+class DeploymentsTable:
+    _COLUMNS = [
+        column("name", "TEXT", "deployment name, from metadata.name"),
+        column("uid", "TEXT", "deployment UID, from metadata.uid"),
+        column("namespace", "TEXT", "deployment namespace, from metadata.namespace"),
+        column("replicas", "INTEGER", "desired replica count, from spec.replicas"),
+        column("ready", "INTEGER", "ready replicas, from status.readyReplicas"),
+        column("available", "INTEGER", "available replicas, from status.availableReplicas"),
+        column("updated", "INTEGER", "updated replicas, from status.updatedReplicas"),
+        column("strategy", "TEXT", "rollout strategy: RollingUpdate or Recreate, from spec.strategy.type"),
+        column("creation_ts", "INTEGER", "creation timestamp in epoch seconds, from metadata.creationTimestamp"),
+    ]
+
+    def columns(self):
+        return self._COLUMNS
+
+    def make_rows(self, context) -> list[tuple[dict, tuple]]:
+        for item in context.data["items"]:
+            deploy = ItemHelper(item)
+            status = item.get("status", {})
+            yield (
+                item,
+                (
+                    deploy.name,
+                    deploy.metadata.get("uid"),
+                    deploy.namespace,
+                    item["spec"].get("replicas"),
+                    status.get("readyReplicas"),
+                    status.get("availableReplicas"),
+                    status.get("updatedReplicas"),
+                    item["spec"].get("strategy", {}).get("type"),
+                    parse_utc(deploy.metadata.get("creationTimestamp")),
+                ),
+            )
+
+
+@table(schema="kubernetes", name="deployment_labels", resource="deployments")
+class DeploymentLabelsTable(LabelsTable):
+    UID_FIELD = "deployment_uid"
+
+
+@table(schema="kubernetes", name="events", resource="events")
+class EventsTable:
+    _COLUMNS = [
+        column("namespace", "TEXT", "event namespace, from metadata.namespace"),
+        column("type", "TEXT", "event type: Normal or Warning — quote with backticks in SQL"),
+        column("reason", "TEXT", "short machine-readable event reason"),
+        column("message", "TEXT", "human-readable event description"),
+        column("count", "INTEGER", "number of times this event has occurred — quote with backticks in SQL"),
+        column("first_ts", "INTEGER", "first occurrence timestamp in epoch seconds, from firstTimestamp"),
+        column("last_ts", "INTEGER", "last occurrence timestamp in epoch seconds, from lastTimestamp"),
+        column("obj_kind", "TEXT", "involved object kind, from involvedObject.kind"),
+        column("obj_name", "TEXT", "involved object name, from involvedObject.name"),
+        column("obj_namespace", "TEXT", "involved object namespace, from involvedObject.namespace"),
+        column("source", "TEXT", "component that generated the event, from source.component"),
+    ]
+
+    def columns(self):
+        return self._COLUMNS
+
+    def make_rows(self, context) -> list[tuple[dict, tuple]]:
+        for item in context.data["items"]:
+            event = ItemHelper(item)
+            obj = item.get("involvedObject", {})
+            yield (
+                item,
+                (
+                    event.namespace,
+                    item.get("type"),
+                    item.get("reason"),
+                    item.get("message"),
+                    item.get("count"),
+                    parse_utc(item.get("firstTimestamp")),
+                    parse_utc(item.get("lastTimestamp")),
+                    obj.get("kind"),
+                    obj.get("name"),
+                    obj.get("namespace"),
+                    item.get("source", {}).get("component"),
+                ),
+            )

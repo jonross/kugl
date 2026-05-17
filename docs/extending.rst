@@ -85,7 +85,19 @@ Column extractors and defaults
 You've seen how the ``path`` extractor works, using JMESPath to identify
 an element in the response JSON. You can also use the ``label``
 extractor, which is a shortcut to ``metadata.labels``, and can either be
-a single string or a list of labels to check in order
+a single string or a list of labels to check in order.
+
+A third option, ``from:``, combines both: Kugl auto-detects whether a
+value is a label (matches ``domain/key`` format like
+``karpenter.sh/nodepool``) or a JMESPath expression (everything else).
+So these two column definitions are equivalent:
+
+.. code:: yaml
+
+   - name: node_pool
+     label: karpenter.sh/nodepool
+   - name: node_pool
+     from: karpenter.sh/nodepool
 
 There are some useful defaults as well:
 
@@ -152,30 +164,29 @@ a pod can have multiple containers. Kugl handles this using the
      - table: node_taints
        resource: nodes
        row_source:
-         - items
-         - spec.taints
+         - items as node
+         - spec.taints as taint
        columns:
          - name: node_uid
-           path: ^metadata.uid
+           path: metadata.uid in node
          - name: key
-           path: key
+           path: key in taint
          - name: effect
-           path: effect
+           path: effect in taint
 
-Each element in ``row_source`` is a JMESPath expression that selects
-items relative to the prior selector. Only the last element in the list
-is used to generate a row, but ``path``\ s can refer to any part of the
-chain. Each ``"^"`` at the start of a ``path`` refers to the part of the
-response one level higher than the bottom ``row_source`` element. In
-this case
+Each element in ``row_source`` is a JMESPath expression followed by an
+``as <name>`` label. Every step must be named when the table has more
+than one ``row_source`` entry. Column ``path`` and ``label`` values
+identify which level they address by ending with ``in <name>``:
 
-- ``^metadata.uid`` means the ``.metadata.uid`` in each element of the
-  response ``items`` array
-- ``key`` and ``effect`` refer to each taint in the ``spec.taints``
-  array
+- ``metadata.uid in node`` reads ``.metadata.uid`` from each element of
+  the ``items`` array (named ``node``)
+- ``key in taint`` and ``effect in taint`` read fields from each taint
+  in the ``spec.taints`` array (named ``taint``)
 
 The default ``row_source`` is just ``items``, which is why the example
-``workflows`` table shown earlier doesn't need to specify it.
+``workflows`` table shown earlier doesn't need to specify it. Single-step
+tables use bare JMESPath paths with no ``in <name>`` qualifier.
 
 This syntax also applies to the ``label`` extractor. For example, if the
 ``row_source`` of a table needs to address Job metadata but also
@@ -186,13 +197,13 @@ metadata from the Job pod template, you can write this:
      ...
      resource: jobs
      row_source:
-       - items
-       - spec.template
+       - items as job
+       - spec.template as template
      columns:
        - name: label_from_job
-         label: ^a-job-label
+         label: a-job-label in job
        - name: label_from_pod
-         label: a-pod-label
+         label: a-pod-label in template
 
 More about row_source
 ~~~~~~~~~~~~~~~~~~~~~
@@ -213,8 +224,8 @@ In detail, here's how ``row_source`` is handled.
 - Repeat with each successive ``row_source`` entry.
 
 This can produce surprising results if one step in the ``row_source``
-list tries to do too much. Let's say the ``node_taints`` table didn't
-need a ``^metadata.uid`` reference, so only requires the taint lists.
+list tries to do too much. Let's say the ``node_taints`` table only
+needed the taint lists, with no reference to node metadata.
 This source list would not work, because ``.spec`` is not a child of
 ``.items``.
 
@@ -302,6 +313,7 @@ Tips
 If creating multiple tables from a resource, you should use the ``uid``
 column (sourced from ``metadata.uid``) as a join key, since this is a
 guaranteed unique key.
+(Example: `nodes` and `node_labels`, `pods` and `pod_labels`.)
 
 The ``utils:`` section of ``~/.kugl/init.yaml`` is ignored during
 configuration parsing, so you can use it to store reusable bits of YAML.

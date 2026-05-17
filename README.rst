@@ -6,40 +6,62 @@ Explore Kubernetes resources using SQLite.
 Example
 -------
 
-Find the top users of a GPU pool, based on instance type and a
-team-specific pod label.
-
-With Kugl (and a bit of configuration for owner and instance type)
-
-.. code:: shell
-
-   kugl -a "select owner, sum(gpu_req), sum(cpu_req)
-            from pods join nodes on pods.node_name = nodes.name
-            where instance_type like 'g5.%large' and pods.phase in ('Running', 'Pending')
-            group by 1 order by 2 desc limit 10"
-
-With ``kubectl`` and ``jq``, that's a little more work:
+Report memory pressure by node — how much memory is requested by running and initializing
+pods, versus what each node can allocate.  Kugl understands Kubernetes memory and CPU
+units natively, and offers ``kubectl``'s human-friendly status string as a column:
 
 .. code:: shell
 
-   kubectl get pods -o json --all | 
-   jq -r --argjson nodes "$(kubectl get nodes -o json | jq '[.items[] 
-           | select((.metadata.labels["node.kubernetes.io/instance-type"] // "") | test("g5.*large")) 
-           | .metadata.name]')" \
-     '[ .items[]
-       | select(.spec.nodeName as $node | $nodes | index($node))
-       | select(.status.phase == "Running" or .status.phase == "Pending")
-       | . as $pod | $pod.spec.containers[]
-       | select(.resources.requests["nvidia.com/gpu"] != null)
-       | {owner: $pod.metadata.labels["com.mycompany/job-owner"], 
-          gpu: .resources.requests["nvidia.com/gpu"], 
-          cpu: .resources.requests["cpu"]}
-     ] | group_by(.owner) 
-     | map({owner: .[0].owner, 
-            gpu: map(.gpu | tonumber) | add, 
-            cpu: map(.cpu | if test("m$") then (sub("m$"; "") | tonumber / 1000) else tonumber end) | add})
-     | sort_by(-.gpu) | .[:10] | .[]
-     | "\(.owner) \(.gpu) \(.cpu)"'
+   kugl -a "select n.name, to_size(sum(p.mem_req)) as requested, to_size(n.mem_alloc) as allocatable
+            from nodes n join pods p on p.node_name = n.name
+            where p.phase = 'Running' or p.status like 'Init:%'
+            group by n.name order by sum(p.mem_req) desc"
+
+Result:
+
+.. code:: text
+
+   name                                         requested    allocatable
+   ip-10-12-18-252.us-east-2.compute.internal   42Gi         59Gi
+   ip-10-12-188-56.us-east-2.compute.internal   36Gi         120Gi
+   ...
+
+With ``kubectl -o json`` and ``jq``, that's rather more work.  Parsing units is your problem,
+status is derived from multiple fields, joins are awkward, and this doesn't yet cover
+output formatting:
+
+.. code:: shell
+
+   { kubectl get nodes -o json; kubectl get pods -A -o json; } | jq -rn '
+     def membytes:
+       if test("Ki$") then (gsub("Ki$"; "") | tonumber * 1024)
+       elif test("Mi$") then (gsub("Mi$"; "") | tonumber * 1048576)
+       elif test("Gi$") then (gsub("Gi$"; "") | tonumber * 1073741824)
+       elif test("K$")  then (gsub("K$";  "") | tonumber * 1000)
+       elif test("M$")  then (gsub("M$";  "") | tonumber * 1000000)
+       elif test("G$")  then (gsub("G$";  "") | tonumber * 1000000000)
+       else tonumber end;
+     (input | .items | map({
+       name: .metadata.name,
+       alloc: (.status.allocatable.memory | membytes)
+     }) | INDEX(.name)) as $nodeMap |
+     [input | .items[] |
+       select(
+         .status.phase == "Running" or
+         (((.spec.initContainers // []) | length) > 0 and
+          ((.status.initContainerStatuses // []) | map(select(.ready)) | length) <
+          ((.spec.initContainers // []) | length))
+       ) |
+       select(.spec.nodeName) |
+       {
+         node: .spec.nodeName,
+         mem: ([.spec.containers[].resources.requests.memory // "0"] | map(membytes) | add)
+       }
+     ] |
+     group_by(.node) |
+     map({node: .[0].node, requested: (map(.mem) | add), allocatable: $nodeMap[.[0].node].alloc}) |
+     sort_by(-.requested)[] |
+     [.node, .requested, .allocatable] | @tsv'
 
 Installing
 ----------
@@ -47,7 +69,7 @@ Installing
 Kugl requires Python 3.9 or later, and kubectl.
 
 **This is an alpha release.** Please expect bugs and
-`backward-incompatible changes <./docs-tmp/breaking.md>`__
+`backward-incompatible changes <docs/breaking.rst>`__
 
 If you don't mind Kugl cluttering your Python with its
 `dependencies <./reqs_public.txt>`__:
@@ -95,11 +117,11 @@ Find the pods using the most memory:
 
    kugl -a "select namespace, name, to_size(mem_req) from pods order by mem_req desc limit 15"
 
-If this query is helpful, `save it <./docs-tmp/shortcuts.md>`__, then
+If this query is helpful, `save it <docs/shortcuts.rst>`__, then
 you can run ``kugl hi-mem``.
 
 Please also see the `recommended
-configuration <./docs-tmp/recommended.md>`__.
+configuration <docs/recommended.rst>`__.
 
 How it works (important)
 ------------------------
@@ -117,30 +139,35 @@ Server load by **caching responses for two minutes**. This is why it
 often prints "Data delayed up to ..." messages.
 
 Depending on your cluster activity, the cache can be a help or a
-hindrance. You can suppress the "delayed" messages with the ``-r`` /
-``--reckless`` option, or always update data using the ``-u`` /
-``--update`` option. These behaviors, and the cache expiration time, can
+hindrance. You can suppress the "delayed" messages with the ``-q`` /
+``--quiet`` option, or always fetch fresh data using the ``-r`` /
+``--refresh`` option. These behaviors, and the cache expiration time, can
 be set in the config file as well.
 
 In any case, please be mindful of stale data and server load.
 
+.. BEGIN_LEARN_MORE
+
 Learn more
 ----------
 
-- `Command-line syntax <./docs-tmp/syntax.md>`__
-- `Recommended configuration <./docs-tmp/recommended.md>`__
-- `Settings <./docs-tmp/settings.md>`__
-- `Built-in tables and functions <./docs-tmp/builtins.md>`__
-- `Configuring new columns and tables <./docs-tmp/extending.md>`__
-- `Troubleshooting and feedback <./docs-tmp/trouble.md>`__
+- `Command-line syntax <docs/syntax.rst>`__
+- `Recommended configuration <docs/recommended.rst>`__
+- `Settings <docs/settings.rst>`__
+- `Shortcuts <docs/shortcuts.rst>`__
+- `Built-in tables and functions <docs/builtins.rst>`__
+- `Configuring new columns and tables <docs/extending.rst>`__
+- `Troubleshooting and feedback <docs/trouble.rst>`__
 - Beyond Kubernetes and kubectl
 
-  - `Other resource types <./docs-tmp/resources.md>`__
-  - `Additional schemas <./docs-tmp/multi.md>`__
+  - `Other resource types <docs/resources.rst>`__
+  - `Additional schemas <docs/multi.rst>`__
 
 - `Release notes <./CHANGELOG.md>`__
-- `Breaking changes <./docs-tmp/breaking.md>`__
+- `Breaking changes <docs/breaking.rst>`__
 - `License <./LICENSE>`__
+
+.. END_LEARN_MORE
 
 Pronunciation
 ~~~~~~~~~~~~~

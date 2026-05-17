@@ -101,23 +101,24 @@ def parse_args(
     argv: list[str], ap: ArgumentParser, settings: Settings
 ) -> tuple[argparse.Namespace, CacheFlag]:
     """Add stock arguments to parser, parse the command line, and override settings."""
+    ap.add_argument("-c", "--context", type=str)
     ap.add_argument("-D", "--debug", type=str)
-    ap.add_argument("-c", "--cache", default=False, action="store_true")
     ap.add_argument("-H", "--no-headers", default=False, action="store_true")
-    ap.add_argument("-r", "--reckless", default=False, action="store_true")
+    ap.add_argument("-q", "--quiet", default=False, action="store_true")
+    ap.add_argument("-r", "--refresh", default=False, action="store_true")
+    ap.add_argument("-s", "--stale", default=False, action="store_true")
     ap.add_argument("-t", "--timeout", type=str)
-    ap.add_argument("-u", "--update", default=False, action="store_true")
     ap.add_argument("sql")
     args = ap.parse_args(argv)
-    if args.cache and args.update:
-        fail("Cannot use both -c/--cache and -u/--update")
+    if args.stale and args.refresh:
+        fail("Cannot use both -s/--stale and -r/--refresh")
     if args.timeout:
         settings.cache_timeout = Age(args.timeout)
-    if args.reckless:
-        settings.reckless = True
+    if args.quiet:
+        settings.quiet = True
     if args.no_headers:
         settings.no_headers = True
-    return args, (ALWAYS_UPDATE if args.update else NEVER_UPDATE if args.cache else CHECK)
+    return args, (ALWAYS_UPDATE if args.refresh else NEVER_UPDATE if args.stale else CHECK)
 
 
 def _merge_init_files() -> tuple[UserInit, dict[str, Shortcut]]:

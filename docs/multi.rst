@@ -7,11 +7,12 @@ Other resource types
    ``PYTHONPATH.`` Kugl will refuse to read a configuration file that is
    world-writable.
 
+.. warning::
+   This is experimental, the functionality is pretty limited.
+   It's also subject to change.
+
 Extending Kugl to AWS
 ~~~~~~~~~~~~~~~~~~~~~
-
-(So far this is just an experiment, the functionality is pretty
-limited.)
 
 Using the ``exec`` resource type described in `Other resource
 types <./resources.rst>`__, you can make AWS data available for
@@ -27,19 +28,19 @@ query. For example: if ``~/.kugl/ec2.yaml`` contains
      - table: instances
        resource: instances
        row_source:
-         - Reservations
-         - Instances
+         - Reservations as reservation
+         - Instances as instance
        columns:
          - name: type
-           path: InstanceType
+           path: InstanceType in instance
          - name: zone
-           path: Placement.AvailabilityZone
+           path: Placement.AvailabilityZone in instance
          - name: private_dns
-           path: PrivateDnsName
+           path: PrivateDnsName in instance
          - name: state
-           path: State.Name
+           path: State.Name in instance
          - name: launched
-           path: LaunchTime
+           path: LaunchTime in instance
 
 you can write
 

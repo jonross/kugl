@@ -215,6 +215,104 @@ def make_cronjob(
     return obj
 
 
+def make_service(
+    name: str,
+    namespace: str = None,
+    svc_type: str = "ClusterIP",
+    cluster_ip: str = "10.96.0.1",
+    external_ip: str = None,
+    labels: Optional[dict] = None,
+):
+    """
+    Construct a Service dict from a generic chunk of YAML that we can alter to simulate different
+    responses from the K8S API.
+
+    :param name: Service name
+    :param svc_type: Service type (ClusterIP, NodePort, LoadBalancer, ExternalName)
+    :param cluster_ip: Cluster IP, or "None" for headless/ExternalName services
+    :param external_ip: External IP for LoadBalancer services
+    """
+    obj = yaml.safe_load(_static_content("sample_service.yaml"))
+    obj["metadata"]["name"] = name
+    obj["metadata"]["uid"] = "uid-" + name
+    if namespace is not None:
+        obj["metadata"]["namespace"] = namespace
+    obj["spec"]["type"] = svc_type
+    obj["spec"]["clusterIP"] = cluster_ip
+    if external_ip is not None:
+        obj["status"]["loadBalancer"]["ingress"] = [{"ip": external_ip}]
+    if labels is not None:
+        obj["metadata"]["labels"] = labels
+    return obj
+
+
+def make_deployment(
+    name: str,
+    namespace: str = None,
+    replicas: int = 3,
+    ready: int = None,
+    available: int = None,
+    updated: int = None,
+    strategy: str = "RollingUpdate",
+    labels: Optional[dict] = None,
+):
+    """
+    Construct a Deployment dict from a generic chunk of YAML that we can alter to simulate different
+    responses from the K8S API.
+
+    :param name: Deployment name
+    :param replicas: Desired replica count
+    :param ready: Ready replicas (defaults to replicas)
+    :param available: Available replicas (defaults to replicas)
+    :param updated: Updated replicas (defaults to replicas)
+    :param strategy: Rollout strategy (RollingUpdate or Recreate)
+    """
+    obj = yaml.safe_load(_static_content("sample_deployment.yaml"))
+    obj["metadata"]["name"] = name
+    obj["metadata"]["uid"] = "uid-" + name
+    if namespace is not None:
+        obj["metadata"]["namespace"] = namespace
+    obj["spec"]["replicas"] = replicas
+    obj["spec"]["strategy"]["type"] = strategy
+    obj["status"]["replicas"] = replicas
+    obj["status"]["readyReplicas"] = replicas if ready is None else ready
+    obj["status"]["availableReplicas"] = replicas if available is None else available
+    obj["status"]["updatedReplicas"] = replicas if updated is None else updated
+    if labels is not None:
+        obj["metadata"]["labels"] = labels
+    return obj
+
+
+def make_event(
+    name: str,
+    namespace: str = "default",
+    event_type: str = "Normal",
+    reason: str = "Scheduled",
+    message: str = "Event message",
+    count: int = 1,
+    first_ts: int = UNIT_TEST_TIMEBASE,
+    last_ts: int = UNIT_TEST_TIMEBASE,
+    obj_kind: str = "Pod",
+    obj_name: str = "example-pod",
+    obj_namespace: str = "default",
+    source: str = "default-scheduler",
+):
+    obj = yaml.safe_load(_static_content("sample_event.yaml"))
+    obj["metadata"]["name"] = f"{obj_name}.{name}"
+    obj["metadata"]["namespace"] = namespace
+    obj["type"] = event_type
+    obj["reason"] = reason
+    obj["message"] = message
+    obj["count"] = count
+    obj["firstTimestamp"] = to_utc(first_ts)
+    obj["lastTimestamp"] = to_utc(last_ts)
+    obj["involvedObject"]["kind"] = obj_kind
+    obj["involvedObject"]["name"] = obj_name
+    obj["involvedObject"]["namespace"] = obj_namespace
+    obj["source"]["component"] = source
+    return obj
+
+
 @cache
 def _static_content(filename: str):
     return Path(__file__).parent.parent.joinpath("static", filename).read_text()

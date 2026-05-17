@@ -1,3 +1,34 @@
+## 0.8.0
+
+New tables in ``kubernetes`` schema:
+
+- ``events``
+- ``cronjobs`` and ``cronjob_labels`` 
+- ``services`` and ``service_labels``
+- ``deployments`` and ``deployment_labels``
+
+CLI changes (breaking):
+
+- Added ``-c``/``--context`` option to specify a Kubernetes context
+- Renamed ``-a`` option to ``-A`` for consistency with ``kubectl``
+- Renamed ``-c``/``--cache`` to ``-s``/``--stale``
+- Renamed ``-u``/``--update`` to ``-r``/``--refresh``
+- Renamed ``-r``/``--reckless`` to ``-q``/``--quiet`` (and ``reckless:`` in settings to ``quiet:``)
+
+Extending tables:
+
+- Breaking: Named scope syntax for multi-step ``row_source``: each entry takes ``as <name>`` and
+  columns reference ancestor objects with ``in <name>`` suffix (e.g. ``metadata.uid in node``);
+  the old ``^`` parent-hop syntax is removed
+- New ``from:`` column key that auto-detects label vs JMESPath: values matching
+  ``domain/key`` format (e.g. ``karpenter.sh/nodepool``) use label extraction, everything
+  else uses JMESPath (``path:`` and ``label:`` to be removed in a future release)
+
+Documentation:
+
+- New masthead example of ``kugl`` vs ``kubectl | jq``
+
+
 ## 0.7.0
 
 - Add `init` subcommand to generate `kubernetes.yaml` per recommended post-install configuration
@@ -40,7 +71,7 @@
 - Allow environment variables in `file` resource paths
 - Fix the `exec` resource by adding a `cache_key` field; these resources would otherwise experience cache collisions
 - Resource cache paths and file formats have changed, and cache now lives in `~/.kuglcache`
-- `rm -r ~/.kugl/cache` is recommended to clear obsolete files
+- `rm -r ~/.kuglcache` is recommended to clear obsolete files
 
 ## 0.3.3
 

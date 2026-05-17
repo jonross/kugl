@@ -15,8 +15,8 @@ from kugl.util import KuglError, Age, kugl_home
 
 
 def test_enforce_cache_option(test_home):
-    with pytest.raises(KuglError, match="Cannot use both -c/--cache and -u/--update"):
-        main1(["-c", "-u", "select 1"])
+    with pytest.raises(KuglError, match="Cannot use both -s/--stale and -r/--refresh"):
+        main1(["-s", "-r", "select 1"])
 
 
 def test_enforce_cache_option_via_shortcut(test_home, capsys):
@@ -24,16 +24,16 @@ def test_enforce_cache_option_via_shortcut(test_home, capsys):
         shortcuts:
           - name: foo
             args:
-              - -u
+              - -r
               - "select 1"
     """)
-    with pytest.raises(KuglError, match="Cannot use both -c/--cache and -u/--update"):
-        main1(["-c", "foo"])
+    with pytest.raises(KuglError, match="Cannot use both -s/--stale and -r/--refresh"):
+        main1(["-s", "foo"])
 
 
 def test_enforce_one_namespace_option(test_home):
-    with pytest.raises(KuglError, match="Cannot use both -a/--all and -n/--namespace"):
-        main1(["-a", "-n", "x", "select * from pods"])
+    with pytest.raises(KuglError, match="Cannot use both -A/--all and -n/--namespace"):
+        main1(["-A", "-n", "x", "select * from pods"])
 
 
 def test_no_such_table(test_home):
@@ -65,7 +65,7 @@ def test_unknown_option_in_shortcut(test_home, capsys):
           - "select * from pods"
     """)
     with pytest.raises(SystemExit):
-        main1(["-a", "foo"])
+        main1(["-A", "foo"])
     assert "unrecognized arguments: --badoption" in capsys.readouterr().err
 
 
@@ -77,22 +77,22 @@ def test_no_headers(test_home, capsys):
 
 
 @pytest.mark.parametrize(
-    "argv,expected_flag,age,reckless,error",
+    "argv,expected_flag,age,quiet,error",
     [
-        (["-u", "select 1"], ALWAYS_UPDATE, Age(120), False, None),
+        (["-r", "select 1"], ALWAYS_UPDATE, Age(120), False, None),
         (["-t", "5", "select 1"], CHECK, Age(5), False, None),
-        (["-c", "-r", "select 1"], NEVER_UPDATE, Age(120), True, None),
+        (["-s", "-q", "select 1"], NEVER_UPDATE, Age(120), True, None),
         (
-            ["-c", "-u", "select 1"],
+            ["-s", "-r", "select 1"],
             None,
             None,
             None,
-            "Cannot use both -c/--cache and -u/--update",
+            "Cannot use both -s/--stale and -r/--refresh",
         ),
     ],
 )
-def test_parse_args(test_home, argv, expected_flag, age, reckless, error):
-    """Verify correct values received for -u, -t, -c, -r options"""
+def test_parse_args(test_home, argv, expected_flag, age, quiet, error):
+    """Verify correct values received for -r, -t, -s, -q options"""
     ap = ArgumentParser()
     settings = Settings()
     if error:
@@ -102,7 +102,7 @@ def test_parse_args(test_home, argv, expected_flag, age, reckless, error):
         args, actual_flag = parse_args(argv, ap, settings)
         assert actual_flag == expected_flag
         assert settings.cache_timeout == age
-        assert settings.reckless == reckless
+        assert settings.quiet == quiet
 
 
 def test_init_command(test_home, capsys):

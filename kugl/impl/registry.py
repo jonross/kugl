@@ -54,7 +54,7 @@ class Registry:
 
     def add_resource(self, cls: type, family: str, schema_defaults: list[str]):
         """
-        Register a resource type.  This is called by the @resource decorator.
+        Register a resource type.  This is called by the @resource_type decorator.
 
         :param cls: The class to register
         :param family: e.g. "file", "kubernetes", "aws"
@@ -87,7 +87,7 @@ class Registry:
             fail(f"Resource family {family} is not registered")
         return impl
 
-    def get_resource_by_schema(self, schema_name: str) -> Type:
+    def get_schema_default_resource(self, schema_name: str) -> Type:
         return self.resources_by_schema.get(schema_name)
 
     def augment_cli(self, ap: ArgumentParser):
@@ -132,10 +132,15 @@ class Resource(BaseModel):
 class Schema(BaseModel):
     """Collection of tables and resource definitions."""
 
+    # schema name
     name: str
+    # name -> table defined in python code
     builtin: dict[str, TableDef] = {}
+    # name -> table defined in config file
     _create: dict[str, CreateTable] = {}
+    # name -> table extended in config file
     _extend: dict[str, ExtendTable] = {}
+    # name -> resource defined in config file
     _resources: dict[str, Resource] = {}
 
     def read_configs(self, init_path: list[str]):
@@ -148,6 +153,7 @@ class Schema(BaseModel):
         ]
 
         # Reset the non-builtin tables, since these can change during unit tests.
+        # (We don't create a new registry per test.)
         self._create.clear()
         self._extend.clear()
         self._resources.clear()
@@ -160,14 +166,15 @@ class Schema(BaseModel):
                 columns_known.add(column.name)
 
         def _check_column(table_name, column_name):
-            # Detect duplicate columns
+            # Reject duplicate column, or add to known if new.
             columns_known = tables_known[table_name]
             if column_name in columns_known:
                 fail(f"Column '{column_name}' is already defined in table '{table_name}'")
             columns_known.add(column_name)
 
-        def _apply(folder: ConfigPath):
+        def _merge_config(folder: ConfigPath):
             # Merge one UserConfig into the schema.
+            # Return True if the folder exists, else False
             path = folder / f"{self.name}.yaml"
             if not path.exists():
                 return False
@@ -201,7 +208,7 @@ class Schema(BaseModel):
             return True
 
         # Apply builtin config and user config.
-        found = any([_apply(folder) for folder in init_path])
+        found = any([_merge_config(folder) for folder in init_path])
         if not found and self.name != DEFAULT_SCHEMA:
             # There's a built-in schema for Kubernetes, so no issue if no config files
             fail(f"no configurations found for schema '{self.name}'")
@@ -218,31 +225,33 @@ class Schema(BaseModel):
             if family in fields:
                 return parse_model(rgy.get_resource_by_family(family), fields)
         # If no family is specified, the schema may have a default one
-        if impl := rgy.get_resource_by_schema(self.name):
+        if impl := rgy.get_schema_default_resource(self.name):
             return parse_model(impl, fields)
         fail(
             f"can't infer type of resource '{r.name}' -- need one of 'file', 'data', 'namespaced' etc"
         )
 
-    def table_builder(self, name, missing_ok=True):
+    def table_builder(self, table_name: str, missing_ok=True):
         """Return the Table builder subclass (see tables.py) for a table name.
-        :param missing_ok: Defaults to True because we normally let SQLite flag missing tables.
+        :param missing_ok: Defaults to True because we normally let SQLite identify missing
+            tables by surfacing the exception from the query.
         """
-        builtin = self.builtin.get(name)
-        creator = self._create.get(name)
-        extender = self._extend.get(name)
+        builtin = self.builtin.get(table_name)
+        creator = self._create.get(table_name)
+        extender = self._extend.get(table_name)
         if builtin and creator:
-            fail(f"Pre-defined table {name} can't be created from config")
+            fail(f"Pre-defined table {table_name} can't be created from config")
         if builtin:
             return TableFromCode(builtin, extender)
         if creator:
-            return TableFromConfig(name, self.name, creator, extender)
+            return TableFromConfig(table_name, self.name, creator, extender)
         if not missing_ok:
-            fail(f"Table '{name}' is not defined in schema {self.name}")
+            fail(f"Table '{table_name}' is not defined in schema {self.name}")
 
     def all_table_names(self):
+        """Return all the table names that are built in or defined in user configs."""
         return set(chain(self.builtin.keys(), self._create.keys(), self._extend.keys()))
 
-    def resource_for(self, table: Table) -> set[ResourceDef]:
+    def resource_def(self, table: Table) -> set[ResourceDef]:
         """Return the ResourceDef used by a Table."""
         return self._resources[table.resource]

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: "2024-11-20T01:05:00Z"
+  name: example-deployment
+  namespace: example
+  uid: aaaabbbb-1234-5678-abcd-000000000002
+  labels: {}
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: example
+  template:
+    metadata:
+      labels:
+        app: example
+    spec:
+      containers:
+      - name: main
+        image: example.com/app:latest
+status:
+  replicas: 3
+  readyReplicas: 3
+  availableReplicas: 3
+  updatedReplicas: 3

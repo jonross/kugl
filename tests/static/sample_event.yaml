@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Event
+metadata:
+  name: example-pod.17c8a9f0c0b23456
+  namespace: default
+  uid: aaaabbbb-1234-5678-abcd-000000000099
+type: Normal
+reason: Scheduled
+message: Successfully assigned default/example-pod to node-1
+count: 1
+firstTimestamp: "2024-11-20T01:00:00Z"
+lastTimestamp: "2024-11-20T01:00:00Z"
+involvedObject:
+  kind: Pod
+  name: example-pod
+  namespace: default
+  uid: aaaabbbb-1234-5678-abcd-000000000001
+source:
+  component: default-scheduler
+  host: master-node

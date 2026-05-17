@@ -19,7 +19,7 @@ from kugl.util import Age
 def test_settings_defaults():
     s = Settings()
     assert s.cache_timeout == Age(120)
-    assert not s.reckless
+    assert not s.quiet
     assert not s.no_headers
     assert s.init_path == []
 
@@ -30,7 +30,7 @@ def test_settings_custom(monkeypatch):
         Settings,
         yaml.safe_load("""
         cache_timeout: 5s
-        reckless: true
+        quiet: true
         no_headers: true
         init_path:
           - $FOO/abc
@@ -39,7 +39,7 @@ def test_settings_custom(monkeypatch):
     """),
     )
     assert s.cache_timeout == Age(5)
-    assert s.reckless
+    assert s.quiet
     assert s.no_headers
     assert s.init_path == ["/tmp/abc", "/tmp/xyz", "$BAR/xyz"]
 
@@ -53,7 +53,7 @@ def test_empty_config():
 def test_empty_init():
     c = UserInit()
     assert c.settings.cache_timeout == Age(120)
-    assert not c.settings.reckless
+    assert not c.settings.quiet
     assert c.shortcuts == []
 
 
@@ -201,4 +201,4 @@ def test_must_have_path_or_label():
     """),
         return_errors=True,
     )
-    assert errors == ["columns.0: Value error, must specify either path or label"]
+    assert errors == ["columns.0: Value error, must specify path, label, or from"]

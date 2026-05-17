@@ -11,6 +11,12 @@ resources:
     namespaced: true
   - name: nodes
     namespaced: false
+  - name: services
+    namespaced: true
+  - name: deployments
+    namespaced: true
+  - name: events
+    namespaced: true
 
 # node_taints builtin table is done here because it doesn't have any special column extraction
 # logic, and it serves as a good unit test.
@@ -19,15 +25,15 @@ create:
   - table: node_taints
     resource: nodes
     row_source:
-      - items
-      - spec.taints
+      - items as node
+      - spec.taints as taint
     columns:
       - name: node_uid
-        path: ^metadata.uid
+        from: metadata.uid in node
         comment: node UID, from metadata.uid
       - name: key
-        path: key
+        from: key in taint
         comment: taint key
       - name: effect
-        path: effect
+        from: effect in taint
         comment: taint effect
