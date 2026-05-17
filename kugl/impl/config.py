@@ -3,14 +3,13 @@ Pydantic models for configuration files.
 """
 
 from os.path import expandvars, expanduser
-import re
 from typing import Optional, Tuple, Callable, Union
 
 import jmespath
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic.functional_validators import model_validator
 
-from .extract import ColumnType, KUGL_TYPE_TO_SQL_TYPE, LabelExtractor, PathExtractor
+from .extract import ColumnType, KUGL_TYPE_TO_SQL_TYPE, FieldRef, LabelExtractor, PathExtractor
 from kugl.util import (
     Age,
     ConfigPath,
@@ -164,19 +163,16 @@ class UserColumn(Column):
 
         Called at TableFromConfig build time when scope names are known.
         """
-        _SCOPE_PREFIX = re.compile(r"^([a-zA-Z_][a-zA-Z0-9_]*)\.(.+)$")
         if self.path:
-            m = _SCOPE_PREFIX.match(self.path)
-            if m and m.group(1) in scope_names:
-                scope_name, target = m.group(1), m.group(2)
-            else:
+            ref = FieldRef.parse_scoped(self.path, scope_names)
+            if ref.scope_name is None:
                 fail(
                     f"Table '{table_name}', column '{self.name}': "
                     f"path '{self.path}' must begin with a scope name "
                     f"(one of: {sorted(scope_names)})"
                 )
             try:
-                self._extractor = PathExtractor(self.name, self.type, target, scope_name=scope_name)
+                self._extractor = PathExtractor(self.name, self.type, ref.target, scope_name=ref.scope_name)
             except ValueError as e:
                 fail(str(e))
         elif self.label:
@@ -184,21 +180,20 @@ class UserColumn(Column):
             scope_name = None
             stripped_labels = []
             for label in labels:
-                m = _SCOPE_PREFIX.match(label)
-                if m and m.group(1) in scope_names:
-                    if scope_name and scope_name != m.group(1):
-                        fail(
-                            f"Table '{table_name}', column '{self.name}': "
-                            f"all labels must use the same scope name"
-                        )
-                    scope_name = m.group(1)
-                    stripped_labels.append(m.group(2))
-                else:
+                ref = FieldRef.parse_scoped(label, scope_names)
+                if ref.scope_name is None:
                     fail(
                         f"Table '{table_name}', column '{self.name}': "
                         f"label '{label}' must begin with a scope name "
                         f"(one of: {sorted(scope_names)})"
                     )
+                if scope_name and scope_name != ref.scope_name:
+                    fail(
+                        f"Table '{table_name}', column '{self.name}': "
+                        f"all labels must use the same scope name"
+                    )
+                scope_name = ref.scope_name
+                stripped_labels.append(ref.target)
             self._extractor = LabelExtractor(self.name, self.type, stripped_labels, scope_name=scope_name)
 
 
