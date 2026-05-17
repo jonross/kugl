@@ -99,7 +99,7 @@ def test_parse_args(test_home, argv, expected_flag, age, quiet, error):
         with pytest.raises(KuglError, match=error):
             parse_args(argv, ap, settings)
     else:
-        args, actual_flag = parse_args(argv, ap, settings)
+        args, actual_flag, _ = parse_args(argv, ap, settings)
         assert actual_flag == expected_flag
         assert settings.cache_timeout == age
         assert settings.quiet == quiet

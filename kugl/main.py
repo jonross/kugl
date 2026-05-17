@@ -4,6 +4,7 @@ Command-line entry point.
 
 import argparse
 import os
+import re
 from argparse import ArgumentParser
 import sys
 from sqlite3 import DatabaseError
@@ -80,13 +81,28 @@ def main2(argv: List[str], init: Optional[UserInit] = None):
 
     ap = ArgumentParser()
     Registry.get().augment_cli(ap)
-    args, cache_flag = parse_args(argv, ap, init.settings)
+    args, cache_flag, extras = parse_args(argv, ap, init.settings)
+
+    # Reject unrecognized options for direct SQL queries (shortcuts handle this separately).
+    if " " in args.sql and extras:
+        ap.error(f"unrecognized arguments: {' '.join(extras)}")
 
     # Check for shortcut and reparse, because they can contain command-line options.
     if " " not in args.sql:
         if not (shortcut := shortcuts.get(args.sql)):
             fail(f"No shortcut named '{args.sql}' is defined")
-        return main2(argv[:-1] + shortcut.args, init)
+        bad = [e for e in extras if e.startswith('-')]
+        if bad:
+            fail(f"Unrecognized options: {' '.join(bad)}")
+        if len(extras) != len(shortcut.params):
+            if shortcut.params:
+                fail(f"Shortcut '{shortcut.name}' requires {len(shortcut.params)} argument(s): {', '.join(shortcut.params)}")
+            else:
+                fail(f"Shortcut '{shortcut.name}' takes no arguments")
+        bindings = dict(zip(shortcut.params, extras))
+        expanded = [re.sub(r'\{\{(\w+)\}\}', lambda m: bindings[m.group(1)], a) for a in shortcut.args]
+        idx = len(argv) - len(extras) - 1
+        return main2(argv[:idx] + expanded, init)
 
     if args.debug:
         debug_features(args.debug.split(","))
@@ -99,7 +115,7 @@ def main2(argv: List[str], init: Optional[UserInit] = None):
 
 def parse_args(
     argv: list[str], ap: ArgumentParser, settings: Settings
-) -> tuple[argparse.Namespace, CacheFlag]:
+) -> tuple[argparse.Namespace, CacheFlag, list[str]]:
     """Add stock arguments to parser, parse the command line, and override settings."""
     ap.add_argument("-c", "--context", type=str)
     ap.add_argument("-D", "--debug", type=str)
@@ -109,7 +125,7 @@ def parse_args(
     ap.add_argument("-s", "--stale", default=False, action="store_true")
     ap.add_argument("-t", "--timeout", type=str)
     ap.add_argument("sql")
-    args = ap.parse_args(argv)
+    args, extras = ap.parse_known_args(argv)
     if args.stale and args.refresh:
         fail("Cannot use both -s/--stale and -r/--refresh")
     if args.timeout:
@@ -118,7 +134,7 @@ def parse_args(
         settings.quiet = True
     if args.no_headers:
         settings.no_headers = True
-    return args, (ALWAYS_UPDATE if args.refresh else NEVER_UPDATE if args.stale else CHECK)
+    return args, (ALWAYS_UPDATE if args.refresh else NEVER_UPDATE if args.stale else CHECK), extras
 
 
 def _merge_init_files() -> tuple[UserInit, dict[str, Shortcut]]:
