@@ -131,8 +131,8 @@ class TableFromConfig(Table):
         )
         self.row_source = [Itemizer.parse(x, name) for x in (creator.row_source or ["items"])]
         if len(self.row_source) > 1:
-            scope_names = {s.name for s in self.row_source if s.name is not None}
-            unnamed = [s.expr for s in self.row_source if s.name is None]
+            scope_names = {s.scope_name for s in self.row_source if s.scope_name is not None}
+            unnamed = [s.expr for s in self.row_source if s.scope_name is None]
             if unnamed:
                 fail(
                     f"Table '{name}': multi-step row_source entries must all have 'as <name>'; "
@@ -176,8 +176,8 @@ class TableFromConfig(Table):
                             # Fix #132 -- don't do this at pass 0, or it sets the parent to the entire
                             # response object.
                             context.set_parent(child, item)
-                        if source.name is not None:
-                            context.set_scope(child, source.name, item if index > 0 else None)
+                        if source.scope_name is not None:
+                            context.set_scope(child, source.scope_name, item if index > 0 else None)
                         new_items.append(child)
                         if debug:
                             debug("add " + abbreviate(child))
@@ -185,8 +185,8 @@ class TableFromConfig(Table):
                     if index > 0:
                         # See comment above.
                         context.set_parent(found, item)
-                    if source.name is not None:
-                        context.set_scope(found, source.name, item if index > 0 else None)
+                    if source.scope_name is not None:
+                        context.set_scope(found, source.scope_name, item if index > 0 else None)
                     new_items.append(found)
                     if debug:
                         debug("add " + abbreviate(found))
@@ -241,7 +241,7 @@ class Itemizer:
     # Should dictionaries be unpacked to a key/value array
     unpack: bool
     # Optional scope name from 'as <name>' suffix
-    name: Optional[str] = None
+    scope_name: Optional[str] = None
 
     @classmethod
     def parse(cls, s: str, table_name: str):
@@ -269,6 +269,6 @@ class Itemizer:
                 fail(f"Invalid scope name '{name}' in row_source: {s}")
 
         try:
-            return Itemizer(expr=expr_part, finder=jmespath.compile(expr_part), unpack=unpack, name=name)
+            return Itemizer(expr=expr_part, finder=jmespath.compile(expr_part), unpack=unpack, scope_name=name)
         except jmespath.exceptions.ParseError as e:
             fail(f"invalid row_source {expr_part} for table {table_name}", e)
