@@ -10,21 +10,14 @@ scope-aware path resolution.
 
 ### Goal
 
-Replace the `^` parent-hop syntax with named scope references.  Before:
+Replace the `^` parent-hop syntax with named scope references.
 
-```yaml
-create:
-  - table: node_taints
-    resource: nodes
-    row_source:
-      - items
-      - spec.taints
-    columns:
-      - name: node_uid
-        path: ^metadata.uid   # ^ = "go up one level"
-```
+**Single row_source** (the common case — default `["items"]` or one explicit entry):
+path expressions resolve against the one implicit object; no scope prefix required.
 
-After:
+**Multiple row_source entries**: every entry must carry `as <name>`, and every path /
+label expression must begin with an explicit scope name.  There is no implicit
+"current object" when more than one level exists.
 
 ```yaml
 create:
@@ -32,10 +25,12 @@ create:
     resource: nodes
     row_source:
       - items as node
-      - spec.taints
+      - spec.taints as taint
     columns:
       - name: node_uid
-        path: node.metadata.uid   # named scope, no counting required
+        path: node.metadata.uid
+      - name: taint_key
+        path: taint.key
 ```
 
 ### Changes
@@ -64,14 +59,14 @@ create:
 
 **`kugl/impl/extract.py` — `FieldRef` / `PathExtractor` / `LabelExtractor`**
 
-- `FieldRef.parse` currently strips leading `^` characters.  Extend it to also
-  detect a leading `<word>.` prefix that could be a scope name.  Store as
-  `scope_name: Optional[str]` and strip it from the target before JMESPath
-  compilation.
+- `FieldRef.parse`: remove `^` handling; detect a leading `<word>.` prefix as a
+  scope name.  Store as `scope_name: Optional[str]` and strip it from the target
+  before JMESPath compilation.
 - In `PathExtractor.extract` and `LabelExtractor.extract`, when `self._ref.scope_name`
-  is set, resolve the object via `context.get_scope(obj, scope_name)` instead of
-  `context.get_parent(obj, n_parents)`.
-- Keep `^` handling intact for backward compatibility.
+  is set, resolve the object via `context.get_scope(obj, scope_name)`.
+- Validation at table-build time (`TableFromConfig.__init__`): if `len(row_source) > 1`,
+  every `row_source` entry must have a name and every column path/label must carry a
+  scope prefix; raise a clear `ConfigError` if either constraint is violated.
 
 ### Builtin Update
 
@@ -81,10 +76,12 @@ as a self-contained example:
 ```yaml
     row_source:
       - items as node
-      - spec.taints
+      - spec.taints as taint
     columns:
       - name: node_uid
         path: node.metadata.uid
+      - name: taint_key
+        path: taint.key
 ```
 
 ### Tests
@@ -93,7 +90,9 @@ as a self-contained example:
   syntax produces the same output.
 - Add a new test with three levels of nesting (e.g. `pod → container → env`) using
   two named scopes, verifying that both ancestor levels are reachable by name.
-- Add a test that `^` still works (backward compat).
+- Add a test that `^` in a path raises a clear parse error.
+- Add a test that a multi-step `row_source` with a missing `as` name raises a `ConfigError`.
+- Add a test that a multi-step `row_source` with a bare (un-scoped) column path raises a `ConfigError`.
 
 ---
 
@@ -104,16 +103,29 @@ as a self-contained example:
 Replace the two-key `path:` / `label:` vocabulary with a single `from:` key that
 auto-detects extraction type.  Named scope prefixes compose naturally.
 
+Single row_source (bare paths, no scope prefix needed):
+
 ```yaml
     columns:
       - name: node_pool
-        from: karpenter.sh/nodepool      # auto-detected: label (contains / before first .)
+        from: karpenter.sh/nodepool   # auto-detected: label
       - name: provider_id
-        from: spec.providerID            # auto-detected: JMESPath
+        from: spec.providerID         # auto-detected: JMESPath
+```
+
+Multi-step row_source (all entries named, all columns scoped):
+
+```yaml
+    row_source:
+      - items as pod
+      - spec.containers as container
+    columns:
       - name: pod_name
-        from: pod.metadata.name          # named scope + JMESPath
+        from: pod.metadata.name           # named scope + JMESPath
       - name: pod_pool
-        from: pod.karpenter.sh/nodepool  # named scope + label
+        from: pod.karpenter.sh/nodepool   # named scope + label
+      - name: container_name
+        from: container.name              # named scope + JMESPath
 ```
 
 ### Auto-Detection Rule
@@ -143,7 +155,7 @@ this correctly because `metadata.labels.foo` is not a valid DNS domain segment.
 
 **`kugl/impl/extract.py` — `FieldRef`**
 
-- Move the scope-prefix parsing here (it's already handling `^`); `gen_extractor`
+- Move the scope-prefix parsing here; `gen_extractor`
   delegates to `FieldRef.parse_from(s, known_scopes=None)`.
 - Known scopes are not available at Pydantic parse time (they live in `CreateTable`
   which is a sibling, not a parent).  Two options:
@@ -184,5 +196,3 @@ this correctly because `metadata.labels.foo` is not a valid DNS domain segment.
 
 - The broader resource-coverage gaps from `discuss.md` (deployments, containers table,
   etc.) are separate work and should not be bundled here.
-- `^` removal: keep the old syntax working indefinitely.  No deprecation warning needed
-  until named scopes have been in a release.
