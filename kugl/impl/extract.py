@@ -47,13 +47,6 @@ class FieldRef:
     target: str
 
     @classmethod
-    def parse(cls, s: str) -> "FieldRef":
-        """Parse a path/label string, raising if ^ syntax is used."""
-        if "^" in s:
-            fail("^ parent navigation is no longer supported; use named row_source scopes instead")
-        return cls(None, s)
-
-    @classmethod
     def parse_scoped(cls, s: str, scope_names: set) -> "FieldRef":
         """Parse a path/label string, detecting a scope prefix if it matches a declared scope name.
 
