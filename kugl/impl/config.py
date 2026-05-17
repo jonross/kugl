@@ -73,6 +73,17 @@ class Shortcut(BaseModel):
     name: str
     args: list[str]
     comment: Optional[str] = None
+    params: list[str] = []
+
+    @model_validator(mode="after")
+    @classmethod
+    def _check_params(cls, shortcut: "Shortcut") -> "Shortcut":
+        declared = set(shortcut.params)
+        for arg in shortcut.args:
+            for token in re.findall(r'\{\{(\w+)\}\}', arg):
+                if token not in declared:
+                    fail(f"Shortcut '{shortcut.name}': undeclared parameter '{{{{{token}}}}}'")
+        return shortcut
 
 
 class SecondaryUserInit(ConfigContent):
