@@ -108,7 +108,22 @@ settings:
 shortcuts:
   - name: mypods
     args: ["select name, status from pods where namespace = 'default'"]
+  - name: pods-by-image
+    args: ["select name, namespace, status from pods where image like '%{{img}}%'"]
+    params:
+      - img
 ```
+
+Shortcuts support positional parameters via `{{name}}` tokens in `args`. Declare param names in
+`params:`; supply values at invocation time as trailing positional arguments:
+
+```
+kugl pods-by-image nginx
+kugl -H pods-by-image nginx   # flags before the shortcut name still work
+```
+
+Config validation fails at parse time if a `{{token}}` appears in `args` but is not listed in
+`params`. Invocation fails with a clear error if the wrong number of arguments is supplied.
 
 ### `~/.kugl/<schema>.yaml` (e.g. `kubernetes.yaml`)
 Defines resources and tables for a schema.

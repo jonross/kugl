@@ -37,6 +37,33 @@ in `recommended configuration <./recommended.rst>`__, add this to
 
 To run, type ``kugl hi-mem`` or ``kugl nodes``.
 
-Simple parameter substitution might be offered in the future, but if you
-need more powerful templates, your own wrapper script is the short-term
-answer.
+Parameterized shortcuts
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Shortcuts can declare named parameters, letting a single shortcut serve
+multiple invocations with different values.
+
+Declare parameter names in the ``params`` list and reference them in
+``args`` as ``{{name}}`` tokens:
+
+.. code:: yaml
+
+   shortcuts:
+
+     - name: pods-by-image
+       args:
+         - "SELECT name, namespace, status FROM pods WHERE image LIKE '%{{img}}%'"
+       params:
+         - img
+
+Supply values positionally on the command line:
+
+.. code:: bash
+
+   kugl pods-by-image nginx
+   kugl -H pods-by-image nginx     # flags before the shortcut name still work
+
+The number of positional arguments must match the number of declared
+parameters exactly; a mismatch is an error.  Using a ``{{token}}`` in
+``args`` without a matching entry in ``params`` is also an error, caught
+at config-load time.

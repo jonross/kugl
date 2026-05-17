@@ -24,8 +24,9 @@ Extending tables:
   ``domain/key`` format (e.g. ``karpenter.sh/nodepool``) use label extraction, everything
   else uses JMESPath (``path:`` and ``label:`` to be removed in a future release)
 
-Documentation:
+Other:
 
+- Shortcuts now support parameterization
 - New masthead example of ``kugl`` vs ``kubectl | jq``
 
 
