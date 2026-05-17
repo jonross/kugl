@@ -37,6 +37,12 @@ KUGL_TYPE_TO_SQL_TYPE = {
 
 
 _SCOPE_SUFFIX = re.compile(r"^(.+)\s+in\s+([a-zA-Z_][a-zA-Z0-9_]*)$")
+_LABEL_PATTERN = re.compile(r"^[a-zA-Z0-9.-]+/[a-zA-Z0-9._/-]+$")
+
+
+def is_label(s: str) -> bool:
+    """Return True if s looks like a Kubernetes label key (domain/name format)."""
+    return bool(_LABEL_PATTERN.match(s))
 
 
 @dataclass
@@ -56,8 +62,10 @@ class FieldRef:
         if "^" in s:
             fail("^ parent navigation is no longer supported; use named row_source scopes instead")
         m = _SCOPE_SUFFIX.match(s)
-        if m and m.group(2) in scope_names:
-            return cls(m.group(2), m.group(1))
+        if m:
+            if m.group(2) in scope_names:
+                return cls(m.group(2), m.group(1))
+            fail(f"Unknown scope '{m.group(2)}'; valid scopes are: {sorted(scope_names)}")
         return cls(None, s)
 
 

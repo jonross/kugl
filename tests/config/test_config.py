@@ -201,4 +201,4 @@ def test_must_have_path_or_label():
     """),
         return_errors=True,
     )
-    assert errors == ["columns.0: Value error, must specify either path or label"]
+    assert errors == ["columns.0: Value error, must specify path, label, or from"]

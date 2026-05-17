@@ -206,6 +206,154 @@ def test_unscoped_column_in_multi_step(test_home):
         assert_query("SELECT * FROM things", "")
 
 
+def test_from_detects_label(test_home):
+    """`from: domain/key` auto-detects as a label extractor."""
+    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
+      resources:
+        - name: things
+          data:
+            items:
+              - metadata:
+                  labels:
+                    test.io/group: team-a
+      create:
+        - table: things
+          resource: things
+          columns:
+            - name: grp
+              from: test.io/group
+    """)
+    assert_query("SELECT * FROM things", """
+        grp
+        team-a
+    """)
+
+
+def test_from_detects_path(test_home):
+    """`from: jmespath.expr` auto-detects as a path extractor."""
+    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
+      resources:
+        - name: things
+          data:
+            items:
+              - metadata:
+                  name: my-thing
+      create:
+        - table: things
+          resource: things
+          columns:
+            - name: thing_name
+              from: metadata.name
+    """)
+    assert_query("SELECT * FROM things", """
+        thing_name
+        my-thing
+    """)
+
+
+def test_from_scoped_path(test_home):
+    """`from: expr in scope` resolves a JMESPath on the named scope."""
+    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
+      resources:
+        - name: things
+          data:
+            items:
+              - metadata:
+                  name: pod-a
+                spec:
+                  containers:
+                    - name: c1
+                    - name: c2
+      create:
+        - table: things
+          resource: things
+          row_source:
+            - items as pod
+            - spec.containers as container
+          columns:
+            - name: pod_name
+              from: metadata.name in pod
+            - name: container_name
+              from: name in container
+    """)
+    assert_query("SELECT * FROM things ORDER BY container_name", """
+        pod_name    container_name
+        pod-a       c1
+        pod-a       c2
+    """)
+
+
+def test_from_scoped_label(test_home):
+    """`from: domain/key in scope` resolves as a label on the named scope object."""
+    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
+      resources:
+        - name: things
+          data:
+            items:
+              - metadata:
+                  labels:
+                    test.io/group: team-b
+                children:
+                  - val: x
+      create:
+        - table: things
+          resource: things
+          row_source:
+            - items as item
+            - children as child
+          columns:
+            - name: grp
+              from: test.io/group in item
+            - name: val
+              from: val in child
+    """)
+    assert_query("SELECT * FROM things", """
+        grp     val
+        team-b  x
+    """)
+
+
+def test_from_conflicts_with_path(test_home):
+    """Specifying both `from` and `path` raises a validation error."""
+    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
+      resources:
+        - name: things
+          data:
+            items: [{val: a}]
+      create:
+        - table: things
+          resource: things
+          columns:
+            - name: val
+              from: val
+              path: val
+    """)
+    with pytest.raises(KuglError, match="cannot specify .from. alongside"):
+        assert_query("SELECT * FROM things", "")
+
+
+def test_from_unknown_scope(test_home):
+    """`from: expr in unknownscope` raises a clear error at table-build time."""
+    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
+      resources:
+        - name: things
+          data:
+            items:
+              - children: [{val: a}]
+      create:
+        - table: things
+          resource: things
+          row_source:
+            - items as item
+            - children as child
+          columns:
+            - name: val
+              from: val in ghost
+    """)
+    with pytest.raises(KuglError, match="Unknown scope 'ghost'"):
+        assert_query("SELECT * FROM things", "")
+
+
 def test_data_dict_expansion(test_home):
     """Verify the behavior of the '; kv' option in row_source"""
     kugl_home().prep().joinpath("kubernetes.yaml").write_text("""

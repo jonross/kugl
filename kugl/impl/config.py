@@ -7,10 +7,10 @@ from os.path import expandvars, expanduser
 from typing import Optional, Tuple, Callable, Union
 
 import jmespath
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pydantic.functional_validators import model_validator
 
-from .extract import ColumnType, KUGL_TYPE_TO_SQL_TYPE, FieldRef, LabelExtractor, PathExtractor
+from .extract import ColumnType, KUGL_TYPE_TO_SQL_TYPE, FieldRef, LabelExtractor, PathExtractor, is_label
 from kugl.util import (
     Age,
     ConfigPath,
@@ -125,9 +125,10 @@ class Column(BaseModel):
 class UserColumn(Column):
     """Holds one entry from a columns: list in a user config file."""
 
-    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True, populate_by_name=True)
     path: Optional[str] = None
     label: Optional[Union[str, list[str]]] = None
+    from_: Optional[str] = Field(None, alias="from")
     # Parsed value of self.path
     _finder: jmespath.parser.Parser
     # Number of ^ in self.path
@@ -144,19 +145,33 @@ class UserColumn(Column):
         Generate the Extractor instance for a column definition; given an object, it will return
         a column value of the appropriate type.
         """
-        if column.path and column.label:
+        has_path = column.path is not None
+        has_label = column.label is not None
+        has_from = column.from_ is not None
+
+        if has_from and (has_path or has_label):
+            raise ValueError("cannot specify 'from' alongside 'path' or 'label'")
+        if has_path and has_label:
             raise ValueError("cannot specify both path and label")
-        elif column.path:
+
+        if has_from:
+            # Strip any 'in <name>' suffix; scope validation is deferred to rebuild_for_scope.
+            target = re.sub(r"\s+in\s+[a-zA-Z_][a-zA-Z0-9_]*$", "", column.from_)
+            if is_label(target):
+                column._extractor = LabelExtractor(column.name, column.type, [target])
+            else:
+                column._extractor = PathExtractor(column.name, column.type, target)
+        elif has_path:
             # Strip any 'in <name>' suffix before JMESPath compilation; scope resolution
             # is deferred to rebuild_for_scope when scope names are known.
             path_target = re.sub(r"\s+in\s+[a-zA-Z_][a-zA-Z0-9_]*$", "", column.path)
             column._extractor = PathExtractor(column.name, column.type, path_target)
-        elif column.label:
+        elif has_label:
             if not isinstance(column.label, list):
                 column.label = [column.label]
             column._extractor = LabelExtractor(column.name, column.type, column.label)
         else:
-            raise ValueError("must specify either path or label")
+            raise ValueError("must specify path, label, or from")
         return column
 
     def extract(self, obj: object, context) -> object:
@@ -199,6 +214,21 @@ class UserColumn(Column):
                 scope_name = ref.scope_name
                 stripped_labels.append(ref.target)
             self._extractor = LabelExtractor(self.name, self.type, stripped_labels, scope_name=scope_name)
+        elif self.from_:
+            ref = FieldRef.parse_scoped(self.from_, scope_names)
+            if ref.scope_name is None:
+                fail(
+                    f"Table '{table_name}', column '{self.name}': "
+                    f"'from' value '{self.from_}' must end with 'in <name>' "
+                    f"(one of: {sorted(scope_names)})"
+                )
+            if is_label(ref.target):
+                self._extractor = LabelExtractor(self.name, self.type, [ref.target], scope_name=ref.scope_name)
+            else:
+                try:
+                    self._extractor = PathExtractor(self.name, self.type, ref.target, scope_name=ref.scope_name)
+                except ValueError as e:
+                    fail(str(e))
 
 
 class ExtendTable(BaseModel):
