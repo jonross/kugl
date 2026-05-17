@@ -140,13 +140,14 @@ extend:
 
 ## Column Extractors
 
-Two extractor types, specified by keyword in a column definition:
+Three extractor keys, specified in a column definition:
 
 **`path:`** — JMESPath expression into the current row item  
-**`label:`** — shortcut to `metadata.labels`; can be a list to try in order
+**`label:`** — shortcut to `metadata.labels`; can be a list to try in order  
+**`from:`** — unified key that auto-detects label vs path: values matching `domain/key` (e.g. `karpenter.sh/nodepool`) use `LabelExtractor`; everything else uses `PathExtractor`
 
-**Named scope navigation** — in multi-step `row_source`, each entry must carry `as <name>`, and every column path/label must be prefixed with a scope name:
-- `node.metadata.uid` extracts `metadata.uid` from the object named `node` at a higher level
+**Named scope navigation** — in multi-step `row_source`, each entry must carry `as <name>`, and every column expression must end with `in <name>` to identify which scope to resolve against:
+- `metadata.uid in node` extracts `metadata.uid` from the object named `node` at a higher level
 - All named scopes from ancestor levels are available at each step
 
 ## Column Types
@@ -175,14 +176,14 @@ row_source:
   - spec.taints as taint  # step 2: each taint within each node, named "taint"
 columns:
   - name: node_uid
-    path: node.metadata.uid   # scope prefix "node." resolves to the step-1 object
+    path: metadata.uid in node   # "in node" suffix resolves to the step-1 object
   - name: taint_key
-    path: taint.key           # scope prefix "taint." resolves to the step-2 object
+    path: key in taint           # "in taint" suffix resolves to the step-2 object
 ```
 
 - Each step applies to results of the prior step
-- Multi-step tables require `as <name>` on every entry; all column paths/labels must carry a scope prefix
-- Single-step tables use bare JMESPath paths with no scope prefix
+- Multi-step tables require `as <name>` on every entry; all column paths/labels must end with `in <name>`
+- Single-step tables use bare JMESPath paths with no scope qualifier
 - Dict sources can be unpacked to key/value pairs with `; kv` suffix: `- env; kv`
 - Default `row_source` is `["items"]`
 
