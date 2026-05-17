@@ -220,11 +220,13 @@ class RowContext:
             depth -= 1
         return child
 
+    # FIXME: rethink how this is done
     def set_scope(self, child, name: str, parent=None):
         """Register child as the named scope, inheriting ancestor scopes from parent."""
         base = self._scopes.get(id(parent), {}) if parent is not None else {}
         self.set_scope_with_base(child, name, base)
 
+    # FIXME: rethink how this is done
     def set_scope_with_base(self, child, name: str, base: dict):
         """Like set_scope but accepts a pre-computed base scope dict."""
         self._scopes[id(child)] = {**base, name: child}
