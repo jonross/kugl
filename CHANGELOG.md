@@ -17,12 +17,12 @@ CLI changes (breaking):
 
 Extending tables:
 
-- Named scope syntax for multi-step ``row_source``: each entry takes ``as <name>`` and
+- Breaking: Named scope syntax for multi-step ``row_source``: each entry takes ``as <name>`` and
   columns reference ancestor objects with ``in <name>`` suffix (e.g. ``metadata.uid in node``);
   the old ``^`` parent-hop syntax is removed
 - New ``from:`` column key that auto-detects label vs JMESPath: values matching
   ``domain/key`` format (e.g. ``karpenter.sh/nodepool``) use label extraction, everything
-  else uses JMESPath
+  else uses JMESPath (``path:`` and ``label:`` to be removed in a future release)
 
 Documentation:
 
