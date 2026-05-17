@@ -6,6 +6,7 @@ New tables in ``kubernetes`` schema:
 - ``cronjobs`` and ``cronjob_labels`` 
 - ``services`` and ``service_labels``
 - ``deployments`` and ``deployment_labels``
+- ``containers``
 
 CLI changes (breaking):
 
@@ -14,6 +15,10 @@ CLI changes (breaking):
 - Renamed ``-c``/``--cache`` to ``-s``/``--stale``
 - Renamed ``-u``/``--update`` to ``-r``/``--refresh``
 - Renamed ``-r``/``--reckless`` to ``-q``/``--quiet`` (and ``reckless:`` in settings to ``quiet:``)
+
+CLI changes (non-breaking):
+
+- Added ``-o``/``--output`` option to generate CSV or JSON in addition to tabular format
 
 Extending tables:
 

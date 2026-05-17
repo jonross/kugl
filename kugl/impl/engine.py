@@ -73,9 +73,13 @@ class Engine:
         self.db = SqliteDb()
         add_custom_functions(self.db.conn)
 
-    def query_and_format(self, query: Query) -> str:
+    def query_and_format(self, query: Query, output_format: str = "table") -> str:
         """Execute a Kugl query and format the results for stdout."""
         rows, headers = self.query(query)
+        if output_format == "csv":
+            return _format_csv(rows, headers, self.settings.no_headers)
+        if output_format == "json":
+            return _format_json(rows, headers)
         return tabulate(
             rows,
             tablefmt="plain",
@@ -155,6 +159,20 @@ class Engine:
         truncate = lambda x: int(x) if isinstance(x, float) and x == float(int(x)) else x
         rows = [[truncate(x) for x in row] for row in rows]
         return rows, column_names
+
+
+def _format_csv(rows, headers, no_headers):
+    import io, csv
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    if not no_headers:
+        writer.writerow(headers)
+    writer.writerows(rows)
+    return buf.getvalue().rstrip("\n")
+
+
+def _format_json(rows, headers):
+    return json.dumps([dict(zip(headers, row)) for row in rows], indent=2)
 
 
 class DataCache:

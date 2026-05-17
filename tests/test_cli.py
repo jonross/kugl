@@ -2,6 +2,7 @@
 Tests for command-line options.
 """
 
+import json
 import re
 import sqlite3
 from argparse import ArgumentParser
@@ -74,6 +75,30 @@ def test_no_headers(test_home, capsys):
     out, _ = capsys.readouterr()
     # FIXME: Not sure why the output format is different with no headers...
     assert out == "1  2\n"
+
+
+def test_output_csv(test_home, capsys):
+    main1(["-o", "csv", "select 1 as foo, 2 as bar"])
+    out, _ = capsys.readouterr()
+    assert out == "foo,bar\n1,2\n"
+
+
+def test_output_csv_no_headers(test_home, capsys):
+    main1(["-o", "csv", "-H", "select 1 as foo, 2 as bar"])
+    out, _ = capsys.readouterr()
+    assert out == "1,2\n"
+
+
+def test_output_json(test_home, capsys):
+    main1(["-o", "json", "select 1 as foo, 2 as bar"])
+    out, _ = capsys.readouterr()
+    assert json.loads(out) == [{"foo": 1, "bar": 2}]
+
+
+def test_output_invalid(test_home, capsys):
+    with pytest.raises(SystemExit):
+        main1(["-o", "xml", "select 1"])
+    assert "invalid choice" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize(

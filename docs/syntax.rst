@@ -34,3 +34,5 @@ Other
 ~~~~~~~~~~~~~
 
 - ``-H, --no-header`` -- Suppress column headers
+- ``-o, --output FORMAT`` -- Output format: ``table`` (default), ``csv``, or ``json``.
+  ``csv`` respects ``-H``; ``json`` always includes column names as keys.

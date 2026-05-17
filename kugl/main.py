@@ -110,7 +110,7 @@ def main2(argv: List[str], init: Optional[UserInit] = None):
         debug(f"settings: {init.settings}")
 
     engine = Engine(args, cache_flag, init.settings)
-    print(engine.query_and_format(Query(args.sql)))
+    print(engine.query_and_format(Query(args.sql), args.output))
 
 
 def parse_args(
@@ -120,6 +120,7 @@ def parse_args(
     ap.add_argument("-c", "--context", type=str)
     ap.add_argument("-D", "--debug", type=str)
     ap.add_argument("-H", "--no-headers", default=False, action="store_true")
+    ap.add_argument("-o", "--output", choices=["table", "csv", "json"], default="table")
     ap.add_argument("-q", "--quiet", default=False, action="store_true")
     ap.add_argument("-r", "--refresh", default=False, action="store_true")
     ap.add_argument("-s", "--stale", default=False, action="store_true")
