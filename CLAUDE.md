@@ -109,7 +109,7 @@ shortcuts:
   - name: mypods
     args: ["select name, status from pods where namespace = 'default'"]
   - name: pods-by-image
-    args: ["select name, namespace, status from pods where image like '%{{img}}%'"]
+    args: ["select pod_name, namespace from containers where image like '%{{img}}%'"]
     params:
       - img
 ```

@@ -51,6 +51,7 @@ class Container(BaseModel):
     """Helper class for creating containers in test pods"""
 
     name: str = "main"
+    image: str = "example.com/hello-world"
     command: List[str] = Field(default_factory=lambda: ["echo", "hello"])
     requests: Optional[CGM] = CGM(cpu=1, mem="10M")
     limits: Optional[CGM] = CGM(cpu=1, mem="10M")
@@ -90,6 +91,7 @@ def make_pod(
     namespace: Optional[str] = None,
     node_name: Optional[str] = None,
     containers: List[Container] = [Container()],
+    init_containers: Optional[List[Container]] = None,
     labels: Optional[dict] = None,
     phase: Optional[str] = "Running",
 ):
@@ -122,6 +124,8 @@ def make_pod(
     if deletion_ts and not no_metadata:
         obj["metadata"]["deletionTimestamp"] = to_utc(deletion_ts)
     obj["spec"]["containers"] = [c.model_dump(by_alias=True, exclude_none=True) for c in containers]
+    if init_containers:
+        obj["spec"]["initContainers"] = [c.model_dump(by_alias=True, exclude_none=True) for c in init_containers]
     obj["status"]["phase"] = phase
     return obj
 

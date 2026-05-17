@@ -52,7 +52,7 @@ Declare parameter names in the ``params`` list and reference them in
 
      - name: pods-by-image
        args:
-         - "SELECT name, namespace, status FROM pods WHERE image LIKE '%{{img}}%'"
+         - "SELECT pod_name, namespace FROM containers WHERE image LIKE '%{{img}}%'"
        params:
          - img
 

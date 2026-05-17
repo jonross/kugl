@@ -203,6 +203,49 @@ class PodsTable:
             )
 
 
+@table(schema="kubernetes", name="containers", resource="pods")
+class ContainersTable:
+    _COLUMNS = [
+        column("pod_uid", "TEXT", "pod UID, from metadata.uid"),
+        column("pod_name", "TEXT", "pod name, from metadata.name"),
+        column("namespace", "TEXT", "pod namespace, from metadata.namespace"),
+        column("name", "TEXT", "container name"),
+        column("image", "TEXT", "container image"),
+        column("is_init", "INTEGER", "1 for init containers, 0 for regular"),
+        column("cpu_req", "REAL", "CPU requested, in cores"),
+        column("gpu_req", "REAL", "GPU requested, or null"),
+        column("mem_req", "INTEGER", "memory requested, in bytes"),
+        column("cpu_lim", "REAL", "CPU limit, or null"),
+        column("gpu_lim", "REAL", "GPU limit, or null"),
+        column("mem_lim", "INTEGER", "memory limit, or null"),
+    ]
+
+    def columns(self):
+        return self._COLUMNS
+
+    def make_rows(self, context) -> list[tuple[dict, tuple]]:
+        for item in context.data["items"]:
+            pod = PodHelper(item)
+            spec = item.get("spec", {})
+            for is_init, field in [(0, "containers"), (1, "initContainers")]:
+                for c in spec.get(field, []):
+                    req = Limits.extract(c.get("resources", {}).get("requests"), context.debug)
+                    lim = Limits.extract(c.get("resources", {}).get("limits"), context.debug)
+                    yield (
+                        c,
+                        (
+                            pod.metadata.get("uid"),
+                            pod.name,
+                            pod.namespace,
+                            c.get("name"),
+                            c.get("image"),
+                            is_init,
+                            *req.as_tuple(),
+                            *lim.as_tuple(),
+                        ),
+                    )
+
+
 @table(schema="kubernetes", name="jobs", resource="jobs")
 class JobsTable:
     _COLUMNS = [
