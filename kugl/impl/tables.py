@@ -171,13 +171,15 @@ class TableFromConfig(Table):
                 if isinstance(found, dict) and source.unpack:
                     found = [{"key": k, "value": v} for k, v in found.items()]
                 if isinstance(found, list):
+                    # Compute base scopes once for all children from this item.
+                    base_scopes = (context._scopes.get(id(item), {}) if index > 0 else {}) if source.scope_name else None
                     for child in found:
                         if index > 0:
                             # Fix #132 -- don't do this at pass 0, or it sets the parent to the entire
                             # response object.
                             context.set_parent(child, item)
                         if source.scope_name is not None:
-                            context.set_scope(child, source.scope_name, item if index > 0 else None)
+                            context.set_scope_with_base(child, source.scope_name, base_scopes)
                         new_items.append(child)
                         if debug:
                             debug("add " + abbreviate(child))
@@ -220,10 +222,12 @@ class RowContext:
 
     def set_scope(self, child, name: str, parent=None):
         """Register child as the named scope, inheriting ancestor scopes from parent."""
-        parent_scopes = self._scopes.get(id(parent), {}) if parent is not None else {}
-        child_scopes = dict(parent_scopes)
-        child_scopes[name] = child
-        self._scopes[id(child)] = child_scopes
+        base = self._scopes.get(id(parent), {}) if parent is not None else {}
+        self.set_scope_with_base(child, name, base)
+
+    def set_scope_with_base(self, child, name: str, base: dict):
+        """Like set_scope but accepts a pre-computed base scope dict."""
+        self._scopes[id(child)] = {**base, name: child}
 
     def get_scope(self, obj, name: str):
         """Look up a named scope for obj, returning None if not found."""
