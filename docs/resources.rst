@@ -124,14 +124,12 @@ To build a table showing environment settings by region:
      - table: env_settings
        resource: by_region
        row_source:
-         # Address each element in the result list
-         - "[]"
-         # Focus on the environment settings
-         - content.env
+         - "[]" as file
+         - content.env as setting
        columns:
          - name: region
-           path: ^match.region
+           path: match.region in file
          - name: name
-           path: name
+           path: name in setting
          - name: value
-           path: value
+           path: value in setting

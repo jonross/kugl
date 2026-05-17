@@ -77,13 +77,13 @@ def test_label_parents(test_home):
           - table: job_users
             resource: jobs
             row_source:
-              - items
-              - spec.template
+              - items as job
+              - spec.template as template
             columns:
               - name: job_username
-                label: ^user
+                label: user in job
               - name: pod_username
-                label: user
+                label: user in template
     """)
     kubectl_response(
         "jobs",

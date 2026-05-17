@@ -9,6 +9,17 @@ Please expect bugs and backward-incompatible changes.
 0.8.0
 ~~~~~
 
+Breaking changes are significant, gearing up for a 1.0 release.
+
+The new `from:` syntax alternative to `path:` and `label:` is backwards compatible, but
+the old syntax is deprecated and will be removed in a future release.
+
+Extending tables:
+
+- Named scope syntax for multi-step ``row_source``: each entry takes ``as <name>`` and
+  columns reference ancestor objects with ``in <name>`` suffix (e.g. ``metadata.uid in node``);
+  the old ``^`` parent-hop syntax is removed
+
 CLI changes:
 
 - Added ``-c``/``--context`` option to specify a Kubernetes context

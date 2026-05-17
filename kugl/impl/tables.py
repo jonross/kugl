@@ -4,6 +4,7 @@ SQLite tables are defined and populated here.
 """
 
 from dataclasses import dataclass
+import re
 from typing import Optional, Type
 
 import jmespath
@@ -129,6 +130,16 @@ class TableFromConfig(Table):
             creator.columns + (extender.columns if extender else []),
         )
         self.row_source = [Itemizer.parse(x, name) for x in (creator.row_source or ["items"])]
+        if len(self.row_source) > 1:
+            scope_names = {s.scope_name for s in self.row_source if s.scope_name is not None}
+            unnamed = [s.expr for s in self.row_source if s.scope_name is None]
+            if unnamed:
+                fail(
+                    f"Table '{name}': multi-step row_source entries must all have 'as <name>'; "
+                    f"missing for: {unnamed}"
+                )
+            for column in self.added_columns:
+                column.rebuild_for_scope(scope_names, name)
 
     def make_rows(self, context: "RowContext") -> list[tuple[dict, tuple]]:
         """
@@ -160,11 +171,15 @@ class TableFromConfig(Table):
                 if isinstance(found, dict) and source.unpack:
                     found = [{"key": k, "value": v} for k, v in found.items()]
                 if isinstance(found, list):
+                    # Compute base scopes once for all children from this item.
+                    base_scopes = (context._scopes.get(id(item), {}) if index > 0 else {}) if source.scope_name else None
                     for child in found:
                         if index > 0:
                             # Fix #132 -- don't do this at pass 0, or it sets the parent to the entire
                             # response object.
                             context.set_parent(child, item)
+                        if source.scope_name is not None:
+                            context.set_scope_with_base(child, source.scope_name, base_scopes)
                         new_items.append(child)
                         if debug:
                             debug("add " + abbreviate(child))
@@ -172,6 +187,8 @@ class TableFromConfig(Table):
                     if index > 0:
                         # See comment above.
                         context.set_parent(found, item)
+                    if source.scope_name is not None:
+                        context.set_scope(found, source.scope_name, item if index > 0 else None)
                     new_items.append(found)
                     if debug:
                         debug("add " + abbreviate(found))
@@ -184,12 +201,15 @@ class RowContext:
 
     Primarily, the `.data` attribute holds the JSON data from 'kubectl get' or similar.
     The `.set_parent` and `.get_parent` methods allow row-generating functions to track
-    parent objects as they iterate through nested data structures."""
+    parent objects as they iterate through nested data structures.
+    The `.set_scope` and `.get_scope` methods support named scope resolution for
+    multi-step row_source tables."""
 
     def __init__(self, data):
         self.data = data
         self.debug = debugging("extract")
         self._parents = {}
+        self._scopes = {}
 
     def set_parent(self, child, parent):
         self._parents[id(child)] = parent
@@ -200,21 +220,42 @@ class RowContext:
             depth -= 1
         return child
 
+    # FIXME: rethink how this is done
+    def set_scope(self, child, name: str, parent=None):
+        """Register child as the named scope, inheriting ancestor scopes from parent."""
+        base = self._scopes.get(id(parent), {}) if parent is not None else {}
+        self.set_scope_with_base(child, name, base)
+
+    # FIXME: rethink how this is done
+    def set_scope_with_base(self, child, name: str, base: dict):
+        """Like set_scope but accepts a pre-computed base scope dict."""
+        self._scopes[id(child)] = {**base, name: child}
+
+    def get_scope(self, obj, name: str):
+        """Look up a named scope for obj, returning None if not found."""
+        return self._scopes.get(id(obj), {}).get(name)
+
 
 @dataclass
 class Itemizer:
     """Helper class to hold information parsed from one line of a row_source"""
 
-    # Original row_source expression
+    # JMESPath expression (without the 'as <name>' suffix)
     expr: str
     # JMESPath expression to find the items
     finder: ParsedResult
     # Should dictionaries be unpacked to a key/value array
     unpack: bool
+    # Optional scope name from 'as <name>' suffix
+    scope_name: Optional[str] = None
 
     @classmethod
     def parse(cls, s: str, table_name: str):
-        """Parse a line from the row_source section of a config file"""
+        """Parse a line from the row_source section of a config file.
+
+        Syntax: 'expr [as name][; kv]'
+        """
+        # Split off options (;kv etc.)
         parts = s.split(";")
         if len(parts) == 1:
             unpack = False
@@ -222,7 +263,18 @@ class Itemizer:
             unpack = True
         else:
             fail(f"Invalid row_source options: {s}")
+
+        # Parse 'expr as name' from the expression part
+        expr_part = parts[0].strip()
+        name = None
+        as_index = expr_part.find(" as ")
+        if as_index >= 0:
+            name = expr_part[as_index + 4:].strip()
+            expr_part = expr_part[:as_index].strip()
+            if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", name):
+                fail(f"Invalid scope name '{name}' in row_source: {s}")
+
         try:
-            return Itemizer(s, jmespath.compile(parts[0]), unpack)
+            return Itemizer(expr=expr_part, finder=jmespath.compile(expr_part), unpack=unpack, scope_name=name)
         except jmespath.exceptions.ParseError as e:
-            fail(f"invalid row_source {parts[0]} for table {table_name}", e)
+            fail(f"invalid row_source {expr_part} for table {table_name}", e)

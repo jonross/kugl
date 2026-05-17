@@ -4,19 +4,24 @@ Two related improvements to the YAML extension mechanism. They can be implemente
 sequentially on one branch or separately; Phase 1 is a prerequisite for Phase 2's
 scope-aware path resolution.
 
+Scope references use a consistent `in <name>` suffix, mirroring the `as <name>` suffix
+in `row_source` declarations: `as` binds a name, `in` references it.
+
 ---
 
 ## Phase 1: Named Scopes in `row_source`
+
+**Status: implemented with `<scope>.` prefix syntax — needs revision to `in <scope>` suffix.**
 
 ### Goal
 
 Replace the `^` parent-hop syntax with named scope references.
 
 **Single row_source** (the common case — default `["items"]` or one explicit entry):
-path expressions resolve against the one implicit object; no scope prefix required.
+path expressions resolve against the one implicit object; no scope qualifier required.
 
 **Multiple row_source entries**: every entry must carry `as <name>`, and every path /
-label expression must begin with an explicit scope name.  There is no implicit
+label expression must end with an explicit `in <name>` qualifier.  There is no implicit
 "current object" when more than one level exists.
 
 ```yaml
@@ -28,9 +33,9 @@ create:
       - spec.taints as taint
     columns:
       - name: node_uid
-        path: node.metadata.uid
+        path: metadata.uid in node
       - name: taint_key
-        path: taint.key
+        path: key in taint
 ```
 
 ### Changes
@@ -45,28 +50,26 @@ create:
 
 - Add `_scopes: dict[int, dict[str, object]]`.  Key is `id(child)`; value is the
   map of scope names visible at that child's level.
-- Update `set_parent` to also record named scopes: when a child is created from a
-  level that had a name, include that name → parent-object in the child's scope map,
-  merging with any scopes already inherited.
-- Add `get_scope(child, name) -> Optional[object]` that walks up the scope chain
-  to find the named object.
+- `set_scope(child, name, parent)` records the child's scope map, inheriting all
+  ancestor scopes from parent and adding `name → child`.
+- Add `get_scope(obj, name) -> Optional[object]` that looks up the named object.
 
 **`kugl/impl/tables.py` — `TableFromConfig._itemize`**
 
-- After calling `context.set_parent(child, item)`, also call a new
+- After calling `context.set_parent(child, item)`, also call
   `context.set_scope(child, source.name, item)` when `source.name` is not None,
   carrying forward all ancestor scopes so deeper levels can still reference `node`.
 
 **`kugl/impl/extract.py` — `FieldRef` / `PathExtractor` / `LabelExtractor`**
 
-- `FieldRef.parse`: remove `^` handling; detect a leading `<word>.` prefix as a
+- `FieldRef.parse`: remove `^` handling; detect a trailing ` in <word>` suffix as a
   scope name.  Store as `scope_name: Optional[str]` and strip it from the target
   before JMESPath compilation.
 - In `PathExtractor.extract` and `LabelExtractor.extract`, when `self._ref.scope_name`
   is set, resolve the object via `context.get_scope(obj, scope_name)`.
 - Validation at table-build time (`TableFromConfig.__init__`): if `len(row_source) > 1`,
-  every `row_source` entry must have a name and every column path/label must carry a
-  scope prefix; raise a clear `ConfigError` if either constraint is violated.
+  every `row_source` entry must have a name and every column path/label must carry an
+  `in <name>` qualifier; raise a clear `ConfigError` if either constraint is violated.
 
 ### Builtin Update
 
@@ -79,9 +82,9 @@ as a self-contained example:
       - spec.taints as taint
     columns:
       - name: node_uid
-        path: node.metadata.uid
+        path: metadata.uid in node
       - name: taint_key
-        path: taint.key
+        path: key in taint
 ```
 
 ### Tests
@@ -101,9 +104,10 @@ as a self-contained example:
 ### Goal
 
 Replace the two-key `path:` / `label:` vocabulary with a single `from:` key that
-auto-detects extraction type.  Named scope prefixes compose naturally.
+auto-detects extraction type.  Named scope qualifiers compose naturally via the same
+`in <name>` suffix.
 
-Single row_source (bare paths, no scope prefix needed):
+Single row_source (no scope qualifier needed):
 
 ```yaml
     columns:
@@ -121,24 +125,27 @@ Multi-step row_source (all entries named, all columns scoped):
       - spec.containers as container
     columns:
       - name: pod_name
-        from: pod.metadata.name           # named scope + JMESPath
+        from: metadata.name in pod            # JMESPath on pod scope
       - name: pod_pool
-        from: pod.karpenter.sh/nodepool   # named scope + label
+        from: karpenter.sh/nodepool in pod    # label on pod scope — unambiguous
       - name: container_name
-        from: container.name              # named scope + JMESPath
+        from: name in container               # JMESPath on container scope
 ```
 
 ### Auto-Detection Rule
 
-After stripping any `<scope>.` prefix:
+Strip any trailing ` in <word>` suffix first, then apply to the remainder:
 
 - Matches `[a-zA-Z0-9.-]+/[a-zA-Z0-9._/-]+` (K8s label format: DNS domain + `/` +
   key) → `LabelExtractor`
 - Otherwise → `PathExtractor`
 
 A value like `metadata.labels.foo/bar` is a JMESPath, not a label — the `/` appears
-inside a path segment, not as the label-domain separator.  The regex above handles
-this correctly because `metadata.labels.foo` is not a valid DNS domain segment.
+inside a path segment, not as the label-domain separator.  The regex handles this
+correctly because `metadata.labels.foo` is not a valid DNS domain segment.
+
+Parsing ` in <word>` is safe because neither JMESPath expressions nor label keys
+contain spaces, so the delimiter is unambiguous.
 
 ### Changes
 
@@ -148,34 +155,30 @@ this correctly because `metadata.labels.foo` is not a valid DNS domain segment.
   because `from` is a Python keyword).
 - In `gen_extractor`, handle `from_` alongside `path` and `label`.
   - If `from_` is set alongside `path` or `label`, raise `ValueError`.
-  - Parse any scope prefix from `from_`.
+  - Strip any ` in <word>` suffix from `from_` to extract the scope name.
   - Apply the label-vs-path regex to the remainder.
   - Construct the appropriate extractor, passing the scope name through.
 - Keep `path:` and `label:` fully supported so existing configs are not broken.
 
 **`kugl/impl/extract.py` — `FieldRef`**
 
-- Move the scope-prefix parsing here; `gen_extractor`
-  delegates to `FieldRef.parse_from(s, known_scopes=None)`.
-- Known scopes are not available at Pydantic parse time (they live in `CreateTable`
-  which is a sibling, not a parent).  Two options:
-  - **Lazy validation**: accept any `<word>.` prefix as a potential scope; fail at
-    table-build time in `TableFromConfig.__init__` if a referenced scope name is not
-    declared in `row_source`.
-  - **Two-pass**: `CreateTable` validates column scope references after parsing.
-  Lazy validation is simpler and consistent with how `path:` expressions are
-  currently validated (JMESPath compilation errors surface at parse time, but
-  missing-path errors surface at query time).
+- Centralise the ` in <scope>` parsing in `FieldRef.parse_scoped(s)`; both
+  `gen_extractor` (for `from:`) and `FieldRef.parse` (for `path:`/`label:`) delegate
+  to it.
+- Known scopes are not available at Pydantic parse time.  Use lazy validation: accept
+  any ` in <word>` suffix as a potential scope; fail at table-build time in
+  `TableFromConfig.__init__` if the referenced scope name is not declared in
+  `row_source`.
 
 ### Tests
 
 - `from: karpenter.sh/nodepool` produces the same result as `label: karpenter.sh/nodepool`.
 - `from: spec.providerID` produces the same result as `path: spec.providerID`.
-- `from: node.metadata.name` with a named `node` scope resolves correctly.
-- `from: node.karpenter.sh/nodepool` with a named `node` scope resolves as a label
-  on the node object.
+- `from: metadata.name in pod` with a named `pod` scope resolves correctly.
+- `from: karpenter.sh/nodepool in pod` with a named `pod` scope resolves as a label
+  on the pod object.
 - Error: `from:` and `path:` both specified → validation error.
-- Error: `from: unknownscope.foo` where `unknownscope` is not in `row_source` → clear
+- Error: `from: foo in unknownscope` where `unknownscope` is not in `row_source` → clear
   error message at table-build time.
 
 ---
@@ -184,7 +187,7 @@ this correctly because `metadata.labels.foo` is not a valid DNS domain segment.
 
 | File | Change |
 |---|---|
-| `kugl/impl/extract.py` | `FieldRef.parse`: detect scope prefix; extractors: resolve via scope |
+| `kugl/impl/extract.py` | `FieldRef.parse`: detect ` in <scope>` suffix; extractors: resolve via scope |
 | `kugl/impl/tables.py` | `Itemizer`: parse `as <name>`; `RowContext`: track named scopes |
 | `kugl/impl/config.py` | `UserColumn`: add `from_` field and dispatch in `gen_extractor` |
 | `kugl/builtins/schemas/kubernetes.yaml` | Convert `node_taints` to named scope syntax |
