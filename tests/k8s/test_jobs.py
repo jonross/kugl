@@ -81,9 +81,9 @@ def test_label_parents(test_home):
               - spec.template as template
             columns:
               - name: job_username
-                label: job.user
+                label: user in job
               - name: pod_username
-                label: template.user
+                label: user in template
     """)
     kubectl_response(
         "jobs",

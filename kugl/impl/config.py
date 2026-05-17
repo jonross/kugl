@@ -2,6 +2,7 @@
 Pydantic models for configuration files.
 """
 
+import re
 from os.path import expandvars, expanduser
 from typing import Optional, Tuple, Callable, Union
 
@@ -146,7 +147,10 @@ class UserColumn(Column):
         if column.path and column.label:
             raise ValueError("cannot specify both path and label")
         elif column.path:
-            column._extractor = PathExtractor(column.name, column.type, column.path)
+            # Strip any 'in <name>' suffix before JMESPath compilation; scope resolution
+            # is deferred to rebuild_for_scope when scope names are known.
+            path_target = re.sub(r"\s+in\s+[a-zA-Z_][a-zA-Z0-9_]*$", "", column.path)
+            column._extractor = PathExtractor(column.name, column.type, path_target)
         elif column.label:
             if not isinstance(column.label, list):
                 column.label = [column.label]
@@ -168,7 +172,7 @@ class UserColumn(Column):
             if ref.scope_name is None:
                 fail(
                     f"Table '{table_name}', column '{self.name}': "
-                    f"path '{self.path}' must begin with a scope name "
+                    f"path '{self.path}' must end with 'in <name>' "
                     f"(one of: {sorted(scope_names)})"
                 )
             try:
@@ -184,7 +188,7 @@ class UserColumn(Column):
                 if ref.scope_name is None:
                     fail(
                         f"Table '{table_name}', column '{self.name}': "
-                        f"label '{label}' must begin with a scope name "
+                        f"label '{label}' must end with 'in <name>' "
                         f"(one of: {sorted(scope_names)})"
                     )
                 if scope_name and scope_name != ref.scope_name:

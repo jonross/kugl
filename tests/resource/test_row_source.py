@@ -42,9 +42,9 @@ _MULTI_STEP_CONFIG = """
         - children as child
       columns:
         - name: parent_id
-          path: item.parent
+          path: parent in item
         - name: val
-          path: child.val
+          path: val in child
 """
 
 @pytest.mark.parametrize("items,expected", [
@@ -103,11 +103,11 @@ def test_kv_with_parent_nav(test_home):
             - env as kv_pair; kv
           columns:
             - name: service
-              path: item.service
+              path: service in item
             - name: key
-              path: kv_pair.key
+              path: key in kv_pair
             - name: value
-              path: kv_pair.value
+              path: value in kv_pair
     """)
     assert_query(
         "SELECT * FROM things ORDER BY service, key",
@@ -145,11 +145,11 @@ def test_three_level_named_scopes(test_home):
             - tags as tag_item
           columns:
             - name: section
-              path: section_item.section
+              path: section in section_item
             - name: grp
-              path: group.grp
+              path: grp in group
             - name: tag
-              path: tag_item.tag
+              path: tag in tag_item
     """)
     assert_query(
         "SELECT * FROM things ORDER BY section, grp, tag",
@@ -178,7 +178,7 @@ def test_missing_scope_name(test_home):
             - children
           columns:
             - name: val
-              path: item.val
+              path: val in item
     """)
     with pytest.raises(KuglError, match="must all have 'as <name>'"):
         assert_query("SELECT * FROM things", "")
@@ -202,7 +202,7 @@ def test_unscoped_column_in_multi_step(test_home):
             - name: val
               path: val
     """)
-    with pytest.raises(KuglError, match="must begin with a scope name"):
+    with pytest.raises(KuglError, match="must end with 'in <name>'"):
         assert_query("SELECT * FROM things", "")
 
 

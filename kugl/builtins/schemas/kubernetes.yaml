@@ -29,11 +29,11 @@ create:
       - spec.taints as taint
     columns:
       - name: node_uid
-        path: node.metadata.uid
+        path: metadata.uid in node
         comment: node UID, from metadata.uid
       - name: key
-        path: taint.key
+        path: key in taint
         comment: taint key
       - name: effect
-        path: taint.effect
+        path: effect in taint
         comment: taint effect

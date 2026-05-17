@@ -76,9 +76,9 @@ def test_folder_content(hr, tmp_path, capsys):
     # Update the row_source of the people table to match the folder data layout.
     config["create"][0]["row_source"] = ["[] as file", "content as person"]
     config["create"][0]["columns"] = [
-        dict(name="name", path="person.name"),
-        dict(name="age", path="person.age", type="integer"),
-        dict(name="region", path="file.match.region"),
+        dict(name="name", path="name in person"),
+        dict(name="age", path="age in person", type="integer"),
+        dict(name="region", path="match.region in file"),
     ]
     hr.save(config)
     with features_debugged("folder"):

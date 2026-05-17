@@ -36,7 +36,7 @@ KUGL_TYPE_TO_SQL_TYPE = {
 }
 
 
-_SCOPE_PREFIX = re.compile(r"^([a-zA-Z_][a-zA-Z0-9_]*)\.(.+)$")
+_SCOPE_SUFFIX = re.compile(r"^(.+)\s+in\s+([a-zA-Z_][a-zA-Z0-9_]*)$")
 
 
 @dataclass
@@ -48,16 +48,16 @@ class FieldRef:
 
     @classmethod
     def parse_scoped(cls, s: str, scope_names: set) -> "FieldRef":
-        """Parse a path/label string, detecting a scope prefix if it matches a declared scope name.
+        """Parse a path/label string, detecting a trailing 'in <name>' scope qualifier.
 
-        Returns FieldRef with scope_name=None if the leading word is not a declared scope,
+        Returns FieldRef with scope_name=None if no matching qualifier is found,
         leaving the full string as the target.
         """
         if "^" in s:
             fail("^ parent navigation is no longer supported; use named row_source scopes instead")
-        m = _SCOPE_PREFIX.match(s)
-        if m and m.group(1) in scope_names:
-            return cls(m.group(1), m.group(2))
+        m = _SCOPE_SUFFIX.match(s)
+        if m and m.group(2) in scope_names:
+            return cls(m.group(2), m.group(1))
         return cls(None, s)
 
 
