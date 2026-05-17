@@ -101,8 +101,8 @@ def main2(argv: List[str], init: Optional[UserInit] = None):
                 fail(f"Shortcut '{shortcut.name}' takes no arguments")
         bindings = dict(zip(shortcut.params, extras))
         expanded = [re.sub(r'\{\{(\w+)\}\}', lambda m: bindings[m.group(1)], a) for a in shortcut.args]
-        base = [a for a in argv if a not in set(extras) and a != args.sql]
-        return main2(base + expanded, init)
+        idx = len(argv) - len(extras) - 1
+        return main2(argv[:idx] + expanded, init)
 
     if args.debug:
         debug_features(args.debug.split(","))
