@@ -5,14 +5,13 @@ Formerly in ./config.py, refactored for clarity.
 
 from dataclasses import dataclass
 import re
-from typing import Literal
+from typing import Literal, Optional
 
 import jmespath
 
 from kugl.util import parse_utc, parse_age, parse_size, parse_cpu, abbreviate, fail
 
 ColumnType = Literal["text", "integer", "real", "date", "age", "size", "cpu"]
-PARENTED_PATH = re.compile(r"^(\^*)(.*)")
 
 KUGL_TYPE_CONVERTERS = {
     # Valid choices for column type in config -> function to extract that from a string
@@ -39,15 +38,17 @@ KUGL_TYPE_TO_SQL_TYPE = {
 
 @dataclass
 class FieldRef:
-    """Parsed form of a parented JMESPath expression or label, e.g. '^^metadata.name'"""
+    """Parsed form of a potentially-scoped JMESPath expression or label."""
 
-    n_parents: int
+    scope_name: Optional[str]
     target: str
 
     @classmethod
-    def parse(cls, s):
-        m = PARENTED_PATH.match(s)
-        return cls(len(m.group(1)), m.group(2))
+    def parse(cls, s: str) -> "FieldRef":
+        """Parse a path/label string, raising if ^ syntax is used."""
+        if "^" in s:
+            fail("^ parent navigation is no longer supported; use named row_source scopes instead")
+        return cls(None, s)
 
 
 class Extractor:
@@ -81,22 +82,28 @@ class Extractor:
 class LabelExtractor(Extractor):
     """Extract a column value from the first matching label in a list of labels."""
 
-    def __init__(self, column_name: str, column_type: ColumnType, labels: list[str]):
+    def __init__(self, column_name: str, column_type: ColumnType, labels: list[str],
+                 scope_name: Optional[str] = None):
         super().__init__(column_name, column_type)
+        for label in labels:
+            if "^" in label:
+                raise ValueError(
+                    f"^ parent navigation is no longer supported in column {column_name}; "
+                    f"use named row_source scopes instead"
+                )
         self._labels = labels
-        self._refs = [FieldRef.parse(label) for label in labels]
+        self._scope_name = scope_name
 
     def extract(self, obj: object, context) -> object:
         """Resolve the metadata location for each label and see if the label is present."""
-        for ref in self._refs:
-            if ref.n_parents > 0:
-                obj = context.get_parent(obj, ref.n_parents)
+        if self._scope_name:
+            obj = context.get_scope(obj, self._scope_name)
             if obj is None:
-                fail(f"Missing parent or too many ^ while evaluating {ref.target}")
-            if available := obj.get("metadata", {}).get("labels", {}):
-                # If the label is present here, return the value here, even if null
-                if ref.target in available:
-                    return available[ref.target]
+                fail(f"Unknown scope '{self._scope_name}' for column '{self.column_name}'")
+        if available := obj.get("metadata", {}).get("labels", {}):
+            for label in self._labels:
+                if label in available:
+                    return available[label]
 
     def __str__(self):
         """For debug output"""
@@ -106,23 +113,29 @@ class LabelExtractor(Extractor):
 class PathExtractor(Extractor):
     """Extract a column value from the target of a JMESPath expression."""
 
-    def __init__(self, column_name: str, column_type: ColumnType, path: str):
+    def __init__(self, column_name: str, column_type: ColumnType, path: str,
+                 scope_name: Optional[str] = None):
         super().__init__(column_name, column_type)
-        self._ref = FieldRef.parse(path)
+        if "^" in path:
+            raise ValueError(
+                f"^ parent navigation is no longer supported in column {column_name}; "
+                f"use named row_source scopes instead"
+            )
+        self._scope_name = scope_name
         self._path = path
         try:
-            self._finder = jmespath.compile(self._ref.target)
+            self._finder = jmespath.compile(path)
         except jmespath.exceptions.ParseError as e:
             raise ValueError(
-                f"invalid JMESPath expression {self._ref.target} in column {column_name}"
+                f"invalid JMESPath expression {path} in column {column_name}"
             ) from e
 
     def extract(self, obj: object, context) -> object:
         """Extract a value from an object using a JMESPath finder."""
-        if self._ref.n_parents > 0:
-            obj = context.get_parent(obj, self._ref.n_parents)
-        if obj is None:
-            fail(f"Missing parent or too many ^ while evaluating {self._path}")
+        if self._scope_name:
+            obj = context.get_scope(obj, self._scope_name)
+            if obj is None:
+                fail(f"Unknown scope '{self._scope_name}' for column '{self.column_name}'")
         return self._finder.search(obj)
 
     def __str__(self):

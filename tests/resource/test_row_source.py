@@ -11,8 +11,8 @@ from ..testing import assert_query
 from ..k8s.k8s_mocks import kubectl_response
 
 
-def test_too_many_parents(test_home):
-    """Ensure correct error when a parent field reference is too long."""
+def test_caret_rejected(test_home):
+    """Ensure ^ parent navigation raises a clear error."""
     kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
       resources:
         - name: things
@@ -22,18 +22,10 @@ def test_too_many_parents(test_home):
           resource: things
           columns:
             - name: something
-              path: ^^^invalid
+              path: ^parent
     """)
-    kubectl_response(
-        "things",
-        {
-            "items": [
-                {"something": "foo"},
-                {"something": "foo"},
-            ]
-        },
-    )
-    with pytest.raises(KuglError, match="Missing parent or too many . while evaluating ...invalid"):
+    kubectl_response("things", {"items": [{"something": "foo"}]})
+    with pytest.raises(KuglError, match=r"\^ parent navigation is no longer supported"):
         assert_query("SELECT * FROM things", "")
 
 
@@ -46,13 +38,13 @@ _MULTI_STEP_CONFIG = """
     - table: things
       resource: things
       row_source:
-        - items
-        - children
+        - items as item
+        - children as child
       columns:
         - name: parent_id
-          path: ^parent
+          path: item.parent
         - name: val
-          path: val
+          path: child.val
 """
 
 @pytest.mark.parametrize("items,expected", [
@@ -82,7 +74,7 @@ _MULTI_STEP_CONFIG = """
     ),
 ])
 def test_multi_step_row_source(test_home, items, expected):
-    """Multi-step row_source with ^ parent navigation; also checks empty sublists produce no rows."""
+    """Multi-step row_source with named scopes; also checks empty sublists produce no rows."""
     kugl_home().prep().joinpath("kubernetes.yaml").write_text(
         _MULTI_STEP_CONFIG.format(items=json.dumps(items))
     )
@@ -90,7 +82,7 @@ def test_multi_step_row_source(test_home, items, expected):
 
 
 def test_kv_with_parent_nav(test_home):
-    """'; kv' expansion combined with ^ to reference a field from the parent item."""
+    """'; kv' expansion combined with named scope to reference a field from the parent item."""
     kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
       resources:
         - name: things
@@ -107,15 +99,15 @@ def test_kv_with_parent_nav(test_home):
         - table: things
           resource: things
           row_source:
-            - items
-            - env; kv
+            - items as item
+            - env as kv_pair; kv
           columns:
             - name: service
-              path: ^service
+              path: item.service
             - name: key
-              path: key
+              path: kv_pair.key
             - name: value
-              path: value
+              path: kv_pair.value
     """)
     assert_query(
         "SELECT * FROM things ORDER BY service, key",
@@ -128,8 +120,8 @@ def test_kv_with_parent_nav(test_home):
     )
 
 
-def test_double_parent_nav(test_home):
-    """^^ navigates two levels up through a three-step row_source chain."""
+def test_three_level_named_scopes(test_home):
+    """Three-step row_source with named scopes; verifies ancestor scopes are reachable."""
     kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
       resources:
         - name: things
@@ -148,16 +140,16 @@ def test_double_parent_nav(test_home):
         - table: things
           resource: things
           row_source:
-            - items
-            - groups
-            - tags
+            - items as section_item
+            - groups as group
+            - tags as tag_item
           columns:
             - name: section
-              path: ^^section
+              path: section_item.section
             - name: grp
-              path: ^grp
+              path: group.grp
             - name: tag
-              path: tag
+              path: tag_item.tag
     """)
     assert_query(
         "SELECT * FROM things ORDER BY section, grp, tag",
@@ -168,6 +160,50 @@ def test_double_parent_nav(test_home):
         sec-a      grp-2  t3
         """,
     )
+
+
+def test_missing_scope_name(test_home):
+    """Multi-step row_source without 'as <name>' raises a ConfigError."""
+    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
+      resources:
+        - name: things
+          data:
+            items:
+              - children: [{val: a}]
+      create:
+        - table: things
+          resource: things
+          row_source:
+            - items as item
+            - children
+          columns:
+            - name: val
+              path: item.val
+    """)
+    with pytest.raises(KuglError, match="must all have 'as <name>'"):
+        assert_query("SELECT * FROM things", "")
+
+
+def test_unscoped_column_in_multi_step(test_home):
+    """Multi-step row_source with a bare (un-scoped) column path raises a ConfigError."""
+    kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
+      resources:
+        - name: things
+          data:
+            items:
+              - children: [{val: a}]
+      create:
+        - table: things
+          resource: things
+          row_source:
+            - items as item
+            - children as child
+          columns:
+            - name: val
+              path: val
+    """)
+    with pytest.raises(KuglError, match="must begin with a scope name"):
+        assert_query("SELECT * FROM things", "")
 
 
 def test_data_dict_expansion(test_home):

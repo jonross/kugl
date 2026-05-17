@@ -4,6 +4,7 @@ SQLite tables are defined and populated here.
 """
 
 from dataclasses import dataclass
+import re
 from typing import Optional, Type
 
 import jmespath
@@ -129,6 +130,16 @@ class TableFromConfig(Table):
             creator.columns + (extender.columns if extender else []),
         )
         self.row_source = [Itemizer.parse(x, name) for x in (creator.row_source or ["items"])]
+        if len(self.row_source) > 1:
+            scope_names = {s.name for s in self.row_source if s.name is not None}
+            unnamed = [s.expr for s in self.row_source if s.name is None]
+            if unnamed:
+                fail(
+                    f"Table '{name}': multi-step row_source entries must all have 'as <name>'; "
+                    f"missing for: {unnamed}"
+                )
+            for column in self.added_columns:
+                column.rebuild_for_scope(scope_names, name)
 
     def make_rows(self, context: "RowContext") -> list[tuple[dict, tuple]]:
         """
@@ -165,6 +176,8 @@ class TableFromConfig(Table):
                             # Fix #132 -- don't do this at pass 0, or it sets the parent to the entire
                             # response object.
                             context.set_parent(child, item)
+                        if source.name is not None:
+                            context.set_scope(child, source.name, item if index > 0 else None)
                         new_items.append(child)
                         if debug:
                             debug("add " + abbreviate(child))
@@ -172,6 +185,8 @@ class TableFromConfig(Table):
                     if index > 0:
                         # See comment above.
                         context.set_parent(found, item)
+                    if source.name is not None:
+                        context.set_scope(found, source.name, item if index > 0 else None)
                     new_items.append(found)
                     if debug:
                         debug("add " + abbreviate(found))
@@ -184,12 +199,15 @@ class RowContext:
 
     Primarily, the `.data` attribute holds the JSON data from 'kubectl get' or similar.
     The `.set_parent` and `.get_parent` methods allow row-generating functions to track
-    parent objects as they iterate through nested data structures."""
+    parent objects as they iterate through nested data structures.
+    The `.set_scope` and `.get_scope` methods support named scope resolution for
+    multi-step row_source tables."""
 
     def __init__(self, data):
         self.data = data
         self.debug = debugging("extract")
         self._parents = {}
+        self._scopes = {}
 
     def set_parent(self, child, parent):
         self._parents[id(child)] = parent
@@ -200,21 +218,38 @@ class RowContext:
             depth -= 1
         return child
 
+    def set_scope(self, child, name: str, parent=None):
+        """Register child as the named scope, inheriting ancestor scopes from parent."""
+        parent_scopes = self._scopes.get(id(parent), {}) if parent is not None else {}
+        child_scopes = dict(parent_scopes)
+        child_scopes[name] = child
+        self._scopes[id(child)] = child_scopes
+
+    def get_scope(self, obj, name: str):
+        """Look up a named scope for obj, returning None if not found."""
+        return self._scopes.get(id(obj), {}).get(name)
+
 
 @dataclass
 class Itemizer:
     """Helper class to hold information parsed from one line of a row_source"""
 
-    # Original row_source expression
+    # JMESPath expression (without the 'as <name>' suffix)
     expr: str
     # JMESPath expression to find the items
     finder: ParsedResult
     # Should dictionaries be unpacked to a key/value array
     unpack: bool
+    # Optional scope name from 'as <name>' suffix
+    name: Optional[str] = None
 
     @classmethod
     def parse(cls, s: str, table_name: str):
-        """Parse a line from the row_source section of a config file"""
+        """Parse a line from the row_source section of a config file.
+
+        Syntax: 'expr [as name][; kv]'
+        """
+        # Split off options (;kv etc.)
         parts = s.split(";")
         if len(parts) == 1:
             unpack = False
@@ -222,7 +257,18 @@ class Itemizer:
             unpack = True
         else:
             fail(f"Invalid row_source options: {s}")
+
+        # Parse 'expr as name' from the expression part
+        expr_part = parts[0].strip()
+        name = None
+        as_index = expr_part.find(" as ")
+        if as_index >= 0:
+            name = expr_part[as_index + 4:].strip()
+            expr_part = expr_part[:as_index].strip()
+            if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", name):
+                fail(f"Invalid scope name '{name}' in row_source: {s}")
+
         try:
-            return Itemizer(s, jmespath.compile(parts[0]), unpack)
+            return Itemizer(expr=expr_part, finder=jmespath.compile(expr_part), unpack=unpack, name=name)
         except jmespath.exceptions.ParseError as e:
-            fail(f"invalid row_source {parts[0]} for table {table_name}", e)
+            fail(f"invalid row_source {expr_part} for table {table_name}", e)

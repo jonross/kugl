@@ -145,9 +145,9 @@ Two extractor types, specified by keyword in a column definition:
 **`path:`** — JMESPath expression into the current row item  
 **`label:`** — shortcut to `metadata.labels`; can be a list to try in order
 
-**Parent navigation** — prefix `^` chars to walk up the `row_source` chain:
-- `^metadata.uid` means `.metadata.uid` one level above the current item
-- `^^foo` means two levels up
+**Named scope navigation** — in multi-step `row_source`, each entry must carry `as <name>`, and every column path/label must be prefixed with a scope name:
+- `node.metadata.uid` extracts `metadata.uid` from the object named `node` at a higher level
+- All named scopes from ancestor levels are available at each step
 
 ## Column Types
 
@@ -171,12 +171,18 @@ Multi-step JMESPath iteration for generating multiple rows per API response item
 
 ```yaml
 row_source:
-  - items          # step 1: each element of the top-level items array
-  - spec.taints    # step 2: each taint within each node
+  - items as node       # step 1: each element of the top-level items array, named "node"
+  - spec.taints as taint  # step 2: each taint within each node, named "taint"
+columns:
+  - name: node_uid
+    path: node.metadata.uid   # scope prefix "node." resolves to the step-1 object
+  - name: taint_key
+    path: taint.key           # scope prefix "taint." resolves to the step-2 object
 ```
 
 - Each step applies to results of the prior step
-- Parent/child relationships are tracked for `^` path navigation
+- Multi-step tables require `as <name>` on every entry; all column paths/labels must carry a scope prefix
+- Single-step tables use bare JMESPath paths with no scope prefix
 - Dict sources can be unpacked to key/value pairs with `; kv` suffix: `- env; kv`
 - Default `row_source` is `["items"]`
 

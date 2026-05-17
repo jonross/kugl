@@ -25,15 +25,15 @@ create:
   - table: node_taints
     resource: nodes
     row_source:
-      - items
-      - spec.taints
+      - items as node
+      - spec.taints as taint
     columns:
       - name: node_uid
-        path: ^metadata.uid
+        path: node.metadata.uid
         comment: node UID, from metadata.uid
       - name: key
-        path: key
+        path: taint.key
         comment: taint key
       - name: effect
-        path: effect
+        path: taint.effect
         comment: taint effect

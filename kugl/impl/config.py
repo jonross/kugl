@@ -3,6 +3,7 @@ Pydantic models for configuration files.
 """
 
 from os.path import expandvars, expanduser
+import re
 from typing import Optional, Tuple, Callable, Union
 
 import jmespath
@@ -157,6 +158,48 @@ class UserColumn(Column):
 
     def extract(self, obj: object, context) -> object:
         return self._extractor(obj, context)
+
+    def rebuild_for_scope(self, scope_names: set, table_name: str):
+        """Re-create the extractor with scope awareness for multi-step row_source tables.
+
+        Called at TableFromConfig build time when scope names are known.
+        """
+        _SCOPE_PREFIX = re.compile(r"^([a-zA-Z_][a-zA-Z0-9_]*)\.(.+)$")
+        if self.path:
+            m = _SCOPE_PREFIX.match(self.path)
+            if m and m.group(1) in scope_names:
+                scope_name, target = m.group(1), m.group(2)
+            else:
+                fail(
+                    f"Table '{table_name}', column '{self.name}': "
+                    f"path '{self.path}' must begin with a scope name "
+                    f"(one of: {sorted(scope_names)})"
+                )
+            try:
+                self._extractor = PathExtractor(self.name, self.type, target, scope_name=scope_name)
+            except ValueError as e:
+                fail(str(e))
+        elif self.label:
+            labels = self.label if isinstance(self.label, list) else [self.label]
+            scope_name = None
+            stripped_labels = []
+            for label in labels:
+                m = _SCOPE_PREFIX.match(label)
+                if m and m.group(1) in scope_names:
+                    if scope_name and scope_name != m.group(1):
+                        fail(
+                            f"Table '{table_name}', column '{self.name}': "
+                            f"all labels must use the same scope name"
+                        )
+                    scope_name = m.group(1)
+                    stripped_labels.append(m.group(2))
+                else:
+                    fail(
+                        f"Table '{table_name}', column '{self.name}': "
+                        f"label '{label}' must begin with a scope name "
+                        f"(one of: {sorted(scope_names)})"
+                    )
+            self._extractor = LabelExtractor(self.name, self.type, stripped_labels, scope_name=scope_name)
 
 
 class ExtendTable(BaseModel):
