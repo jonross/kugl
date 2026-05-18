@@ -40,8 +40,9 @@ class KubernetesResource(Resource):
 
     @classmethod
     def add_cli_options(cls, ap: ArgumentParser):
-        ap.add_argument("-A", "--all", "--all-namespaces", dest="all", default=False, action="store_true")
-        ap.add_argument("-n", "--namespace", type=str)
+        ap.add_argument("-A", "--all", "--all-namespaces", dest="all", default=False, action="store_true", 
+        help="query all Kubernetes namespaces")
+        ap.add_argument("-n", "--namespace", type=str, help="limit query to NAMESPACE")
 
     def handle_cli_options(self, args):
         if args.all and args.namespace:

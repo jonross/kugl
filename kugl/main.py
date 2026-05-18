@@ -117,15 +117,15 @@ def parse_args(
     argv: list[str], ap: ArgumentParser, settings: Settings
 ) -> tuple[argparse.Namespace, CacheFlag, list[str]]:
     """Add stock arguments to parser, parse the command line, and override settings."""
-    ap.add_argument("-c", "--context", type=str)
-    ap.add_argument("-D", "--debug", type=str)
-    ap.add_argument("-H", "--no-headers", default=False, action="store_true")
-    ap.add_argument("-o", "--output", choices=["table", "csv", "json"], default="table")
-    ap.add_argument("-q", "--quiet", default=False, action="store_true")
-    ap.add_argument("-r", "--refresh", default=False, action="store_true")
-    ap.add_argument("-s", "--stale", default=False, action="store_true")
-    ap.add_argument("-t", "--timeout", type=str)
-    ap.add_argument("sql")
+    ap.add_argument("-c", "--context", type=str, help="kubectl context to use")
+    ap.add_argument("-D", "--debug", type=str, help="comma-separated debug topics: cache, extract, itemize; see docs for more")
+    ap.add_argument("-H", "--no-headers", default=False, action="store_true", help="suppress column headers")
+    ap.add_argument("-o", "--output", choices=["table", "csv", "json"], default="table", help="output format (default: table)")
+    ap.add_argument("-q", "--quiet", default=False, action="store_true", help="suppress stale-data warnings")
+    ap.add_argument("-r", "--refresh", default=False, action="store_true", help="force refresh of all cached data")
+    ap.add_argument("-s", "--stale", default=False, action="store_true", help="use cached data even if stale")
+    ap.add_argument("-t", "--timeout", type=str, help="cache timeout, e.g. 5m or 30s (default: 2m)")
+    ap.add_argument("sql", help="SQL query or shortcut name")
     args, extras = ap.parse_known_args(argv)
     if args.stale and args.refresh:
         fail("Cannot use both -s/--stale and -r/--refresh")
