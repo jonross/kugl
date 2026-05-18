@@ -55,7 +55,8 @@ from your cluster, please redact it before posting.
 Can I give feedback without opening an issue?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Sure, you can email ``kugl dot devel at gmail dot com``.
+Sure, use Kugl's [discussions page](https://github.com/jonross/kugl/discussions) on Github.
+(You'll need a Github account to post.)
 
 I didn't receive a response
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
