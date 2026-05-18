@@ -179,8 +179,21 @@ def test_shortcuts_command(test_home, capsys):
     """)
     main1(["shortcuts"])
     out = capsys.readouterr().out
-    assert "mypods" in out
-    assert "(list my pods)" in out
-    assert "select name from pods" in out
+    assert "mypods  -- list my pods" in out
     assert "find-image <img>" in out
-    assert "select name from pods where image like" in out
+    assert "select name from pods" not in out
+
+
+def test_shortcuts_command_verbose(test_home, capsys):
+    kugl_home().prep().joinpath("init.yaml").write_text("""
+        shortcuts:
+          - name: mypods
+            comment: list my pods
+            args:
+              - "select name from pods"
+    """)
+    for flag in ["-v", "--verbose"]:
+        main1(["shortcuts", flag])
+        out = capsys.readouterr().out
+        assert "mypods  -- list my pods" in out
+        assert "select name from pods" in out

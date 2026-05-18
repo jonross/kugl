@@ -70,7 +70,8 @@ def main2(argv: List[str], init: Optional[UserInit] = None):
 
     if argv[0] == "shortcuts":
         _, shortcuts = _merge_init_files()
-        _handle_shortcuts_command(shortcuts)
+        verbose = len(argv) > 1 and argv[1] in ("-v", "--verbose")
+        _handle_shortcuts_command(shortcuts, verbose)
         return
 
     if argv[0] == "schema" or argv[0] == "--schema":
@@ -195,7 +196,7 @@ def _merge_init_files() -> tuple[UserInit, dict[str, Shortcut]]:
     return init, shortcuts
 
 
-def _handle_shortcuts_command(shortcuts: dict):
+def _handle_shortcuts_command(shortcuts: dict, verbose: bool = False):
     if not shortcuts:
         print("No shortcuts defined.")
         return
@@ -203,12 +204,13 @@ def _handle_shortcuts_command(shortcuts: dict):
         header = shortcut.name
         if shortcut.params:
             header += " " + " ".join(f"<{p}>" for p in shortcut.params)
-        print(header)
-        for arg in shortcut.args:
-            print(f"    {arg}")
         if shortcut.comment:
-            print(f"    ({shortcut.comment})")
-        print()
+            header += f"  -- {shortcut.comment}"
+        print(header)
+        if verbose:
+            for arg in shortcut.args:
+                print(f"    {arg}")
+            print()
 
 
 def _handle_init_command():
