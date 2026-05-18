@@ -71,8 +71,7 @@ Kugl requires Python 3.9 or later, and kubectl.
 **This is an alpha release.** Please expect bugs and
 `backward-incompatible changes <docs/breaking.rst>`__
 
-If you don't mind Kugl cluttering your Python with its
-`dependencies <./reqs_public.txt>`__:
+If you don't mind Kugl's dependencies in your Python env:
 
 .. code:: shell
 
