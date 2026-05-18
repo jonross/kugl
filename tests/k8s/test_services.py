@@ -13,7 +13,12 @@ def test_service_types(test_home):
             "items": [
                 make_service("svc-1"),
                 make_service("svc-2", svc_type="NodePort", cluster_ip="10.96.0.2"),
-                make_service("svc-3", svc_type="LoadBalancer", cluster_ip="10.96.0.3", external_ip="203.0.113.5"),
+                make_service(
+                    "svc-3",
+                    svc_type="LoadBalancer",
+                    cluster_ip="10.96.0.3",
+                    external_ip="203.0.113.5",
+                ),
                 make_service("svc-4", svc_type="ExternalName", cluster_ip="None"),
             ]
         },

@@ -10,7 +10,14 @@ import jmespath
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pydantic.functional_validators import model_validator
 
-from .extract import ColumnType, KUGL_TYPE_TO_SQL_TYPE, FieldRef, LabelExtractor, PathExtractor, is_label
+from .extract import (
+    ColumnType,
+    KUGL_TYPE_TO_SQL_TYPE,
+    FieldRef,
+    LabelExtractor,
+    PathExtractor,
+    is_label,
+)
 from kugl.util import (
     Age,
     ConfigPath,
@@ -80,7 +87,7 @@ class Shortcut(BaseModel):
     def _check_params(cls, shortcut: "Shortcut") -> "Shortcut":
         declared = set(shortcut.params)
         for arg in shortcut.args:
-            for token in re.findall(r'\{\{(\w+)\}\}', arg):
+            for token in re.findall(r"\{\{(\w+)\}\}", arg):
                 if token not in declared:
                     fail(f"Shortcut '{shortcut.name}': undeclared parameter '{{{{{token}}}}}'")
         return shortcut
@@ -202,7 +209,9 @@ class UserColumn(Column):
                     f"(one of: {sorted(scope_names)})"
                 )
             try:
-                self._extractor = PathExtractor(self.name, self.type, ref.target, scope_name=ref.scope_name)
+                self._extractor = PathExtractor(
+                    self.name, self.type, ref.target, scope_name=ref.scope_name
+                )
             except ValueError as e:
                 fail(str(e))
         elif self.label:
@@ -224,7 +233,9 @@ class UserColumn(Column):
                     )
                 scope_name = ref.scope_name
                 stripped_labels.append(ref.target)
-            self._extractor = LabelExtractor(self.name, self.type, stripped_labels, scope_name=scope_name)
+            self._extractor = LabelExtractor(
+                self.name, self.type, stripped_labels, scope_name=scope_name
+            )
         elif self.from_:
             ref = FieldRef.parse_scoped(self.from_, scope_names)
             if ref.scope_name is None:
@@ -234,10 +245,14 @@ class UserColumn(Column):
                     f"(one of: {sorted(scope_names)})"
                 )
             if is_label(ref.target):
-                self._extractor = LabelExtractor(self.name, self.type, [ref.target], scope_name=ref.scope_name)
+                self._extractor = LabelExtractor(
+                    self.name, self.type, [ref.target], scope_name=ref.scope_name
+                )
             else:
                 try:
-                    self._extractor = PathExtractor(self.name, self.type, ref.target, scope_name=ref.scope_name)
+                    self._extractor = PathExtractor(
+                        self.name, self.type, ref.target, scope_name=ref.scope_name
+                    )
                 except ValueError as e:
                     fail(str(e))
 

@@ -162,7 +162,8 @@ class Engine:
 
 
 def _format_csv(rows, headers, no_headers):
-    import io, csv # noqa: E401
+    import io, csv  # noqa: E401
+
     buf = io.StringIO()
     writer = csv.writer(buf, lineterminator="\n")
     if not no_headers:

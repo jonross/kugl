@@ -91,16 +91,20 @@ def main2(argv: List[str], init: Optional[UserInit] = None):
     if " " not in args.sql:
         if not (shortcut := shortcuts.get(args.sql)):
             fail(f"No shortcut named '{args.sql}' is defined")
-        bad = [e for e in extras if e.startswith('-')]
+        bad = [e for e in extras if e.startswith("-")]
         if bad:
             fail(f"Unrecognized options: {' '.join(bad)}")
         if len(extras) != len(shortcut.params):
             if shortcut.params:
-                fail(f"Shortcut '{shortcut.name}' requires {len(shortcut.params)} argument(s): {', '.join(shortcut.params)}")
+                fail(
+                    f"Shortcut '{shortcut.name}' requires {len(shortcut.params)} argument(s): {', '.join(shortcut.params)}"
+                )
             else:
                 fail(f"Shortcut '{shortcut.name}' takes no arguments")
         bindings = dict(zip(shortcut.params, extras))
-        expanded = [re.sub(r'\{\{(\w+)\}\}', lambda m: bindings[m.group(1)], a) for a in shortcut.args]
+        expanded = [
+            re.sub(r"\{\{(\w+)\}\}", lambda m: bindings[m.group(1)], a) for a in shortcut.args
+        ]
         idx = len(argv) - len(extras) - 1
         return main2(argv[:idx] + expanded, init)
 
@@ -118,12 +122,35 @@ def parse_args(
 ) -> tuple[argparse.Namespace, CacheFlag, list[str]]:
     """Add stock arguments to parser, parse the command line, and override settings."""
     ap.add_argument("-c", "--context", type=str, help="kubectl context to use")
-    ap.add_argument("-D", "--debug", type=str, help="comma-separated debug topics: cache, extract, itemize; see docs for more")
-    ap.add_argument("-H", "--no-headers", default=False, action="store_true", help="suppress column headers")
-    ap.add_argument("-o", "--output", choices=["table", "csv", "json"], default="table", help="output format (default: table)")
-    ap.add_argument("-q", "--quiet", default=False, action="store_true", help="suppress stale-data warnings")
-    ap.add_argument("-r", "--refresh", default=False, action="store_true", help="force refresh of all cached data")
-    ap.add_argument("-s", "--stale", default=False, action="store_true", help="use cached data even if stale")
+    ap.add_argument(
+        "-D",
+        "--debug",
+        type=str,
+        help="comma-separated debug topics: cache, extract, itemize; see docs for more",
+    )
+    ap.add_argument(
+        "-H", "--no-headers", default=False, action="store_true", help="suppress column headers"
+    )
+    ap.add_argument(
+        "-o",
+        "--output",
+        choices=["table", "csv", "json"],
+        default="table",
+        help="output format (default: table)",
+    )
+    ap.add_argument(
+        "-q", "--quiet", default=False, action="store_true", help="suppress stale-data warnings"
+    )
+    ap.add_argument(
+        "-r",
+        "--refresh",
+        default=False,
+        action="store_true",
+        help="force refresh of all cached data",
+    )
+    ap.add_argument(
+        "-s", "--stale", default=False, action="store_true", help="use cached data even if stale"
+    )
     ap.add_argument("-t", "--timeout", type=str, help="cache timeout, e.g. 5m or 30s (default: 2m)")
     ap.add_argument("sql", help="SQL query or shortcut name")
     args, extras = ap.parse_known_args(argv)

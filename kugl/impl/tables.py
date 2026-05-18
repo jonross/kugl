@@ -79,8 +79,7 @@ class Table:
 
     def printable_schema(self):
         rows = [
-            (c.name, c._sqltype, c.comment or "")
-            for c in self.builtin_columns + self.added_columns
+            (c.name, c._sqltype, c.comment or "") for c in self.builtin_columns + self.added_columns
         ]
         return f"## {self.name}\n" + tabulate(rows, tablefmt="plain")
 
@@ -172,7 +171,11 @@ class TableFromConfig(Table):
                     found = [{"key": k, "value": v} for k, v in found.items()]
                 if isinstance(found, list):
                     # Compute base scopes once for all children from this item.
-                    base_scopes = (context._scopes.get(id(item), {}) if index > 0 else {}) if source.scope_name else None
+                    base_scopes = (
+                        (context._scopes.get(id(item), {}) if index > 0 else {})
+                        if source.scope_name
+                        else None
+                    )
                     for child in found:
                         if index > 0:
                             # Fix #132 -- don't do this at pass 0, or it sets the parent to the entire
@@ -269,12 +272,14 @@ class Itemizer:
         name = None
         as_index = expr_part.find(" as ")
         if as_index >= 0:
-            name = expr_part[as_index + 4:].strip()
+            name = expr_part[as_index + 4 :].strip()
             expr_part = expr_part[:as_index].strip()
             if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", name):
                 fail(f"Invalid scope name '{name}' in row_source: {s}")
 
         try:
-            return Itemizer(expr=expr_part, finder=jmespath.compile(expr_part), unpack=unpack, scope_name=name)
+            return Itemizer(
+                expr=expr_part, finder=jmespath.compile(expr_part), unpack=unpack, scope_name=name
+            )
         except jmespath.exceptions.ParseError as e:
             fail(f"invalid row_source {expr_part} for table {table_name}", e)

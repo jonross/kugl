@@ -13,9 +13,13 @@ def test_cronjob_fields(test_home):
         {
             "items": [
                 make_cronjob("cj-01"),
-                make_cronjob("cj-02", schedule="*/5 * * * *", active_count=2,
-                             last_schedule_ts=UNIT_TEST_TIMEBASE,
-                             last_success_ts=UNIT_TEST_TIMEBASE),
+                make_cronjob(
+                    "cj-02",
+                    schedule="*/5 * * * *",
+                    active_count=2,
+                    last_schedule_ts=UNIT_TEST_TIMEBASE,
+                    last_success_ts=UNIT_TEST_TIMEBASE,
+                ),
                 make_cronjob("cj-03", suspend=True),
                 make_cronjob("cj-04", namespace="xyz"),
             ]

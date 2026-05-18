@@ -50,10 +50,18 @@ def test_simple_shortcut(test_home, capsys, use_old_syntax):
         assert "Shortcuts format has changed" not in err
 
 
-@pytest.mark.parametrize("params,values,sql_template,check", [
-    (["val"], ["hello"], "select '{{val}}' as x", lambda out: "hello" in out),
-    (["a", "b"], ["foo", "bar"], "select '{{a}}' as a, '{{b}}' as b", lambda out: "foo" in out and "bar" in out),
-])
+@pytest.mark.parametrize(
+    "params,values,sql_template,check",
+    [
+        (["val"], ["hello"], "select '{{val}}' as x", lambda out: "hello" in out),
+        (
+            ["a", "b"],
+            ["foo", "bar"],
+            "select '{{a}}' as a, '{{b}}' as b",
+            lambda out: "foo" in out and "bar" in out,
+        ),
+    ],
+)
 def test_shortcut_with_params(test_home, capsys, params, values, sql_template, check):
     """Verify parameterized shortcuts substitute values correctly."""
     kugl_home().prep().joinpath("init.yaml").write_text(f"""

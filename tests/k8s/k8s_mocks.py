@@ -125,7 +125,9 @@ def make_pod(
         obj["metadata"]["deletionTimestamp"] = to_utc(deletion_ts)
     obj["spec"]["containers"] = [c.model_dump(by_alias=True, exclude_none=True) for c in containers]
     if init_containers:
-        obj["spec"]["initContainers"] = [c.model_dump(by_alias=True, exclude_none=True) for c in init_containers]
+        obj["spec"]["initContainers"] = [
+            c.model_dump(by_alias=True, exclude_none=True) for c in init_containers
+        ]
     obj["status"]["phase"] = phase
     return obj
 

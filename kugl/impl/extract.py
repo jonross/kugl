@@ -100,8 +100,13 @@ class Extractor:
 class LabelExtractor(Extractor):
     """Extract a column value from the first matching label in a list of labels."""
 
-    def __init__(self, column_name: str, column_type: ColumnType, labels: list[str],
-                 scope_name: Optional[str] = None):
+    def __init__(
+        self,
+        column_name: str,
+        column_type: ColumnType,
+        labels: list[str],
+        scope_name: Optional[str] = None,
+    ):
         super().__init__(column_name, column_type)
         for label in labels:
             if "^" in label:
@@ -131,8 +136,9 @@ class LabelExtractor(Extractor):
 class PathExtractor(Extractor):
     """Extract a column value from the target of a JMESPath expression."""
 
-    def __init__(self, column_name: str, column_type: ColumnType, path: str,
-                 scope_name: Optional[str] = None):
+    def __init__(
+        self, column_name: str, column_type: ColumnType, path: str, scope_name: Optional[str] = None
+    ):
         super().__init__(column_name, column_type)
         if "^" in path:
             raise ValueError(
@@ -144,9 +150,7 @@ class PathExtractor(Extractor):
         try:
             self._finder = jmespath.compile(path)
         except jmespath.exceptions.ParseError as e:
-            raise ValueError(
-                f"invalid JMESPath expression {path} in column {column_name}"
-            ) from e
+            raise ValueError(f"invalid JMESPath expression {path} in column {column_name}") from e
 
     def extract(self, obj: object, context) -> object:
         """Extract a value from an object using a JMESPath finder."""

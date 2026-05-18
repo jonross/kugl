@@ -12,12 +12,34 @@ def test_event_columns(test_home):
         "events",
         {
             "items": [
-                make_event("ev1", event_type="Normal", reason="Scheduled", count=1,
-                           obj_kind="Pod", obj_name="my-pod", source="default-scheduler"),
-                make_event("ev2", event_type="Warning", reason="OOMKilling", count=5,
-                           obj_kind="Pod", obj_name="my-pod", source="kubelet"),
-                make_event("ev3", event_type="Warning", reason="Failed", count=3,
-                           obj_kind="Node", obj_name="node-1", obj_namespace="", source="kubelet"),
+                make_event(
+                    "ev1",
+                    event_type="Normal",
+                    reason="Scheduled",
+                    count=1,
+                    obj_kind="Pod",
+                    obj_name="my-pod",
+                    source="default-scheduler",
+                ),
+                make_event(
+                    "ev2",
+                    event_type="Warning",
+                    reason="OOMKilling",
+                    count=5,
+                    obj_kind="Pod",
+                    obj_name="my-pod",
+                    source="kubelet",
+                ),
+                make_event(
+                    "ev3",
+                    event_type="Warning",
+                    reason="Failed",
+                    count=3,
+                    obj_kind="Node",
+                    obj_name="node-1",
+                    obj_namespace="",
+                    source="kubelet",
+                ),
             ]
         },
     )

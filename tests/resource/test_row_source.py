@@ -47,32 +47,36 @@ _MULTI_STEP_CONFIG = """
           path: val in child
 """
 
-@pytest.mark.parametrize("items,expected", [
-    pytest.param(
-        [
-            {"parent": "p1", "children": [{"val": "a"}, {"val": "b"}]},
-            {"parent": "p2", "children": [{"val": "c"}]},
-        ],
-        """
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        pytest.param(
+            [
+                {"parent": "p1", "children": [{"val": "a"}, {"val": "b"}]},
+                {"parent": "p2", "children": [{"val": "c"}]},
+            ],
+            """
         parent_id    val
         p1           a
         p1           b
         p2           c
         """,
-        id="normal",
-    ),
-    pytest.param(
-        [
-            {"parent": "p1", "children": [{"val": "a"}]},
-            {"parent": "p2", "children": []},
-        ],
-        """
+            id="normal",
+        ),
+        pytest.param(
+            [
+                {"parent": "p1", "children": [{"val": "a"}]},
+                {"parent": "p2", "children": []},
+            ],
+            """
         parent_id    val
         p1           a
         """,
-        id="empty_sublist",
-    ),
-])
+            id="empty_sublist",
+        ),
+    ],
+)
 def test_multi_step_row_source(test_home, items, expected):
     """Multi-step row_source with named scopes; also checks empty sublists produce no rows."""
     kugl_home().prep().joinpath("kubernetes.yaml").write_text(
@@ -223,10 +227,13 @@ def test_from_detects_label(test_home):
             - name: grp
               from: test.io/group
     """)
-    assert_query("SELECT * FROM things", """
+    assert_query(
+        "SELECT * FROM things",
+        """
         grp
         team-a
-    """)
+    """,
+    )
 
 
 def test_from_detects_path(test_home):
@@ -245,10 +252,13 @@ def test_from_detects_path(test_home):
             - name: thing_name
               from: metadata.name
     """)
-    assert_query("SELECT * FROM things", """
+    assert_query(
+        "SELECT * FROM things",
+        """
         thing_name
         my-thing
-    """)
+    """,
+    )
 
 
 def test_from_scoped_path(test_home):
@@ -276,11 +286,14 @@ def test_from_scoped_path(test_home):
             - name: container_name
               from: name in container
     """)
-    assert_query("SELECT * FROM things ORDER BY container_name", """
+    assert_query(
+        "SELECT * FROM things ORDER BY container_name",
+        """
         pod_name    container_name
         pod-a       c1
         pod-a       c2
-    """)
+    """,
+    )
 
 
 def test_from_scoped_label(test_home):
@@ -307,10 +320,13 @@ def test_from_scoped_label(test_home):
             - name: val
               from: val in child
     """)
-    assert_query("SELECT * FROM things", """
+    assert_query(
+        "SELECT * FROM things",
+        """
         grp     val
         team-b  x
-    """)
+    """,
+    )
 
 
 def test_from_conflicts_with_path(test_home):

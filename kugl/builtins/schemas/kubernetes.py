@@ -40,8 +40,15 @@ class KubernetesResource(Resource):
 
     @classmethod
     def add_cli_options(cls, ap: ArgumentParser):
-        ap.add_argument("-A", "--all", "--all-namespaces", dest="all", default=False, action="store_true", 
-        help="query all Kubernetes namespaces")
+        ap.add_argument(
+            "-A",
+            "--all",
+            "--all-namespaces",
+            dest="all",
+            default=False,
+            action="store_true",
+            help="query all Kubernetes namespaces",
+        )
         ap.add_argument("-n", "--namespace", type=str, help="limit query to NAMESPACE")
 
     def handle_cli_options(self, args):
@@ -80,7 +87,9 @@ class KubernetesResource(Resource):
             if unit_testing:
                 status_thread.join()
         if self.namespaced:
-            _, output, _ = run(["kubectl", *context_flag, "get", self.name, *namespace_flag, "-o", "json"])
+            _, output, _ = run(
+                ["kubectl", *context_flag, "get", self.name, *namespace_flag, "-o", "json"]
+            )
         else:
             _, output, _ = run(["kubectl", *context_flag, "get", self.name, "-o", "json"])
         data = json.loads(output)
@@ -326,8 +335,16 @@ class CronJobsTable:
         column("schedule", "TEXT", "cron schedule expression, from spec.schedule"),
         column("suspend", "INTEGER", "1 if suspended, 0 otherwise"),
         column("active", "INTEGER", "number of currently active jobs"),
-        column("last_schedule_ts", "INTEGER", "last schedule time in epoch seconds, from status.lastScheduleTime"),
-        column("last_success_ts", "INTEGER", "last successful time in epoch seconds, from status.lastSuccessfulTime"),
+        column(
+            "last_schedule_ts",
+            "INTEGER",
+            "last schedule time in epoch seconds, from status.lastScheduleTime",
+        ),
+        column(
+            "last_success_ts",
+            "INTEGER",
+            "last successful time in epoch seconds, from status.lastSuccessfulTime",
+        ),
         column("cpu_req", "REAL", "sum of CPUs requested across containers in job template"),
         column("gpu_req", "REAL", "sum of GPUs requested, or null"),
         column("mem_req", "INTEGER", "sum of memory requested, in bytes"),
@@ -374,7 +391,11 @@ class ServicesTable:
         column("type", "TEXT", "service type: ClusterIP, NodePort, LoadBalancer, or ExternalName"),
         column("cluster_ip", "TEXT", "cluster IP, or null for headless services"),
         column("external_ip", "TEXT", "external IP or hostname for LoadBalancer services, or null"),
-        column("creation_ts", "INTEGER", "creation timestamp in epoch seconds, from metadata.creationTimestamp"),
+        column(
+            "creation_ts",
+            "INTEGER",
+            "creation timestamp in epoch seconds, from metadata.creationTimestamp",
+        ),
     ]
 
     def columns(self):
@@ -415,8 +436,16 @@ class DeploymentsTable:
         column("ready", "INTEGER", "ready replicas, from status.readyReplicas"),
         column("available", "INTEGER", "available replicas, from status.availableReplicas"),
         column("updated", "INTEGER", "updated replicas, from status.updatedReplicas"),
-        column("strategy", "TEXT", "rollout strategy: RollingUpdate or Recreate, from spec.strategy.type"),
-        column("creation_ts", "INTEGER", "creation timestamp in epoch seconds, from metadata.creationTimestamp"),
+        column(
+            "strategy",
+            "TEXT",
+            "rollout strategy: RollingUpdate or Recreate, from spec.strategy.type",
+        ),
+        column(
+            "creation_ts",
+            "INTEGER",
+            "creation timestamp in epoch seconds, from metadata.creationTimestamp",
+        ),
     ]
 
     def columns(self):
@@ -454,9 +483,19 @@ class EventsTable:
         column("type", "TEXT", "event type: Normal or Warning — quote with backticks in SQL"),
         column("reason", "TEXT", "short machine-readable event reason"),
         column("message", "TEXT", "human-readable event description"),
-        column("count", "INTEGER", "number of times this event has occurred — quote with backticks in SQL"),
-        column("first_ts", "INTEGER", "first occurrence timestamp in epoch seconds, from firstTimestamp"),
-        column("last_ts", "INTEGER", "last occurrence timestamp in epoch seconds, from lastTimestamp"),
+        column(
+            "count",
+            "INTEGER",
+            "number of times this event has occurred — quote with backticks in SQL",
+        ),
+        column(
+            "first_ts",
+            "INTEGER",
+            "first occurrence timestamp in epoch seconds, from firstTimestamp",
+        ),
+        column(
+            "last_ts", "INTEGER", "last occurrence timestamp in epoch seconds, from lastTimestamp"
+        ),
         column("obj_kind", "TEXT", "involved object kind, from involvedObject.kind"),
         column("obj_name", "TEXT", "involved object name, from involvedObject.name"),
         column("obj_namespace", "TEXT", "involved object namespace, from involvedObject.namespace"),
