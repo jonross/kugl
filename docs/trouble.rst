@@ -32,11 +32,14 @@ seems relevant:
 These can be combined, e.g. ``--debug fetch,itemize``. To turn on all
 debugging options, use ``--debug all``.
 
+If all else fails, try Claude Code.  Tell it where to find the documentation
+(or the code, if you have cloned the repository), and ask it to help you debug the problem.
+
 I found a bug
 ~~~~~~~~~~~~~
 
-Help me help you! I don't have access to your Kubernetes cluster, so
-you'll have to capture the neccessary detail.
+Feel free to open an issue on Github.  Since I don't have access to your 
+Kubernetes cluster, capture the necessary detail in your issue.
 
 - Follow recommendations for debugging queries, above.
 - Use a low-activity namespace if possible, so the amount of data
@@ -52,14 +55,14 @@ If there is too much material, you can post it to a service like
 `Pastebin <https://pastebin.com>`__. If it includes secure information
 from your cluster, please redact it before posting.
 
-Can I give feedback without opening an issue?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+I have a question or idea
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Sure, use Kugl's [discussions page](https://github.com/jonross/kugl/discussions) on Github.
-(You'll need a Github account to post.)
+Please use Kugl's [discussions page](https://github.com/jonross/kugl/discussions) on Github.
+(You'll need a Github account to post, but it's free.)
 
-I didn't receive a response
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+I didn't receive a response right away
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Like many open source committers, the author has a family and a day job.
 🙂
