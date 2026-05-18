@@ -352,6 +352,9 @@ than the number of rows. Note that ``type`` and ``count`` conflict with SQL
 keywords / aggregate function names and must be backtick-quoted in queries,
 e.g. ``SELECT \`type\`, \`count\` FROM events``.
 
+Querying the events table may be slow, since the number of active events
+in a cluster can be large.
+
 +---------------+---------+------------------------------------------------------------+
 | Column        | Type    | Description                                                |
 +===============+=========+============================================================+
