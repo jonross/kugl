@@ -157,3 +157,30 @@ def test_init_command_already_exists(test_home):
 
     with pytest.raises(KuglError, match="already exists"):
         main1(["init"])
+
+
+def test_shortcuts_command_none(test_home, capsys):
+    main1(["shortcuts"])
+    assert "No shortcuts defined" in capsys.readouterr().out
+
+
+def test_shortcuts_command(test_home, capsys):
+    kugl_home().prep().joinpath("init.yaml").write_text("""
+        shortcuts:
+          - name: mypods
+            comment: list my pods
+            args:
+              - "select name from pods"
+          - name: find-image
+            params:
+              - img
+            args:
+              - "select name from pods where image like '%{{img}}%'"
+    """)
+    main1(["shortcuts"])
+    out = capsys.readouterr().out
+    assert "mypods" in out
+    assert "(list my pods)" in out
+    assert "select name from pods" in out
+    assert "find-image <img>" in out
+    assert "select name from pods where image like" in out

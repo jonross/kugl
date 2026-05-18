@@ -68,6 +68,11 @@ def main2(argv: List[str], init: Optional[UserInit] = None):
         _handle_init_command()
         return
 
+    if argv[0] == "shortcuts":
+        _, shortcuts = _merge_init_files()
+        _handle_shortcuts_command(shortcuts)
+        return
+
     if argv[0] == "schema" or argv[0] == "--schema":
         if len(argv) < 2:
             fail("Missing schema or table name")
@@ -188,6 +193,22 @@ def _merge_init_files() -> tuple[UserInit, dict[str, Shortcut]]:
         _merge_init(secondary)
     _merge_init(init)
     return init, shortcuts
+
+
+def _handle_shortcuts_command(shortcuts: dict):
+    if not shortcuts:
+        print("No shortcuts defined.")
+        return
+    for shortcut in shortcuts.values():
+        header = shortcut.name
+        if shortcut.params:
+            header += " " + " ".join(f"<{p}>" for p in shortcut.params)
+        print(header)
+        for arg in shortcut.args:
+            print(f"    {arg}")
+        if shortcut.comment:
+            print(f"    ({shortcut.comment})")
+        print()
 
 
 def _handle_init_command():
