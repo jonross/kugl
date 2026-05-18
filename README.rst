@@ -86,7 +86,7 @@ Bash alias.
        docker run \
            -v ~/.kube:/root/.kube \
            -v ~/.kugl:/root/.kugl \
-           jonross/kugl:0.7.0 python3 -m kugl.main "$@"
+           jonross/kugl:0.8 python3 -m kugl.main "$@"
    }
 
 If neither of those suits you, it's easy to set up from source:

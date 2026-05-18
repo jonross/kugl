@@ -1,5 +1,5 @@
 
-VERSION = 0.7.0
+VERSION = 0.8
 IMAGE = jonross/kugl:$(VERSION)
 
 .PHONY: lint test test-all test-py39-lo test-py39-hi test-py13-lo test-py13-hi dist pypi docker push dshell pyshell docs clean pristine

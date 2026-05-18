@@ -20,7 +20,7 @@
 project = "Kugl"
 copyright = "2024-2026, Jon Ross"
 author = "Jon Ross"
-release = "0.7.0"
+release = "0.8"
 
 
 # -- General configuration ---------------------------------------------------
