@@ -110,6 +110,18 @@ def test_shortcut_undeclared_param(test_home):
         main1(["foo"])
 
 
+@pytest.mark.parametrize("name", ["init", "shortcuts", "schema"])
+def test_shortcut_reserved_name(test_home, name):
+    """Verify that shortcuts cannot shadow built-in subcommands."""
+    kugl_home().prep().joinpath("init.yaml").write_text(f"""
+        shortcuts:
+          - name: {name}
+            args: ["select 1"]
+    """)
+    with pytest.raises(KuglError, match=f"Shortcut name '{name}' is reserved"):
+        main1(["select 1"])
+
+
 def test_shortcut_with_params_and_flag(test_home, capsys):
     """Verify flags like -H work alongside parameterized shortcuts."""
     kugl_home().prep().joinpath("init.yaml").write_text("""

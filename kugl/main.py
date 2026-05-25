@@ -180,9 +180,13 @@ def _merge_init_files() -> tuple[UserInit, dict[str, Shortcut]]:
         with failure_preamble(f"Errors in {path}:"):
             return parse_file(model_class, path)
 
+    RESERVED = {"init", "shortcuts", "schema"}
+
     def _merge_init(init: SecondaryUserInit):
         with failure_preamble(f"Errors in {init._source}:"):
             for shortcut in init.shortcuts:
+                if shortcut.name in RESERVED:
+                    fail(f"Shortcut name '{shortcut.name}' is reserved")
                 if shortcut.name in shortcuts:
                     fail(f"Duplicate shortcut '{shortcut.name}'")
                 shortcuts[shortcut.name] = shortcut
