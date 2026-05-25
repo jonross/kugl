@@ -14,6 +14,8 @@ Breaking changes are significant, gearing up for a 1.0 release.
 The new `from:` syntax alternative to `path:` and `label:` is backwards compatible, but
 the old syntax is deprecated and will be removed in a future release.
 
+Python 3.10 is required, since 3.9 is EOL.
+
 Extending tables:
 
 - Named scope syntax for multi-step ``row_source``: each entry takes ``as <name>`` and
