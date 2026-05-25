@@ -2,7 +2,7 @@
 VERSION = 0.8
 IMAGE = jonross/kugl:$(VERSION)
 
-.PHONY: lint test test-all test-py39-lo test-py39-hi test-py13-lo test-py13-hi dist pypi docker push dshell pyshell docs clean pristine
+.PHONY: lint test test-all test-py310-lo test-py310-hi test-py13-lo test-py13-hi dist pypi docker push dshell pyshell docs clean pristine
 
 # Lint and format check
 lint:
@@ -13,14 +13,14 @@ lint:
 test:
 	uv run pytest
 
-# Comprehensive regression test (Python 3.9 with low/high deps, Python 3.13 with high deps)
+# Comprehensive regression test (Python 3.10 with low/high deps, Python 3.13 with high deps)
 # Note: Python 3.13 with lowest resolution is not tested because old pydantic versions don't support it
 test-all:
-	@echo "=== Testing Python 3.9 with lowest dependencies ==="
-	@uv run --python 3.9 --resolution lowest pytest
+	@echo "=== Testing Python 3.10 with lowest dependencies ==="
+	@uv run --python 3.10 --resolution lowest pytest
 	@echo ""
-	@echo "=== Testing Python 3.9 with highest dependencies ==="
-	@uv run --python 3.9 --resolution highest pytest
+	@echo "=== Testing Python 3.10 with highest dependencies ==="
+	@uv run --python 3.10 --resolution highest pytest
 	@echo ""
 	@echo "=== Testing Python 3.13 with highest dependencies ==="
 	@uv run --python 3.13 --resolution highest pytest
@@ -28,11 +28,11 @@ test-all:
 	@echo "✓ All regression tests passed!"
 
 # Individual test targets (for debugging)
-test-py39-lo:
-	uv run --python 3.9 --resolution lowest pytest
+test-py310-lo:
+	uv run --python 3.10 --resolution lowest pytest
 
-test-py39-hi:
-	uv run --python 3.9 --resolution highest pytest
+test-py310-hi:
+	uv run --python 3.10 --resolution highest pytest
 
 test-py13-lo:
 	uv run --python 3.13 --resolution lowest pytest
@@ -67,7 +67,7 @@ smoke:
 
 # Manually test PyPI install
 pyshell:
-	docker run -it -v ~/.kube:/root/.kube --entrypoint /bin/sh python:3.9-alpine
+	docker run -it -v ~/.kube:/root/.kube --entrypoint /bin/sh python:3.10-alpine
 
 # Build documentation locally
 docs:

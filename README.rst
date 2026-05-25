@@ -66,7 +66,7 @@ output formatting:
 Installing
 ----------
 
-Kugl requires Python 3.9 or later, and kubectl.
+Kugl requires Python 3.10 or later, and kubectl.
 
 **This is an alpha release.** Please expect bugs and
 `backward-incompatible changes <docs/breaking.rst>`__
