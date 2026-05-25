@@ -26,7 +26,7 @@ dependencies = [
     "jmespath>=0.9.5,<=1.0",
     "pydantic>=2.0.2,<=2.9.2",
     "pyyaml>=5.3,<=6.0.2",
-    "sqlparse>=0.5.1,<=0.5.3",
+    "sqlparse>=0.5.4,<=0.5.4",
     "tabulate>=0.9.0,<=0.9.0",
 ]
 
