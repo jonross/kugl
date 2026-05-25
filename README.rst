@@ -1,6 +1,3 @@
-Kugl
-====
-
 Explore Kubernetes resources using SQLite.
 
 Example
@@ -68,9 +65,6 @@ Installing
 
 Kugl requires Python 3.10 or later, and kubectl.
 
-**This is an alpha release.** Please expect bugs and
-`backward-incompatible changes <docs/breaking.rst>`__
-
 If you don't mind Kugl's dependencies in your Python env:
 
 .. code:: shell
@@ -107,97 +101,9 @@ If neither of those suits you, it's easy to set up from source:
    # or put kugl's bin directory in your PATH
    PATH=${PATH}:$(pwd)/bin
 
-Test it
-~~~~~~~
-
-Find the pods using the most memory:
-
-.. code:: shell
-
-   kugl -a "select namespace, name, to_size(mem_req) from pods order by mem_req desc limit 15"
-
-If this query is helpful, `save it <docs/shortcuts.rst>`__, then
-you can run ``kugl hi-mem``.
-
-Please also see the `recommended
-configuration <docs/recommended.rst>`__.
-
-How it works (important)
-------------------------
-
-Kugl is just a thin wrapper on Kubectl and SQLite. It turns
-``SELECT ... FROM pods`` into ``kubectl get pods -o json``, then maps
-fields from the response to columns in SQLite. If you ``JOIN`` to other
-resource tables like ``nodes`` it calls ``kubectl get`` for those too.
-If you need more columns or tables than are built in as of this release,
-there's a config file for that.
-
-Because Kugl always fetches all resources from a namespace (or
-everything, if ``-A/--all-namespaces`` is used), it tries to ease Kubernetes API
-Server load by **caching responses for two minutes**. This is why it
-often prints "Data delayed up to ..." messages.
-
-Depending on your cluster activity, the cache can be a help or a
-hindrance. You can suppress the "delayed" messages with the ``-q`` /
-``--quiet`` option, or always fetch fresh data using the ``-r`` /
-``--refresh`` option. These behaviors, and the cache expiration time, can
-be set in the config file as well.
-
-In any case, please be mindful of stale data and server load.
-
-.. BEGIN_LEARN_MORE
+.. END_INCLUDE
 
 Learn more
-----------
+~~~~~~~~~~
 
-- `Command-line syntax <docs/syntax.rst>`__
-- `Recommended configuration <docs/recommended.rst>`__
-- `Settings <docs/settings.rst>`__
-- `Shortcuts <docs/shortcuts.rst>`__
-- `Built-in tables and functions <docs/builtins.rst>`__
-- `Configuring new columns and tables <docs/extending.rst>`__
-- `Troubleshooting and feedback <docs/trouble.rst>`__
-- Beyond Kubernetes and kubectl
-
-  - `Other resource types <docs/resources.rst>`__
-  - `Additional schemas <docs/multi.rst>`__
-
-- `Release notes <./CHANGELOG.md>`__
-- `Breaking changes <docs/breaking.rst>`__
-- `License <./LICENSE>`__
-
-.. END_LEARN_MORE
-
-Pronunciation
-~~~~~~~~~~~~~
-
-Like "cudgel", so, a blunt instrument for convincing data to be
-row-shaped.
-
-Or "koo-jull", if you prefer something less combative.
-
-"Kugel" is a casserole with varying degrees of cultural significance,
-and sounds too much like "Google".
-
-Rationale
-~~~~~~~~~
-
-Kugl won't replace everyday use of ``kubectl``; it's more for ad-hoc
-queries and reports, where the cognitive overhead of ``kubectl | jq`` is
-an obstacle. In that context, full SQL support and user-defined tables
-are essential, and it is where Kugl hopes to go a step further than
-prior art.
-
-Some other implementations of SQL-on-Kubernetes:
-
-- `ksql <https://github.com/brendandburns/ksql>`__ is built on Node.js
-  and AlaSQL; last commit November 2016.
-- `kubeql <https://github.com/saracen/kubeql>`__ is a SQL-like query
-  language for Kubernetes; last commit October 2017.
-- `kube-query <https://github.com/aquasecurity/kube-query>`__ is an
-  `osquery <https://osquery.io/>`__ extension; last commit July 2020.
-
-Contributors
-------------
-
-- `Elliot Miller <https://github.com/bitoffdev>`__
+For more (and important) information please see https://kugl.readthedocs.io/
