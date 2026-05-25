@@ -33,7 +33,7 @@ def test_enforce_cache_option_via_shortcut(test_home, capsys):
 
 
 def test_enforce_one_namespace_option(test_home):
-    with pytest.raises(KuglError, match="Cannot use both -A/--all and -n/--namespace"):
+    with pytest.raises(KuglError, match="Cannot use both -A/--all-namespaces and -n/--namespace"):
         main1(["-A", "-n", "x", "select * from pods"])
 
 

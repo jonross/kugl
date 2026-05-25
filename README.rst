@@ -133,7 +133,7 @@ If you need more columns or tables than are built in as of this release,
 there's a config file for that.
 
 Because Kugl always fetches all resources from a namespace (or
-everything, if ``-a/--all`` is used), it tries to ease Kubernetes API
+everything, if ``-A/--all-namespaces`` is used), it tries to ease Kubernetes API
 Server load by **caching responses for two minutes**. This is why it
 often prints "Data delayed up to ..." messages.
 
