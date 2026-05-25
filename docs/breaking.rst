@@ -21,6 +21,7 @@ Extending tables:
 - Named scope syntax for multi-step ``row_source``: each entry takes ``as <name>`` and
   columns reference ancestor objects with ``in <name>`` suffix (e.g. ``metadata.uid in node``);
   the old ``^`` parent-hop syntax is removed
+- Instead of ``;kv`` at the end of a row source, to extract name/value pairs use ``:dict``
 
 CLI changes:
 
