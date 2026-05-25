@@ -199,7 +199,7 @@ columns:
 - Each step applies to results of the prior step
 - Multi-step tables require `as <name>` on every entry; all column paths/labels must end with `in <name>`
 - Single-step tables use bare JMESPath paths with no scope qualifier
-- Dict sources can be unpacked to key/value pairs with `; kv` suffix: `- env; kv`
+- Dict sources can be unpacked to key/value pairs with `:dict` suffix: `- env:dict`
 - Default `row_source` is `["items"]`
 
 ## Decorators (kugl/api.py)

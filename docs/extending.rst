@@ -270,10 +270,10 @@ not both.
      AWS_REGION: us-east-1
      ...
 
-Kugl has a simple workaround for this. A ``row_source`` entry can have
-additional processing options, and for any row source entry that
-addresses a dictionary, you can add the option ``"kv"`` to get key-value
-pairs. For example, if you have adressed the above YAML data with
+Kugl has a simple workaround for this. Append ``:dict`` to any
+``row_source`` entry that addresses a dictionary, and Kugl will expand
+it into key-value pairs. For example, if you have addressed the above
+YAML data with
 
 .. code:: yaml
 
@@ -285,7 +285,7 @@ Change this to
 .. code:: yaml
 
    row_source:
-     - env; kv
+     - env:dict
 
 and Kugl will present the dictionary as if the data source originally
 looked like this:
@@ -307,6 +307,22 @@ It's then straightforward to take columns from these items with
        path: key
      - name: value
        path: value
+
+In a multi-step ``row_source`` you can combine ``:dict`` with ``as
+<name>`` to name the expanded scope for use in column paths:
+
+.. code:: yaml
+
+   row_source:
+     - items as item
+     - env as pair:dict
+   columns:
+     - name: service
+       path: service in item
+     - name: variable
+       path: key in pair
+     - name: value
+       path: value in pair
 
 Tips
 ~~~~

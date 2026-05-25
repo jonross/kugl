@@ -86,7 +86,7 @@ def test_multi_step_row_source(test_home, items, expected):
 
 
 def test_kv_with_parent_nav(test_home):
-    """'; kv' expansion combined with named scope to reference a field from the parent item."""
+    """':dict' expansion combined with named scope to reference a field from the parent item."""
     kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
       resources:
         - name: things
@@ -104,7 +104,7 @@ def test_kv_with_parent_nav(test_home):
           resource: things
           row_source:
             - items as item
-            - env as kv_pair; kv
+            - env as kv_pair:dict
           columns:
             - name: service
               path: service in item
@@ -371,7 +371,7 @@ def test_from_unknown_scope(test_home):
 
 
 def test_data_dict_expansion(test_home):
-    """Verify the behavior of the '; kv' option in row_source"""
+    """Verify the behavior of the ':dict' option in row_source"""
     kugl_home().prep().joinpath("kubernetes.yaml").write_text("""
       resources:
         - name: things
@@ -383,7 +383,7 @@ def test_data_dict_expansion(test_home):
         - table: things
           resource: things
           row_source:
-            - env; kv
+            - env:dict
           columns:
             - name: key
               path: key

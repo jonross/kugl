@@ -256,19 +256,17 @@ class Itemizer:
     def parse(cls, s: str, table_name: str):
         """Parse a line from the row_source section of a config file.
 
-        Syntax: 'expr [as name][; kv]'
+        Syntax: 'expr [as name][:dict]'
         """
-        # Split off options (;kv etc.)
-        parts = s.split(";")
-        if len(parts) == 1:
-            unpack = False
-        elif len(parts) == 2 and parts[1].strip() == "kv":
+        # Check for :dict suffix
+        if s.endswith(":dict"):
             unpack = True
+            s = s[:-5]
         else:
-            fail(f"Invalid row_source options: {s}")
+            unpack = False
 
         # Parse 'expr as name' from the expression part
-        expr_part = parts[0].strip()
+        expr_part = s.strip()
         name = None
         as_index = expr_part.find(" as ")
         if as_index >= 0:
